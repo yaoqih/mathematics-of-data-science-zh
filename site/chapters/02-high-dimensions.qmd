@@ -1,7 +1,7 @@
 ---
 title: "高维空间中的困难、优势与惊喜"
 description: "高维几何、概率基础与测度集中"
-status: 待校对
+status: 已完成
 ---
 
 本书讨论的大多数对象，自然而然地生活在高维空间里。原因可能是我们要分析高维数据，也可能是我们把一个含有许多节点的网络对应到一个同等维数的空间，等等。本章的主角就是“高维”。
@@ -784,7 +784,7 @@ $$
 =\cosh(\lambda a).
 $$
 
-由 Taylor 展开可验证 $\cosh x\le e^{x^2/2}$，于是
+由 Taylor 展开可验证 $\cosh x\le e^{x^2/2}$，[^cosh-taylor] 于是
 
 $$
 \mathbb E[e^{\lambda X_i}]
@@ -902,7 +902,7 @@ $$
 \end{aligned}
 $$
 
-由 $1+x\le e^x$，
+由 $1+x\le e^x$，[^exp-tangent]
 
 $$
 1+\frac{\sigma^2}{a^2}(e^{\lambda a}-1-\lambda a)
@@ -1379,3 +1379,7 @@ $$
 **提示：** 使用 Chernoff 界后，取
 $\lambda=t/(\nu^2+Rt)$。
 :::
+
+[^cosh-taylor]: 由 $\cosh x=\sum_{n=0}^\infty x^{2n}/(2n)!$、$e^{x^2/2}=\sum_{n=0}^\infty x^{2n}/(2^n n!)$，以及 $(2n)!\ge2^n n!$，可逐项比较得到该不等式。
+
+[^exp-tangent]: 直线 $y=1+x$ 正是曲线 $y=e^x$ 在 $x=0$ 处的切线；凸性说明曲线始终位于切线之上。

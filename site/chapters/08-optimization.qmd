@@ -1,7 +1,7 @@
 ---
 title: "数据科学中的优化"
 description: "凸性、最优性条件、对偶与梯度方法"
-status: 待校对
+status: 已完成
 ---
 
 优化位于现代数据科学的中心。无论是拟合线性回归、聚类、求欠定方程组的稀疏解，还是训练深度神经网络，底层任务几乎总是相同的：**寻找使某个明确目标函数最小或最大的参数**。
@@ -1529,7 +1529,7 @@ Ax=b,
 \qquad A\in\mathbb R^{m\times n},
 $$ {#eq-kaczmarz-system}
 
-其第 $i$ 行为 $a_i^T$。Kaczmarz 每步把当前点正交投影到超平面
+其第 $i$ 行为 $a_i^T$。Kaczmarz 方法 [@karczmarz1937] 每步把当前点正交投影到超平面
 $H_i=\{x:a_i^Tx=b_i\}$：
 
 $$

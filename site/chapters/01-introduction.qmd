@@ -1,7 +1,7 @@
 ---
 title: "导论"
 description: "数据科学的兴起、数学基础与全书结构"
-status: 待校对
+status: 已完成
 ---
 
 ## 缘起 {#sec-origins}

@@ -1,7 +1,7 @@
 ---
 title: "图拉普拉斯算子的大样本极限"
 description: "密度估计、连续极限、谱几何与向量扩散映射"
-status: 待校对
+status: 已完成
 ---
 
 <!-- 原稿章节标签：c:convergence -->
@@ -75,7 +75,7 @@ $$\text{Bias}=p(x)-\mathbb E[p_{n,\eps}(x)]=O(\eps).$$
 \end{eqnarray}$$ 式 [\[var2\]](#var2){reference-type="ref" reference="var2"} 中的相应项在 $\eps\to0$ 时趋于 $p(x)$，故为 $O(1)$；式 [\[var5\]](#var5){reference-type="ref" reference="var5"} 定义 $M_2=\int_\mathbb R K^2(z)\,dz$。综合得到 $$\begin{equation}
 \label{eq:density_estimation_MSE}
 p_{n,\eps}(x) = p(x) + \eps \frac{m_2}{2} p^{\prime\prime} (x) + \xi_{n,\eps} + O(\eps^2),
-\end{equation}$$ where $$\mathbb{E}[\xi_{n,\eps}] = 0 \,\,\text{ and }\,\, \text{Var}[\xi_{n,\eps}] = \frac{M_2 p(x)}{n\sqrt{\eps}}\left[1 + O(\sqrt{\eps})\right].$$
+\end{equation}$$ 其中 $$\mathbb{E}[\xi_{n,\eps}] = 0 \,\,\text{且}\,\, \text{Var}[\xi_{n,\eps}] = \frac{M_2 p(x)}{n\sqrt{\eps}}\left[1 + O(\sqrt{\eps})\right].$$
 
 若直接令 $\eps\to0$，标准差 $\sigma(\xi_{n,\eps})$ 会发散，因此必须选取最优 $\eps_n$ 平衡偏差与方差。MMSE 准则
 $$\min_\eps O(\eps^2)+O\left(\frac1{n\eps^{1/2}}\right)$$
@@ -236,11 +236,11 @@ $$\mathcal L^*g=\nabla\cdot[\nabla g+g\nabla U]=-\nabla\cdot J,\qquad-J=\nabla g
 直观上，数据图上的随机游走不会被吸收，总概率守恒；到达边界后只能反射回流形，因此满足无通量边界条件 $J=0$。下面推导 $f$ 的相应边界条件，并验证 $\mathcal L^*$ 确为 $\mathcal L$ 的伴随： $$\begin{eqnarray*}
 \int_{\mathcal{M}} f \mathcal{L}^* g \,dv &=& -\int_{\mathcal{M}} f \nabla \cdot J \,dv\\
 &=& -\int_{\mathcal{M}} \nabla \cdot [fJ] \,dv + \int_{\mathcal{M}} J \cdot \nabla f \,dv \\
-&=& -\int_{\partial \mathcal{M}} fJ\,dS + \int_{\mathcal{M}} J\cdot \nabla f \,dv ~~~~~~~~~\text{no flux b.c.:}\, J=0\\
+&=& -\int_{\partial \mathcal{M}} fJ\,dS + \int_{\mathcal{M}} J\cdot \nabla f \,dv ~~~~~~~~~\text{无通量边界条件：}\, J=0\\
 &=& -\int_{\mathcal{M}} \left[\nabla g + g \nabla U \right] \cdot \nabla f \,dv \\
 &=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla g \cdot \nabla f \, dv \\
 &=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla\cdot(g\nabla f) + \int_{\mathcal{M}} g\Delta f\,dv \\
-&=& \int_{\mathcal{M}} g\left[\Delta f - \nabla U \cdot \nabla f  \right]\,dv - \int_{\partial \mathcal{M}} g \frac{\partial f}{\partial \nu}\,dS ~~~~~~~\text{adjoint b.c.: } \frac{\partial f}{\partial \nu}=0 \\
+&=& \int_{\mathcal{M}} g\left[\Delta f - \nabla U \cdot \nabla f  \right]\,dv - \int_{\partial \mathcal{M}} g \frac{\partial f}{\partial \nu}\,dS ~~~~~~~\text{伴随边界条件：} \frac{\partial f}{\partial \nu}=0 \\
 &=& \int_{\mathcal{M}} g \mathcal{L} f \,dv
 \end{eqnarray*}$$ 因而当 $f$ 满足齐次 Neumann 条件 $\partial f/\partial\nu=0$ 时，$\mathcal L^*$ 是 $\mathcal L$ 的形式伴随。
 
@@ -452,7 +452,7 @@ N(\lambda) \sim \lambda^{d/2},
 \end{equation*}$$ 这就是 Weyl 定律，下面推导它。
 
 当 $t\to0$ 时，$\operatorname{Tr}(G_t)=\sum_ne^{-\lambda_nt}$ 成为无穷多个 1 的和而发散。对 $\Omega\subset\mathbb R^d$，其发散速率为 $$\begin{equation*}
-\text{Tr}(G_t)=\int_\Omega G_t(x,x)\, dx = \sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{(4\pi t)^{d/2}},\quad \text{as } t\to 0.
+\text{Tr}(G_t)=\int_\Omega G_t(x,x)\, dx = \sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{(4\pi t)^{d/2}},\quad \text{当 } t\to 0.
 \end{equation*}$$
 
 ##### 实直线上的扩散
@@ -495,7 +495,7 @@ $$G_t(x,y)\sim\frac1{\sqrt{4\pi t}}e^{-(x-y)^2/(4t)}.$$
 再次利用 Fourier 变换，可得 $\mathbb R^d$ 上的热核 $$\begin{equation*}
 G_t(x,y) = \frac{1}{(4\pi t)^{d/2}} e^{-\frac{\|x-y\|^2}{4t}}.
 \end{equation*}$$ 它也可视为 $d$ 个一维热核之积，对应各维独立 Brownian 运动。任意区域 $\Omega$ 的短时间渐近也相同，因为粒子尚未感知边界。更严格地，可考虑展开 $$\begin{equation*}
-G_t(x,y)\sim\sum\limits_k \frac{1}{(4\pi t)^{d/2}}e^{-\frac{S_k^2(x,y)}{4t}}\sum_n Z_{k,n}(x,y)t^n,\quad \text{as } t\to 0.
+G_t(x,y)\sim\sum\limits_k \frac{1}{(4\pi t)^{d/2}}e^{-\frac{S_k^2(x,y)}{4t}}\sum_n Z_{k,n}(x,y)t^n,\quad \text{当 } t\to 0.
 \end{equation*}$$
 
 代入热方程，$S_k$ 满足 Eikonal 方程 $|\nabla S_k|=1$，$Z_{k,n}$ 满足输运方程。$S_k$ 对应从 $y$ 到 $x$ 的测地线或可在边界反射的台球轨迹长度。对角项满足 $G_t(x,x)\sim(4\pi t)^{-d/2}$，故 $$\begin{equation*}
@@ -515,9 +515,9 @@ G_t(x,y)\sim\sum\limits_k \frac{1}{(4\pi t)^{d/2}}e^{-\frac{S_k^2(x,y)}{4t}}\sum
 N(\lambda)\sim\frac{|\Omega|}{(4\pi)^{d/2}\frac{d}{2}\Gamma(\frac{d}{2})}\lambda^{d/2}
 \end{equation}$$ For $d=1$, we have $$\begin{eqnarray*}
 N(\lambda)&\sim&\frac{L}{\sqrt{4\pi}\frac{1}{2}\underbrace{\sqrt{\pi}}_\text{$\Gamma(\frac{1}{2})$}} \lambda^{1/2}\\
-&\sim&\frac{L}{\pi}\lambda^{1/2} \text{\hspace{1cm} (same as previous)}\\
+&\sim&\frac{L}{\pi}\lambda^{1/2} \text{\hspace{1cm}（与前式相同）}\\
 \end{eqnarray*}$$ For $d=2$, we have $$\begin{eqnarray*}
-N(\lambda)&\sim&\frac{|\Omega|}{4\pi}\lambda, \hspace{0.5cm}|\Omega|=L_xL_y \text{\hspace{1cm} (same as previous)}\\
+N(\lambda)&\sim&\frac{|\Omega|}{4\pi}\lambda, \hspace{0.5cm}|\Omega|=L_xL_y \text{\hspace{1cm}（与前式相同）}\\
 \end{eqnarray*}$$
 
 因此可由特征值增长率，例如观察对数图，推断区域的维数与体积。
@@ -716,7 +716,7 @@ $$\left(D_1^{-1}W_1 v\right)(i) = \frac{1}{d_i}\sum_{j\sim i} w_{ij}O_{ij}v(j).$
 
 普通扩散映射对光滑 $f$ 有 $(D^{-1}W-I)f\to c\Delta f$；向量扩散映射相应满足
 $$(D_1^{-1}W_1-I)X\to c\nabla^2X,$$
-其中 $X$ 为向量场，$\nabla^2$ 是流形上的*联络 Laplacian*。
+其中 $X$ 为向量场，$\nabla^2$ 是流形上的*联络拉普拉斯算子*。
 
 ### 可定向性与二重覆盖
 
@@ -725,7 +725,7 @@ Z_{ij} = \left\{\begin{array}{ccl} \det O_{ij} & & (i,j)\in E, \\ 0 & & (i,j)\no
 \end{array} \right.
 \end{equation*}$$ 无需反射时 $Z_{ij}=1$，需要反射时为 $-1$，不邻近时为 0；再用节点度归一化，考察 $D^{-1}Z$ 的谱。
 
-若流形可定向，就能“同步”这些符号：存在 $z_i\in\{\pm1\}$ 使 $\det(O_{ij})=z_iz_j$，等价于图联络 Laplacian 无挫折；这恢复了各局部基的方向。若不可定向，则可在 Euclidean 空间构造其可定向二重覆盖。因此，仅凭数据的局部信息即可检测可定向性。
+若流形可定向，就能“同步”这些符号：存在 $z_i\in\{\pm1\}$ 使 $\det(O_{ij})=z_iz_j$，等价于图联络拉普拉斯算子无挫折；这恢复了各局部基的方向。若不可定向，则可在 Euclidean 空间构造其可定向二重覆盖。因此，仅凭数据的局部信息即可检测可定向性。
 
 <figure id="fig:vectordiffusion1" data-latex-placement="h">
 
@@ -761,7 +761,7 @@ Z & -Z\\
 </figcaption>
 </figure>
 
-由随机样本学习流形拓扑仍是活跃领域 [@niyogi2008finding]。除图 Laplacian 和联络 Laplacian 外，Hodge Laplacian 可通过调和形式揭示 Betti 数等拓扑信息，如连通分支数与孔洞数。拓扑数据分析入门可参见 [@carlsson2009topology]。
+由随机样本学习流形拓扑仍是活跃领域 [@niyogi2008finding]。除图拉普拉斯算子和联络拉普拉斯算子外，Hodge 拉普拉斯算子（Hodge Laplacian）可通过调和形式揭示 Betti 数等拓扑信息，如连通分支数与孔洞数。拓扑数据分析入门可参见 [@carlsson2009topology]。
 
 ## 习题 {#exercises .unnumbered}
 
@@ -798,7 +798,7 @@ $$\phi_n''-\frac{2x}{\sigma^2}\phi_n'=-\lambda_n\phi_n$$
 ::: myexercise
 从 $\mathbb R^2$ 上密度 $p(x,y)=p_1(x)p_2(y)$ 独立抽取 $n$ 个点 $z_i$，其中 $z=(x,y)$，且 $$p_1(x) = \left\{\begin{array}{cc}
 \frac{1}{L} & 0\leq x \leq L \\
-0 & otherwise \\
+0 & \text{其他情形} \\
 \end{array}\right.$$ 以及 $$p_2(y)=\frac1{\sqrt{2\pi\sigma^2}}e^{-y^2/(2\sigma^2)}.$$ 即 $x$ 在 $[0,L]$ 上均匀分布，$y$ 服从均值 0、标准差 $\sigma$ 的正态分布。
 
 1.  求后向 Fokker--Planck 算子 $$\Delta f-\nabla U\cdot\nabla f=-\lambda f$$ 的特征函数与特征值，其中 $U(x,y)=-2\log(p_1(x)p_2(y))$，$\Delta=\partial_x^2+\partial_y^2$。
@@ -857,7 +857,7 @@ $$x\mapsto(\lambda_2^{-1}\phi_2(x),\lambda_3^{-1}\phi_3(x),\ldots),$$
 :::
 
 ::: myexercise
-证明图联络 Laplacian $L_1=D_1-W_1$ 对任意按 $n$ 个 $\RR^d$ 向量理解的 $v\in\RR^{nd}$ 满足
+证明图联络拉普拉斯算子 $L_1=D_1-W_1$ 对任意按 $n$ 个 $\RR^d$ 向量理解的 $v\in\RR^{nd}$ 满足
 $$v^TL_1v=\frac12\sum_{i,j=1}^nw_{ij}\|v(i)-O_{ij}v(j)\|^2.$$
 :::
 

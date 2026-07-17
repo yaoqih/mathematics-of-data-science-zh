@@ -1,7 +1,7 @@
 ---
 title: "测度集中与高斯分析"
 description: "高斯分部积分、比较原理、Gordon 定理与测度集中"
-status: 待校对
+status: 已完成
 ---
 
 # 测度集中与高斯分析 {#c:probability-gaussiananalysis}
@@ -142,7 +142,7 @@ $$\cov(\phi(g),\psi(g)) = \int_{0}^1 \EE \langle \nabla\phi(g),\nabla\psi(g_{(t)
 先说明式 [\[eq:interpolationCI\]](#eq:interpolationCI){reference-type="eqref" reference="eq:interpolationCI"} 与式 [\[eq:interpolationGI\]](#eq:interpolationGI){reference-type="eqref" reference="eq:interpolationGI"} 中两种插值的关系。后一种插值连接两个随机向量的分布，并以协方差的线性组合为参数；协方差恒等式中的插值则连接一个随机向量与它的独立同分布副本，其参数恰好是 $g$ 与 $g_{(t)}$ 之间的协方差。如下述证明所示，可以仍用 $Z_t=\sqrt tX+\sqrt{1-t}Y$ 来研究式 [\[eq:interpolationCI\]](#eq:interpolationCI){reference-type="eqref" reference="eq:interpolationCI"}，只需令 $X$、$Y$ 为两个 $2n$ 维高斯随机向量，协方差分别满足
 $$\begin{equation}
 \label{eq:2diffinterpolations}
-X \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & 0_{n\times n} \\  0_{n\times n} & I_{n\times n} \end{array}\right]\right) \text{ and } Y \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & I_{n\times n} \\  I_{n\times n} & I_{n\times n} \end{array}\right]\right),
+X \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & 0_{n\times n} \\  0_{n\times n} & I_{n\times n} \end{array}\right]\right) \text{ 且 } Y \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & I_{n\times n} \\  I_{n\times n} & I_{n\times n} \end{array}\right]\right),
 \end{equation}$$
 这是因为对每个 $t\in[0,1]$，$Z_t$ 与 $\left[\begin{array}{c}g\\g_{(t)}\end{array}\right]$ 具有相同的概率分布。
 
@@ -495,8 +495,8 @@ $$\begin{equation*}
 设 $p\geq1$ 为整数，证明
 $$\begin{equation*}
         \E\bras{Z^p} = \begin{cases}
-            (p-1)!! &\text{if } p \text{ is even};\\
-            0 &\text{if } p \text{ is odd}.
+            (p-1)!! &\text{当 } p \text{ 为偶数};\\
+            0 &\text{当 } p \text{ 为奇数}.
         \end{cases}
 \end{equation*}$$
 其中 $!!$ 表示双阶乘：对奇自然数 $n$，$n!!=n(n-2)\cdots3\cdot1$。（当 $p$ 为偶数时，$p$ 个元素恰有 $(p-1)!!$ 种配对方式；这绝非巧合。）

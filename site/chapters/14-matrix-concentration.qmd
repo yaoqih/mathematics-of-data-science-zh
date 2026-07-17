@@ -1,7 +1,7 @@
 ---
 title: "矩阵集中不等式"
 description: "非交换 Khintchine 不等式、矩阵集中与自由性改进"
-status: 待校对
+status: 已完成
 ---
 
 # 矩阵集中不等式 {#c:probability-matrixconcentration}
@@ -260,7 +260,7 @@ $$\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \righ
 $$\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq \sqrt{C(d)}\sigma  + C(d) L,$$
 其中
 $$\begin{equation}
-\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{ and } L^2 = \EE \max_i \| Y_i\|^2
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{ 且 } L^2 = \EE \max_i \| Y_i\|^2
 \end{equation}$$
 并且与式 [\[eq:4:Cd_constant\]](#eq:4:Cd_constant){reference-type="eqref" reference="eq:4:Cd_constant"} 相同，
 $$\begin{equation*}
@@ -326,7 +326,7 @@ $$\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq 2\sigma + C \Big( v^{\frac12}\sigm
 $$\PP\Big[  \left\| \sum_{i=1}^n Y_i  \right\| \geq 2\sigma + C \Big( v^{\frac12}\sigma^{\frac12}(\log d)^\frac34 + \sigma_\ast t^{\frac12}+ R^{\frac13}\sigma^{\frac23}t^\frac23 + R t \Big)    \Big] \leq de^{-t}.$$
 其中 $C$ 是普适常数，且
 $$\begin{equation}
-\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{, } v^2 = \left\| \mathrm{Cov}(Y) \right\| \text{ and } \sigma_\ast^2 = \sup_{\|u\|=\|w\|=1}\EE \left| u^TYw \right|^2.
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\|,\quad v^2 = \left\| \mathrm{Cov}(Y) \right\| \text{ 且 } \sigma_\ast^2 = \sup_{\|u\|=\|w\|=1}\EE \left| u^TYw \right|^2.
 \end{equation}$$
 :::
 
@@ -383,7 +383,7 @@ $$\begin{equation}
 *证明.* 对 $W\sim\mathrm{GUE}$，有
 $\EE W_{i_1j_1}W_{i_2j_2}=D^{-1}\delta_{i_1j_2}\delta_{i_2j_1}$，其中 $\delta_{ij}$ 是 $i=j$ 的指示量。[^7] 展开式 [\[eq:crossingformula\]](#eq:crossingformula){reference-type="eqref" reference="eq:crossingformula"} 左侧，得到
 $$\begin{eqnarray*}
-\mathrm{LHS}\text{ of }\eqref{eq:crossingformula} & = & \sum_{i_1,\dots,i_8=1}^D \EE\left[W_{i_1i_2} (B_1)_{i_2i_3} V_{i_3i_4} (B_2)_{i_4i_5} W_{i_5i_6} (B_3)_{i_6i_7} V_{i_7i_8} (B_4)_{i_8i_1} \right] \\ 
+\eqref{eq:crossingformula}\text{ 的左侧} & = & \sum_{i_1,\dots,i_8=1}^D \EE\left[W_{i_1i_2} (B_1)_{i_2i_3} V_{i_3i_4} (B_2)_{i_4i_5} W_{i_5i_6} (B_3)_{i_6i_7} V_{i_7i_8} (B_4)_{i_8i_1} \right] \\ 
 & = & \sum_{i_1,\dots,i_8=1}^D \frac1{D^2}\delta_{i_1i_6}\delta_{i_2i_5}\delta_{i_3i_8}\delta_{i_4i_7}  (B_1)_{i_2i_3}  (B_2)_{i_4i_5}  (B_3)_{i_6i_7}  (B_4)_{i_8i_1} \\
 & = & \frac1{D^2}\sum_{i_1,\dots,i_4=1}^D  (B_1)_{i_2i_3}  (B_2)_{i_4i_2}  (B_3)_{i_1i_4}  (B_4)_{i_3i_1} \\
 & = & \frac1{D^2}\tr\left[ B_3 B_2 B_1 B_4\right].
@@ -441,8 +441,8 @@ $$\begin{eqnarray*}
 设 $W$ 是如下高斯级数表示的 $d\times d$ 矩阵：$W=\sum_{1\leq k\leq l\leq d}g_{kl}A_{kl}$，其中
 $$\begin{equation*}
         A_{kl} = \begin{cases}
-            e_ke_l^\top + e_le_k^\top &\text{for }k<l,\\
-            \sqrt{2} e_ke_k^\top &\text{for }k=l.
+            e_ke_l^\top + e_le_k^\top &\text{当 }k<l,\\
+            \sqrt{2} e_ke_k^\top &\text{当 }k=l.
         \end{cases}
 \end{equation*}$$
 :::
@@ -474,7 +474,7 @@ $$\begin{equation*}
 \end{equation*}$$
 这里矩阵协方差 $\Cov(X)$ 是 $d^2\times d^2$ 矩阵，行列坐标均由指标对索引，其元素为
 $$\begin{equation*}
-        \Cov(X)_{ij,kl} = \E\bras{X_{ij}X_{kl}} \quad\text{for }i,j,k,l\in[d].
+        \Cov(X)_{ij,kl} = \E\bras{X_{ij}X_{kl}} \quad\text{其中 }i,j,k,l\in[d].
 \end{equation*}$$
 计算习题 [\[prob:computing_sigma\]](#prob:computing_sigma){reference-type="ref" reference="prob:computing_sigma"} 中 $W,D$ 的 $\Cov(W),\Cov(D)$，并利用内禀自由的非交换 Khintchine 不等式推出：存在绝对常数 $C'>0$ 使
 $$\begin{equation*}
@@ -509,7 +509,7 @@ $$\begin{equation*}
 ::: myexercise
 []{#prob:bernstein_expectation_bound label="prob:bernstein_expectation_bound"} 设 $\brac{X_k}_{k=1}^n$ 是相互独立的随机对称 $d\times d$ 矩阵，并假设每个 $X_k$ 满足
 $$\begin{equation*}
-        \E X_k=0 \text { and } \|X_k\|\leq R \text { almost surely. }
+        \E X_k=0 \text{ 且 } \|X_k\|\leq R \text{ 几乎处处成立。}
 \end{equation*}$$
 本题目标是证明
 $$\begin{equation}
@@ -540,8 +540,8 @@ $\P\brap{X=ma_ka_k^\top}=1/m$。
 (b) 定义相干性统计量 $\mu(A)=m\max_{1\leq k\leq m}\|a_k\|^2$。证明
 $$\begin{equation*}
                 \max_{k = 1, \dots, s} \norm{\E \bras{(X_k - \E X_k)^2}}  \le 2 \mu(A)
-    \end{equation*}$$ and $$\begin{equation*}
-                \max_{k = 1, \dots, s} \|X_k - \E X_k \| \le 2\mu(A), \text{ almost surely}.
+    \end{equation*}$$ 且 $$\begin{equation*}
+                \max_{k = 1, \dots, s} \|X_k - \E X_k \| \le 2\mu(A), \text{ 几乎处处成立}.
     \end{equation*}$$
 
 (c) 使用习题 [\[prob:bernstein_expectation_bound\]](#prob:bernstein_expectation_bound){reference-type="ref" reference="prob:bernstein_expectation_bound"} 的结论，无需重证。证明存在绝对常数 $C$，使得若样本数满足

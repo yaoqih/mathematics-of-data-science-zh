@@ -1,7 +1,7 @@
 ---
 title: "社群检测与凸松弛的力量"
 description: "最大割、提升、近似算法与社群检测"
-status: 待校对
+status: 已完成
 ---
 
 <!-- 原稿章节标签：c:community -->
@@ -48,7 +48,7 @@ $$\begin{equation}
 \label{MAXCUTproblem_SDP}
 \begin{array}{l}
 \max \quad  \frac12 \sum_{i<j}w_{ij}(1-X_{ij}) \\
-s.t. \quad \quad X\succeq 0 \text{ and } X_{ii}=1,\; i=1,\ldots,n.
+\text{满足} \quad \quad X\succeq 0 \text{ 且 } X_{ii}=1,\; i=1,\ldots,n.
 \end{array}
 \end{equation}$$
 该凸问题可在关于输入规模与 $\log(\epsilon^{-1})$ 的多项式时间内求到 $\epsilon$ 精度 [@LVanderberghe_SBoyd_1996]。
@@ -59,7 +59,7 @@ $$\begin{equation}
 \label{MAXCUTproblem_lifted}
 \begin{array}{l}
 \max \quad  \frac12 \sum_{i<j}w_{ij}(1-X_{ij}) \\
-s.t. \quad \quad X\succeq 0 \text{ , } X_{ii}=1,\; i=1,\ldots,n, \text{ and } \rank(X) = 1.
+\text{满足} \quad \quad X\succeq 0,\ X_{ii}=1,\; i=1,\ldots,n, \text{ 且 } \rank(X) = 1.
 \end{array}
 \end{equation}$$
 删去非凸的秩一约束，便得到 SDP。后面构造最小二分割松弛时还会采用同样方法。
@@ -323,7 +323,7 @@ $$\begin{equation}
 
 现在我们不再满足于得到与真实标签相关的估计，而要正确恢复每一个节点的社群归属。仍聚焦于平衡、对称的二社群模型，这一问题将展示两种重要现象：(i) 面对“典型实例”时，凸松弛常常能找到精确最优解，而不只是近似解；(ii) 对随机实例上的半正定规划等凸松弛，往往可用矩阵集中不等式直接分析，例如第 [\[c:probability-matrixconcentration\]](#c:probability-matrixconcentration){reference-type="ref" reference="c:probability-matrixconcentration"} 章的工具。若社群内连接概率 $p = \frac{a}n$，则不难证明每个社群都将以高概率出现孤立节点，因而不可能正确恢复所有节点。事实上，对某个 $\eps>0$，只要 $p \leq \frac{(2-\eps)\log n}n$ 就会如此。因此我们考察
 $$\begin{equation}
-p = \pp \text{ and } q = \qq,
+p = \pp \text{ 且 } q = \qq,
 \end{equation}$$
 其中 $\alpha>\beta$ 为常数。
 
@@ -360,7 +360,7 @@ $$\begin{align}
 $$\begin{align}
 \max\ \qquad & \tr(BX)\nonumber\\
 \text{s.t.}\ \qquad &X_{ii}=1, \forall_i \label{eq:relaxation_SBM}\\
- & X=xx^T  \text{ for some } x\in\RR^n.\nonumber
+ & X=xx^T,\quad \text{其中某个 }x\in\RR^n.\nonumber
 \end{align}$$
 
 存在 $x\in\RR^n$ 使 $X=xx^T$，等价于 $\rank(X)=1$ 且 $X\succeq0$。所以式 [\[MLE_B\]](#MLE_B){reference-type="ref" reference="MLE_B"} 又等价于 $$\begin{align}
@@ -384,28 +384,28 @@ $$\begin{align}
 
 $$\begin{equation}
 \label{MLE_SDP_Lagrangian}
-\max_{X} \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).
+\max_{X} \min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).
 \end{equation}$$
 
 式 [\[MLE_SDP_Lagrangian\]](#MLE_SDP_Lagrangian){reference-type="eqref" reference="MLE_SDP_Lagrangian"} 可解释为一场博弈：选择 $X$ 的**原始玩家**试图最大化目标；看到 $X$ 后选择 $Z,Q$ 的**对偶玩家**则试图将目标压低。若原始玩家选择的 $X$ 不满足式 [\[MLE_SDP\]](#MLE_SDP){reference-type="eqref" reference="MLE_SDP"} 的约束，对偶玩家便可把目标推向 $-\infty$。确实，若某个 $X_{ii}\neq1$，只需取 $Z_{ii}=-c\frac1{1-X_{ii}}$，再令 $c$ 足够大即可；若 $X$ 不是半正定的，则存在 $v$ 使 $v^TXv<0$，此时可取 $Q=cvv^T$。反之，若 $X$ 满足约束，则
-$$\tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).$$
+$$\tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).$$
 例如对偶玩家取 $Q=0_{n\times n}$ 即可达到等号，因此式 [\[MLE_SDP\]](#MLE_SDP){reference-type="eqref" reference="MLE_SDP"} 与式 [\[MLE_SDP_Lagrangian\]](#MLE_SDP_Lagrangian){reference-type="eqref" reference="MLE_SDP_Lagrangian"} 的值相同：
-$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) = \max_{X} \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right)$$
+$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) = \max_{X} \min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right)$$
 现在改变博弈顺序，让对偶玩家先选变量，原始玩家因而可在知道 $Z,Q$ 后再选 $X$，目标值只可能增大。于是
-$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).$$
+$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \max_{X}  \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).$$
 注意
 $$\tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right) = \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z).$$
 在
-$$\min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z)$$
+$$\min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z)$$
 中，若对偶玩家不令 $B+Q-Z=0_{n\times n}$，原始玩家便可把目标推向 $+\infty$。所以对偶玩家只能选择 $Q=Z-B$，从而
-$$\min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z) = \min_{\substack{Z,\\ Z \text{ is diagonal } \\ Z-B\succeq 0}} \max_{X}  \tr(Z),$$
+$$\min_{\substack{Z,\ Q \\ Z \text{ 为对角矩阵 } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z) = \min_{\substack{Z,\\ Z \text{ 为对角矩阵 } \\ Z-B\succeq 0}} \max_{X}  \tr(Z),$$
 右侧显然已与原始玩家的选择无关。因此
-$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\\ Z \text{ is diagonal } \\ Z-B\succeq 0}}  \tr(Z).$$
+$$\max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\\ Z \text{ 为对角矩阵 } \\ Z-B\succeq 0}}  \tr(Z).$$
 这就是弱对偶。强对偶进一步指出，在一定条件下两边的最优值实际相等，参见 [@LVanderberghe_SBoyd_1996]。此前用平方和解释 Max-Cut 近似比时已经使用过强对偶；本问题也有类似解释，见 [@Bandeira_PCC]。
 
 Also, the problem $$\begin{align}
 \min\ \qquad & \tr(Z)\nonumber\\
-\text{s.t.}\ \qquad & Z \text{ is diagonal} \label{MLE_SDP_DUAL}\\
+\text{满足}\ \qquad & Z \text{ 为对角矩阵} \label{MLE_SDP_DUAL}\\
  & Z - B  \succeq 0 \nonumber
 \end{align}$$ 称为式 [\[MLE_SDP\]](#MLE_SDP){reference-type="ref" reference="MLE_SDP"} 的对偶问题。
 
@@ -704,7 +704,7 @@ $$\operatorname{vecdisc}(A)^2 \leq \operatorname{disc}(A)^2.$$
 $$\begin{align*}
             \min \quad &D \in \R\\
             \text{s.t.}\quad &(AXA^\top)_{i,i} \leq D \quad \forall 1 \leq i \leq d  \\
-            \text{and} \quad &X_{i,i} = 1 \quad \forall 1 \leq i \leq m \\
+            \text{且} \quad &X_{i,i} = 1 \quad \forall 1 \leq i \leq m \\
             &X\succeq 0 \in \R^{m \times m}.
     \end{align*}$$
 
@@ -810,7 +810,7 @@ $$S_{i,j} = (\langle v_i, g \rangle - \sqrt{\pi/2}\operatorname{sign}(v_i^T g))(
 $$\begin{align*}
         \max \quad & \sum_{i,j=1}^n A_{i,j} \langle u_i, u_j \rangle  \in \R\\
         \text{s.t.}\quad &\langle u_i, u_i \rangle =1 \quad \forall 1 \leq i \leq n  \\
-        \text{and} \quad &\sum_{i=1}^n u_{i} = 0 \\
+        \text{且} \quad &\sum_{i=1}^n u_{i} = 0 \\
         &u_i \in \R^n \quad \forall 1 \leq i \leq n.
 \end{align*}$$
 请对某个整数 $k$ 找出矩阵 $B_1,\ldots,B_k$ 与实数 $b_1,\ldots,b_k$，使该问题可写成

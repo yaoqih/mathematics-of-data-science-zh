@@ -1,7 +1,7 @@
 ---
 title: "低秩矩阵恢复"
 description: "核范数、下降锥、矩阵补全、量子态层析与相位恢复"
-status: 待校对
+status: 已完成
 ---
 
 # 低秩矩阵恢复 {#c:lowrank}
@@ -58,7 +58,7 @@ $$\begin{align}
 $$\begin{align}
 \label{eq:ranksvd}
 \begin{split}
-\text{minimize} \quad & \operatorname{rank}(X) \\
+\text{最小化} \quad & \operatorname{rank}(X) \\
 \text{满足} \quad & \|X - A\| \le \eps,
 \end{split}
 \end{align}$$
@@ -101,7 +101,7 @@ $$\begin{align}
 $$\begin{align}
 \label{eq:nuclearnormrelaxationnoise}
 \begin{split}
-\text{minimize} \quad &  \|X\|_*  \\
+\text{最小化} \quad &  \|X\|_*  \\
 \text{满足} \quad & \|\mathcal{A}(X) - y\| \leq \tau,
 \end{split}
 \end{align}$$
@@ -118,7 +118,7 @@ $$\begin{align}
 ::: definition
 []{#def:descentcone label="def:descentcone"} 正常凸函数[^3] $f:\mathbb C^{n_1\times n_2}\to\R$ 在 $X_0$ 处的下降锥 $\mathcal D(f,X_0)$，是所有使 $f$ 在 $X_0$ 附近不增方向的锥包：
 $$\begin{align*}
-    \mathcal{D}(f,X_0) :=\{Z\in \mathbb{C}^{n_1 \times n_2}: f(X_0 + \epsilon Z) \le f(X_0) \text{ for some } \epsilon > 0\}.
+    \mathcal{D}(f,X_0) :=\{Z\in \mathbb{C}^{n_1 \times n_2}: \text{存在 }\epsilon > 0\text{ 使 }f(X_0 + \epsilon Z) \le f(X_0)\}.
 \end{align*}$$
 :::
 
@@ -132,14 +132,14 @@ $$\begin{align*}
 2 $$\begin{align}
 \label{fmin_nonoise}
 \begin{split}
-\text{min.} \quad  & f \left(X\right) \\
-\text{s.t.} \quad & \mathcal{A} \left(X\right) = y.
+\text{最小化} \quad  & f \left(X\right) \\
+\text{满足} \quad & \mathcal{A} \left(X\right) = y.
 \end{split}
 \end{align}$$ $$\begin{align}
 \label{fmin_noise}
 \begin{split}
-\text{min.} \quad  & f \left(X\right) \\
-\text{s.t.} \quad & \|\mathcal{A} \left(X\right) - y\|_2\le \tau.
+\text{最小化} \quad  & f \left(X\right) \\
+\text{满足} \quad & \|\mathcal{A} \left(X\right) - y\|_2\le \tau.
 \end{split}
 \end{align}$$
 :::
@@ -199,7 +199,7 @@ $${\mathcal A}(X_0)_i=y_i=\langle A_i,X_0\rangle,qquad i=1,\dots,m,$$
 $S:=\{Z\in\mathcal D(\|\cdot\|_*,X_0):\|Z\|_F=1\}$，目标变为下界 $\inf_{Z\in S}\|\mathcal A(Z)\|$。重访 Gordon 定理 [\[GordonsTheorem\]](#GordonsTheorem){reference-type="ref" reference="GordonsTheorem"} 的证明，尤其式 [\[eq:5:usingGaussianconcentration_2\]](#eq:5:usingGaussianconcentration_2){reference-type="eqref" reference="eq:5:usingGaussianconcentration_2"}，得到尾界[^5]
 $$\begin{equation}
 \label{gordontail}
-\inf_{x\in S} \| {\mathcal A}(Z) \| \geq \sqrt{m-1} - \omega(S) - t, \qquad \text{for $t > 0$,}
+\inf_{x\in S} \| {\mathcal A}(Z) \| \geq \sqrt{m-1} - \omega(S) - t, \qquad \text{其中 $t > 0$，}
 \end{equation}$$
 其概率至少为 $1-e^{-t^2/2}$。这里使用了式 [\[eq:gordon2\]](#eq:gordon2){reference-type="eqref" reference="eq:gordon2"} 中 $a_d\geq\sqrt{d-1}$，并令 $d=m$ 以适配本章“$m$ 表示测量数”的记号。若 $w(S)\leq\sqrt{m-1}$，命题 [\[prop:cone\]](#prop:cone){reference-type="ref" reference="prop:cone"} 就给出概率恢复保证。
 
@@ -266,12 +266,12 @@ $$m\gtrsim r(n_1+n_2),$$
 $$\Tn_X=\{UA^T+BV^T:A\in\mathbb R^{n_1\times r},\ B\in\mathbb R^{n_2\times r}\}.$$
 
 ::: lemma
-[]{#le:candesrechtlowrank label="le:candesrechtlowrank"} 设 $X_0\in\R^{n_1\times n_2}$ 满足 $\mathcal A(X_0)=y\in\R^m$，并假设：
+[]{#le:candesrechtlowrank label="le:candesrechtlowrank"} 设 $X_0\in\R^{n_1\times n_2}$ 满足 $\mathcal A(X_0)=y\in\R^m$，并假设 [@candes2009exact]：
 
 1.  存在 $\lambda\in\R^m$，使 $Y=\mathcal A^*\lambda$ 满足
     $$\begin{equation}
     \label{eq:nucleardualcond}
-     \mathcal{P}_{\Tn_{X_0}}  Y = UV^* \quad \text{and} \quad \Vert \mathcal{P}_{\Tn^{\perp}_{X_0}} Y  \Vert < 1.
+     \mathcal{P}_{\Tn_{X_0}}  Y = UV^* \quad \text{且} \quad \Vert \mathcal{P}_{\Tn^{\perp}_{X_0}} Y  \Vert < 1.
     \end{equation}$$
 
 2.  线性算子 $\mathcal A$ 限制在切空间 $\Tn_{X_0}$ 上时为单射。
@@ -712,7 +712,7 @@ y = \mathcal{A}(x x^*).
 $$\begin{equation}
 \label{eq:phaserank}
   \begin{array}{ll}
-    \text{minimize}   & \quad \rank(X)\\
+    \text{最小化}   & \quad \rank(X)\\
     \text{满足} & \quad  {\mathcal A}(X) = y \\
 & \quad X \succeq 0.
 \end{array}
@@ -723,7 +723,7 @@ $$\begin{equation}
 $$\begin{equation}
 \label{eq:tracemin}
  \begin{array}{ll}
-    \text{minimize}   & \quad \trace(X)\\
+    \text{最小化}   & \quad \trace(X)\\
     \text{满足} & \quad  {\mathcal A}(X) = y\\
 & \quad X \succeq 0.
 \end{array}
@@ -1009,7 +1009,7 @@ $$\text{满足} \quad \begin{pmatrix} W_1 & X \\ X^\top & W_2 \end{pmatrix} \suc
 ::: myexercise
 （Schoenberg 定理）给定 $n$ 个点 $x_1,\dots,x_n\in\R^d$，定义 **Euclidean 距离矩阵** $D=[d_{ij}]\in\mathbb R^{n\times n}$：
 $$d_{ij} := \|x_i - x_j\|^2
-\qquad \text{for $i,j = 1,\dots,n$}.$$
+\qquad i,j=1,\dots,n.$$
 注意，$D$ 中记录的是距离的平方。\
 (a) 证明：$D\in\mathbb R^{n\times n}$ 是 Euclidean 距离矩阵，当且仅当 $D=D^T$ 且 $HDH^\ast\preceq0$，其中 $H=I_n-\frac1n\mathbf1\mathbf1^T$ 为**中心化矩阵**，$\mathbf1$ 为全一向量。\
 (b) 证明 $\rank(HDH^\ast)\le d$。（该条件说明，当 $d\ll n$ 时，$D$ 是低秩矩阵。）

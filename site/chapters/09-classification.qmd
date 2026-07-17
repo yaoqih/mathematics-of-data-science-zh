@@ -1,7 +1,7 @@
 ---
 title: "分类"
 description: "线性分类、逻辑回归、支持向量机与泛化界"
-status: 待校对
+status: 已完成
 ---
 
 <!-- 原稿章节标签：c:classification -->
@@ -506,7 +506,7 @@ $$\hat{\Rade}_S(\mathcal{F}_B)=\mathbb E_\sigma\left[\sup_{\|w\|\leq B}\frac1n\s
 $$\hat\Rade_S(\mathcal F_B)\leq\frac Bn\sqrt{nR^2}=\frac{BR}{\sqrt n}.$$ ◻
 :::
 
-下面的 Talagrand 收缩引理，是在 SVM 分析中从线性预测量过渡到合页损失、逻辑损失等 Lipschitz 损失的关键工具。它把复合函数类“损失 $\circ$ 假设”的复杂度重新控制在原假设类的复杂度之下。
+下面的 Talagrand 收缩引理 [@LT91]，是在 SVM 分析中从线性预测量过渡到合页损失、逻辑损失等 Lipschitz 损失的关键工具。它把复合函数类“损失 $\circ$ 假设”的复杂度重新控制在原假设类的复杂度之下。
 
 ::: theorem
 []{#th:talagrandcontraction label="th:talagrandcontraction"} 设 $\mathcal F$ 是从 $\mathcal X$ 到 $\mathbb R$ 的函数类，且每个 $\phi_i:\mathbb R\to\mathbb R$ 都是 $L$-Lipschitz 的。则对任意样本 $S=\{x_1,\dots,x_n\}$，

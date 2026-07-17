@@ -1,7 +1,7 @@
 ---
 title: "压缩感知与稀疏性"
 description: "稀疏恢复、零空间性质、限制等距性质与对偶证书"
-status: 待校对
+status: 已完成
 ---
 
 # 压缩感知与稀疏性 {#c:cs}
@@ -168,10 +168,10 @@ $$(1-\delta)\|x\|^2 \leq \left\| Ax\right\|^2 \leq (1+\delta)\|x\|^2,$$
 若 $A$ 对稀疏度 $2s$ 满足 RIP，它就近似保持任意两个 $s$ 稀疏向量之间的距离，“限制等距”之名由此而来。这个性质还可用来证明 $A$ 满足零空间性质。
 
 ::: theorem
-设 $y=Ax$，其中 $x$ 为 $s$ 稀疏向量。若 $A$ 的 RIP 常数满足 $\delta_{2s}<1/3$，则 $\ell_1$ 最小化问题
+设 $y=Ax$，其中 $x$ 为 $s$ 稀疏向量。若 $A$ 的 RIP 常数满足 $\delta_{2s}<1/3$，则 $\ell_1$ 最小化问题 [@Candes-RIP]
 $$\begin{equation}
 \label{l1min}
-\min_z \|z\|_1, \qquad \text{subject to } Az = y = Ax
+\min_z \|z\|_1, \qquad \text{满足 } Az = y = Ax
 \end{equation}$$
 的解 $x_*$ 精确等于 $x$，即 $x_*=x$。[]{#thm:maincs label="thm:maincs"}
 :::
@@ -179,7 +179,7 @@ $$\begin{equation}
 证明该定理需要下面的引理。
 
 ::: lemma
-[]{#lemma:np label="lemma:np"} 若 $x,x'\in\R^p$ 的支撑集分别包含于互不相交的 $S,S'\subseteq[p]$，且 $|S|\leq s$、$|S'|\leq s'$，则
+[]{#lemma:np label="lemma:np"} 若 $x,x'\in\R^p$ 的支撑集分别包含于互不相交的 $S,S'\subseteq[p]$，且 $|S|\leq s$、$|S'|\leq s'$，则 [@Candes-RIP]
 $$| \langle Ax, Ax^\prime \rangle | \leq \delta_{s+s^{\prime}} \|x\| \|x^\prime\|.$$
 :::
 
@@ -192,9 +192,9 @@ $$| \langle Ax, Ax^\prime \rangle | \leq \delta_{s+s^{\prime}} \|x\| \|x^\prime\
 $$\begin{align}
 \|h_{S_0}\|^2 & \leq \frac{1}{1-\delta_s} \|Ah_{S_0}\|^2 \\
 & = \frac{1}{1-\delta_s} \sum_{j \geq 1} \langle Ah_{S_0}, A(-h_{S_j}) \rangle 
-& \text{(because $h_{S_0} = \sum_{j \geq 1} (-h_{S_j})$)} \\
+& \text{（因为 $h_{S_0} = \sum_{j \geq 1} (-h_{S_j})$）} \\
 & \le  \frac{1}{1-\delta_s} \sum_{j \geq 1} \delta_{2s} \|h_{S_0}\| \|h_{S_j}\|
-& \text{(by Lemma~\ref{lemma:np})} \\
+& \text{（由引理~\ref{lemma:np}）} \\
 & \leq \frac{\delta_{2s}}{1 - \delta_s} \|h_{S_0}\| \sum_{j \geq 1} \|h_{S_j}\| \\
 \|h_{S_0}\| & \leq \frac{\delta_{2s}}{1 - \delta_s} \sum_{j \geq 1} \|h_{S_j}\| .
 \label{eq:pf1}
@@ -215,7 +215,7 @@ $$\begin{equation}
 \end{equation}$$
 又因为假设 $\delta_{2s}<1/3$，
 $$\begin{equation}
-\frac{\delta_{2s}}{1-\delta_s} < \frac{\delta_{2s}}{1-\delta_{2s}} < \frac{1}{2} \quad \text{for $\delta_{2s} < \frac{1}{3}$}.
+\frac{\delta_{2s}}{1-\delta_s} < \frac{\delta_{2s}}{1-\delta_{2s}} < \frac{1}{2} \quad \text{当 $\delta_{2s} < \frac{1}{3}$}.
 \label{eq:delta}
 \end{equation}$$
 结合式 [\[eq:lastpf\]](#eq:lastpf){reference-type="ref" reference="eq:lastpf"}、[\[eq:hs0\]](#eq:hs0){reference-type="ref" reference="eq:hs0"} 与 [\[eq:delta\]](#eq:delta){reference-type="ref" reference="eq:delta"}，得到
@@ -383,7 +383,7 @@ Sx = \sum_{i=1}^p \langle x,a_i \rangle a_i.
 $$\begin{equation}
 \label{defequi}
 |\langle a_i,a_j \rangle| = c \quad 
-\text{for all $i,j$ with $i \neq j,$}
+\text{对所有满足 $i\neq j$ 的 $i,j$，}
 \end{equation}$$
 其中 $c\geq0$ 为常数，则称为*等角框架*。任何正交归一基显然都是等角的。
 
@@ -401,7 +401,7 @@ $$\begin{equation}
 ::: proof
 *证明.* 直接计算得到
 $$\begin{equation*}
-\trace (S) = \|S^{\frac{1}{2}}\|_F^2 =\sum_{k=1}^{p} \| a_k\|^2 = p, \,\, \text{and}\,
+\trace (S) = \|S^{\frac{1}{2}}\|_F^2 =\sum_{k=1}^{p} \| a_k\|^2 = p, \,\, \text{且}\,
 \trace (S^2) = \|S\|_F^2 =  \sum_{k,l=1}^{p}  |\langle a_k, a_l \rangle|^2,
 \label{trace}
 \end{equation*}$$
@@ -546,7 +546,7 @@ $$\begin{equation*}
 
 (b) 若 $\Phi$ 满足 $\rho\in(0,1)$ 的 $(s,\rho)$-稳定零空间性质，证明优化问题
 $$\begin{equation*}
-                \hat{x}:= \mathrm{argmin}\, \|z\|_1 \quad \text{subject to} \quad \Phi z=\Phi x
+                \hat{x}:= \mathrm{argmin}\, \|z\|_1 \quad \text{满足} \quad \Phi z=\Phi x
 \end{equation*}$$
 的解满足
 $$\begin{equation*}

@@ -1,7 +1,7 @@
 ---
 title: "深度学习的数学导论"
 description: "神经网络、通用逼近、训练方法与深层架构"
-status: 待校对
+status: 已完成
 ---
 
 <!-- 原稿章节标签：c:deeplearning -->
@@ -76,7 +76,7 @@ $$a^{(\ell)}=\sigma\left(W^{(\ell)}a^{(\ell-1)}+b^{(\ell)}\right),$$
 \label{neuralnet}
 \begin{split}
     a^{(1)} & = x \in \R^{d_1}, \\
-    a^{(\ell)} & = \sigma_k \Big( W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}\Big) \in \R^{d_\ell}, \qquad \text{for $\ell = 2,\dots, L$,}
+    a^{(\ell)} & = \sigma_k \Big( W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}\Big) \in \R^{d_\ell}, \qquad \ell = 2,\dots,L,
 \end{split}
 \end{equation}$$ 其中激活函数 $\sigma_\ell$ 和节点数 $d_\ell$ 都可以逐层变化。
 
@@ -177,9 +177,9 @@ $$\int_{I_n}\sigma(\lambda(y^Tx+\theta))\,d\mu(x)=0.$$
 当 $\lambda\to+\infty$ 时，被积函数逐点收敛到阶跃函数
 $$\psi(x)=
 \begin{cases}
-1 & \text{if } \langle y, x\rangle + \theta > 0, \\
-0 & \text{if } \langle y, x\rangle + \theta < 0, \\
-\sigma(\theta) & \text{if } \langle y, x \rangle + \theta = 0
+1 & \text{当 } \langle y, x\rangle + \theta > 0, \\
+0 & \text{当 } \langle y, x\rangle + \theta < 0, \\
+\sigma(\theta) & \text{当 } \langle y, x \rangle + \theta = 0
 \end{cases}$$
 因为 $\sigma$ 在正负无穷处的极限分别为 1 和 0。连续 sigmoid 型函数在 $\mathbb R$ 上有界，所以这一收敛也是一致有界的。
 
@@ -273,8 +273,8 @@ $$\text{KL}(P\parallel Q)=\sum_{i=1}^nP(i)\log\frac{P(i)}{Q(i)}.$$
 Huber 损失试图兼具均方误差与平均绝对误差的优点。对预测 $\hat y_i$ 与目标 $y_i$，定义
 $$\cost(y,\hat y)=\frac1n\sum_{i=1}^nC_\delta(y_i-\hat y_i),$$
 其中 $$C_{\delta}(r) = \begin{cases}
-\frac{1}{2} r^2 & \text{for } |r| \leq \delta, \\
-\delta (|r| - \frac{1}{2} \delta) & \text{for } |r| > \delta.
+\frac{1}{2} r^2 & \text{当 } |r| \leq \delta, \\
+\delta (|r| - \frac{1}{2} \delta) & \text{当 } |r| > \delta.
 \end{cases}$$ Huber 损失常用于含离群点的回归任务，对离群点的敏感程度低于均方误差。
 
 ### 随机梯度下降 {#ss:SGDsubsection}

@@ -1,7 +1,7 @@
 ---
 title: "线性回归与正则化"
 description: "最小二乘、偏差方差与岭回归"
-status: 待校对
+status: 已完成
 ---
 
 California Mavericks 的清晨，涌浪预报显示：浪高 10 米、周期 18 秒。一场巨型风暴把能量送过数千公里的 Pacific Ocean。对大浪冲浪者来说，这是令人兴奋的条件，也意味着失误后被巨浪吞没的巨大危险。
