@@ -1,0 +1,18 @@
+---
+title: "奇异值分解与主成分分析"
+description: "SVD、PCA 与高维谱现象"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `svdpca.tex`，尚待翻译。
+:::
+
+## 奇异值分解
+
+## 主成分分析与降维
+
+## 高维 PCA 与 Marčenko–Pastur 定律
+
+## 习题 {.unnumbered}
+

@@ -1,0 +1,34 @@
+---
+title: "数据科学的数学基础"
+subtitle: "从高维几何到低秩恢复的数学路线"
+description: "Mathematics of Data Science 中文翻译工程"
+page-layout: full
+toc: false
+title-block-banner: assets/figures/bookcover.png
+---
+
+::: {.home-intro}
+这是一部面向数据科学的现代数学教材，系统串联高维概率、线性代数、图方法、优化、统计学习与结构化恢复。本项目按原书章节组织中文翻译，并保留公式、定理和文献引用的可追溯性。
+
+[开始阅读](chapters/01-introduction.qmd){.btn .btn-primary} [查看进度](status.qmd){.btn .btn-outline-secondary}
+:::
+
+::: {.callout-warning title="版权状态"}
+当前原稿未附带公开许可证。本站处于工程与翻译准备阶段，在获得作者或版权方明确授权前不应公开部署。
+:::
+
+## 全书结构
+
+::: {.chapter-map}
+### 基础与高维直觉
+
+导论、高维空间中的困难与机遇、奇异值分解和主成分分析。
+
+### 模型与算法
+
+线性回归、图与聚类、扩散映射、随机投影、优化、分类与深度学习。
+
+### 概率与结构
+
+图拉普拉斯极限、社群检测、高斯分析、矩阵集中、压缩感知与低秩恢复。
+:::

@@ -1,0 +1,16 @@
+---
+title: "社群检测与凸松弛的力量"
+description: "最大割、提升、近似算法与社群检测"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `communitydetection.tex`，尚待翻译。
+:::
+
+## 最大割、提升与近似算法
+
+## 社群检测
+
+## 习题 {.unnumbered}
+

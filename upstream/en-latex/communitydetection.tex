@@ -1,0 +1,1046 @@
+\chapter{Community \kern-1.2pt Detection and the \kern-1.5pt   Power \kern-1.2pt of Convex \kern-1.2pt Relaxation}
+\label{c:community}
+
+This chapter presents the idea of a convex relaxation, illustrated via problems on graphs. We start with the introduction of the Goemans-Williamson semidefinite relaxation for the Max-Cut problem, and move on to the problem of community detection in the Stochastic Block Model.
+
+\section{Max-Cut, lifting, and approximation algorithms}
+\label{c:maxcut}\label{maxcutapprox}
+
+
+
+Many data analysis tasks include in them a step consisting of solving a computational problem, oftentimes in the form of finding a hidden parameter that best explains the data, or model specifications that provide best-fits. Many such problems, including examples in previous chapters, are computationally intractable. In complexity theory this is often captured by $NP$-hardness. Unless the widely believed $P\neq NP$ conjecture is false, there is no polynomial algorithm that can solve all instances of an NP-hard problem. Thus, when faced with an NP-hard problem (such as the \emph{Max-Cut} problem discussed below) one has three natural options: to use an exponential type algorithm that solves exactly the problem in all instances, to design polynomial time algorithms that only work for some of the instances (hopefully relevant ones), or to design polynomial algorithms that, in all instances, produce guaranteed approximate solutions. 
+
+This section is about the third option, another example of this approach is the earlier discussion on Spectral Clustering and Cheeger's inequality. The second option, of designing algorithms that work in many, rather than all, instances is discussed later in this chapter, notably these goals are often achieved by the same algorithms.
+
+
+
+The \emph{Max-Cut} problem is defined as follows: Given a graph $G=(V,E,W)$ with non-negative weights $w_{ij}$ on the edges, find a set $S\subset V$ for which $\text{cut}(S)$ is maximal.\footnote{The problems of maximizing and minimizing the cut are related if one considers the complement graph. As we saw in Chapter~\ref{c:graphs}, if we want to cluster the nodes of a graph (by minimizing the cut) we have to add a mechanism that balances the size of clusters. The Max-Cut problem does not suffer from this issue, as the partitions that maximize the cut tend to be well balanced. In fact, this makes the Max-Cut problem conceptionally closer to clustering (and community detection) than the Min-Cut problem, making it an excellent theoretical testbed for algorithms and analysis. Furthermore, it also enjoys several direct applications.}
+Goemans and Williamson~\cite{MXGoemans_DPWilliamson_1995} introduced an approximation algorithm that runs in polynomial time, has a randomized component in it, and is able to obtain a cut whose expected value is guaranteed to be no smaller than a particular constant $\alpha_{GW}$ times the optimum cut. The constant $\alpha_{GW}$ is referred to as the approximation ratio.
+
+Let $V=\{1,\ldots,n\}$. One can restate \texttt{Max-Cut} as
+\begin{equation}\label{MAXCUTproblem}
+\begin{array}{l}
+\max \quad  \frac12 \sum_{i<j}w_{ij}(1-y_iy_j) \\
+s.t. \quad \quad  |y_i|=1
+\end{array}
+\end{equation}
+The $y_i$'s are binary variables that indicate set membership, i.e., $y_i=1$ if $i\in S$ and $y_i=-1$ otherwise.
+
+
+Consider the following relaxation of this problem:
+\begin{equation}\label{MAXCUTproblem_Relaxed}
+\begin{array}{l}
+\max \quad  \frac12 \sum_{i<j}w_{ij}(1-u_i^Tu_j) \\
+s.t. \quad \quad  u_i\in \mathbb{R}^n, \|u_i\|=1.
+\end{array}
+\end{equation}
+This is a relaxation because if we restrict $u_i$ to be a multiple of $e_1$, the first element of the canonical basis, then (\ref{MAXCUTproblem_Relaxed}) is equivalent to \eqref{MAXCUTproblem}. For this to be a useful approach, the following two properties should hold:
+ \begin{enumerate}[{(a)}]
+
+ \item \label{it-1} Problem \eqref{MAXCUTproblem_Relaxed} is easy to solve.
+ \item \label{it-2} The solution of \eqref{MAXCUTproblem_Relaxed} is, in some way, related to the solution of \eqref{MAXCUTproblem}.
+ \end{enumerate}
+ 
+ \begin{definition}\label{def_maxcut_rmaxcut}
+ Given a graph $G$, we define $\mathrm{MaxCut}(G)$ as the optimal value of~\eqref{MAXCUTproblem} and $\mathcal{R}\mathrm{MaxCut}(G)$ as the optimal value of~\eqref{MAXCUTproblem_Relaxed}.
+ \end{definition}
+ 
+We start with property (\ref{it-1}). Set $X$ to be the Gram matrix of $u_1,\ldots,u_n$, that is, $X=U^TU$ where the $i$'th column of $U$ is $u_i$. We can rewrite the objective function of the relaxed problem as $$\frac12\sum_{i<j}w_{ij}(1-X_{ij})$$ One can exploit the fact that $X$ having a decomposition of the form $X=Y^TY$ is equivalent to being positive semidefinite, denoted $X\succeq 0$. The set of PSD matrices is a convex set. Also, the constraint $\|u_i\|=1$ can be expressed as $X_{ii}=1$. This means that the relaxed problem is equivalent to the following semidefinite program (SDP):
+
+\begin{equation}\label{MAXCUTproblem_SDP}
+\begin{array}{l}
+\max \quad  \frac12 \sum_{i<j}w_{ij}(1-X_{ij}) \\
+s.t. \quad \quad X\succeq 0 \text{ and } X_{ii}=1,\; i=1,\ldots,n.
+\end{array}
+\end{equation}
+This SDP can be solved (up to $\epsilon$ accuracy) in time polynomial on the input size and $\log(\epsilon^{-1})$~\cite{LVanderberghe_SBoyd_1996} (It is a convex optimization problem, which were discussed in Chapter~\ref{c:optimization}; note however that in this chapter optimization problems are more often formulated as maximization problems).
+
+There is an alternative way of viewing \eqref{MAXCUTproblem_SDP} as a relaxation of \eqref{MAXCUTproblem}. By taking $X = yy^T$ one can formulate a problem equivalent to \eqref{MAXCUTproblem}
+
+\begin{equation}\label{MAXCUTproblem_lifted}
+\begin{array}{l}
+\max \quad  \frac12 \sum_{i<j}w_{ij}(1-X_{ij}) \\
+s.t. \quad \quad X\succeq 0 \text{ , } X_{ii}=1,\; i=1,\ldots,n, \text{ and } \rank(X) = 1.
+\end{array}
+\end{equation}
+The SDP \eqref{MAXCUTproblem_SDP} can be regarded as a relaxation of \eqref{MAXCUTproblem_lifted} obtained by removing the non-convex rank constraint. In fact, this is how we will later formulate a similar relaxation for the minimum bisection problem, in Section~\ref{s:community}.
+
+We now turn to property (\ref{it-2}), and consider the problem of forming a solution to \eqref{MAXCUTproblem} from a solution to \eqref{MAXCUTproblem_SDP}. From the solution $\{u_i\}_{i=1,\ldots,n}$ of the relaxed problem \eqref{MAXCUTproblem_SDP}, we produce a cut subset $S'$ by randomly picking a vector $r \in \mathbb{R}^n$ from the uniform distribution on the unit sphere and setting $$S'=\{i|r^Tu_i\geq0\}$$ In other words, we separate the vectors $u_1,\ldots,u_n$ by a random hyperplane (perpendicular to $r$). We will show that the cut given by the set $S'$ is comparable to the optimal one.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/Chapter8-fig_maxcut_picture1.png}
+\caption{Illustration of the relationship between the angle between vectors and their inner product, $\theta = \arccos(u_i^Tu_j)$}
+\label{figure:8:MaxCut}
+\end{center}
+\end{figure}
+
+
+Let $W$ be the value of the cut produced by the procedure described above. Note that $W$ is a random variable, whose expectation is easily seen (see Figure~\ref{figure:8:MaxCut}) to be given by
+
+\begin{eqnarray*}
+\mathbb{E}[W] & = & \sum_{i<j}w_{ij} \Pr\left\{\text{sign}(r^Tu_i)\neq \text{sign}(r^Tu_j)\right\} \\
+     & = & \sum_{i<j}w_{ij}\frac1\pi \arccos(u_i^Tu_j). \\
+\end{eqnarray*}
+If we define $\alpha_{GW}$ as
+\[
+ \alpha_{GW} = \min_{-1\leq x \leq 1} \frac{\frac1\pi \arccos(x)}{\frac12(1-x)},
+\]
+it can be shown that $\alpha_{GW}>0.87$ (see, for example~\cite{MXGoemans_DPWilliamson_1995}).
+
+By linearity of expectation
+\begin{equation}
+\mathbb{E}[W] = \sum_{i<j}w_{ij}\frac1\pi \arccos(u_i^Tu_j) \geq \alpha_{GW} \frac12 \sum_{i<j}w_{ij}(1-u_i^Tu_j).
+\end{equation}
+
+Let $\mathrm{MaxCut}(G)$ be the maximum cut of $G$, meaning the maximum of the original problem \eqref{MAXCUTproblem}. Naturally, the optimal value of \eqref{MAXCUTproblem_Relaxed} is larger or equal than $\mathrm{MaxCut}(G)$. Hence, an algorithm that solves \eqref{MAXCUTproblem_Relaxed} and uses the random rounding procedure described above produces a cut $W$ satisfying
+\begin{equation}
+\mathrm{MaxCut}(G)\geq \mathbb{E}[W] \geq \alpha_{GW} \frac12 \sum_{i<j}w_{ij}(1-u_i^Tu_j) \geq \alpha_{GW} \mathrm{MaxCut}(G),
+\end{equation}
+thus having an approximation ratio (in expectation) of $\alpha_{GW}$. Note that one can run the randomized rounding procedure several times and select the best cut.\footnote{It is worth noting that one is only guaranteed to solve \eqref{MAXCUTproblem_Relaxed} up to an approximation of $\eps$ from its optimum value. However, since this $\eps$ can be made arbitrarily small, one can get the approximation ratio arbitrarily close to $\alpha_{GW}$.}
+We thus have
+\[
+\mathrm{MaxCut}(G) \geq  \mathbb{E}[W] \geq  \alpha_{GW}\mathcal{R}\mathrm{MaxCut}(G)\geq \alpha_{GW} \mathrm{MaxCut}(G)
+\]
+
+\subsection*{Can $\alpha_{GW}$ be improved?}
+
+A natural question is to ask whether there exists a polynomial time algorithm that has an approximation ratio better than $\alpha_{GW}$. 
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.34\textwidth]{figures/Chapter8-ugc_problem.png}
+\quad \quad
+\includegraphics[width=0.34\textwidth]{figures/Chapter8-ugc_solution.png}
+\caption{Illustration of the Unique Games Problem}
+\label{figure:8:UGP}
+\end{center}
+\end{figure}
+
+The unique games problem (as depicted in Figure~\ref{figure:8:UGP}) is the following: Given a graph and a set of $k$ colors, and, for each edge, a matching between the colors, the goal in the unique games problem is to color the vertices as to agree with as high of a fraction of the edge matchings as possible. For example, in Figure~\ref{figure:8:UGP} the coloring agrees with $\frac34$ of the edge constraints, and it is easy to see that one cannot do better.
+
+The Unique Games Conjecture of Khot~\cite{SKhot_2002}, has played a major role in hardness of approximation results.
+
+\begin{conjecture}
+For any $\epsilon>0$, the problem of distinguishing whether an instance of the Unique Games Problem is such that it is possible to agree with a $\geq 1-\epsilon$ fraction of the constraints or it is not possible to even agree with a $\epsilon$ fraction of them, is NP-hard.
+\end{conjecture}
+
+There is a sub-exponential time algorithm capable of distinguishing such instances of the unique games problem~\cite{Arora_Barak_Steurer_2010}, however no polynomial time algorithm has been found so far. At the moment one of the strongest candidates to break the Unique Games Conjecture is a relaxation based on the Sum-of-squares hierarchy that we will discuss below.
+
+
+Remarkably, approximating~\texttt{Max-Cut} with an approximation ratio better than $\alpha_{GW}$ is as hard as refuting the Unique Games Conjecture (UG-hard)~\cite{Khot_Kindler_Mossel_ODonnel_2005}. More generality, if the Unique Games Conjecture is true, the semidefinite programming approach described above produces optimal approximation ratios for a large class of problems~\cite{Raghavendra_2008_optimalitySDP_UG}.
+
+Not depending on the Unique Games Conjecture, there is a NP-hardness of approximation of $\frac{16}{17}$ for \texttt{Max-Cut}~\cite{Hastad_inapproximability}.
+
+\begin{remark}
+Note that a simple greedy method that assigns membership to each vertex as to maximize the number of edges cut involving vertices already assigned achieves an approximation ratio of $\frac12$ (even of $\frac12$ of the total number of edges, not just of the optimal cut).
+\end{remark}
+
+
+
+\subsection{A Sums-of-Squares interpretation}
+
+We now give a different interpretation to the approximation ratio obtained above. Let us first slightly reformulate the problem (recall that $w_{ii}=0$).
+
+
+Recall from Proposition~\ref{prop:cut_Laplacian} that a cut can be rewritten as a quadratic form involving the graph Laplacian. We can rewrite~\eqref{MAXCUTproblem} as
+\begin{equation}\label{MAXCUTproblem_LG}
+\begin{array}{cl}
+\max &\frac14 y^T L_G y \\
+ & y_{i}=\pm1,\; i=1,\ldots,n.
+\end{array}
+\end{equation}
+
+Similarly,~\eqref{MAXCUTproblem_SDP} can be written (by taking $X$ as the PSD matrix variable that is a surrogate for $X=yy^T$) as
+
+\begin{equation}\label{MAXCUTproblem_SDP_LG} 
+\begin{array}{cl}
+\max &\frac14 \tr\left( L_G X\right) \\
+s.t. & X\succeq 0 \\
+ & X_{ii}=1,\; i=1,\ldots,n.
+\end{array}
+\end{equation}
+
+In Section~\ref{s:community} we will derive the the dual program to~\eqref{MAXCUTproblem_SDP_LG} in the context of recovery in the Stochastic Block Model. Here we will simply state it, and show weak duality as it will be important for the argument that follows.
+
+\begin{equation}\label{MAXCUTproblem_SDP_LG_Dual} 
+\begin{array}{cl}
+\min & \tr\left( D \right)\\
+s.t. & D \text{ is a diagonal matrix}\\
+ & D - \frac14 L_G \succeq 0.
+\end{array}
+\end{equation}
+
+Indeed, if $X$ is a feasible solution to~\eqref{MAXCUTproblem_SDP_LG} and $D$ a feasible solution to~\eqref{MAXCUTproblem_SDP_LG_Dual} then, since $X$ and $D - \frac14 L_G$ are both positive semidefinite $\tr\left[ X\left( D - \frac14 L_G \right)  \right] \geq 0$ which gives
+\[
+0 \leq \tr\left[ X\left( D - \frac14 L_G \right)  \right] = \tr(XD) - \frac14\tr\left( L_G X \right) = \tr(D) - \frac14\tr\left( L_G X \right),
+\]
+since $D$ is diagonal and $X_{ii}=1$. This shows weak duality, the fact that the value of~\eqref{MAXCUTproblem_SDP_LG_Dual} is larger than the one of~\eqref{MAXCUTproblem_SDP_LG}.\footnote{Note how in this chapter optimization problems are formulated as maximization problems, while in Chapter~\ref{c:optimization} they are formulated as minimization problems}
+
+If the Slater condition~\eqref{Slaterscondition} is satisfied then strong duality holds, i.e., the optimal values of both programs coincide. In this case, the Slater condition asks whether there is a matrix strictly positive definite that is feasible for~\eqref{MAXCUTproblem_SDP_LG}, and the identity is such a matrix. This means that there exists $D^{\natural}$ feasible for~\eqref{MAXCUTproblem_SDP_LG_Dual} such that
+\[
+\tr(D^{\natural}) = \mathcal{R}\mathrm{MaxCut}.
+\]
+
+Since, for any $y\in\RR^n$, we have $y^TD^\natural y=\sum_{i=1}^n D^\natural_{ii}y_i$, we can write the following equality that holds for any $y\in\RR^n$:
+\begin{equation}\label{eq:8:SOScertificateMaxCut}
+\frac14 y^TL_Gy =  \mathcal{R}\mathrm{MaxCut} - y^T\left( D^{\natural} - \frac14L_G\right)y + \sum_{i=1}^n D_{ii}^{\natural}\left( y_i^2 - 1 \right).
+\end{equation}
+
+Since $D^{\natural} - \frac14L_G\succeq 0$, there exists $V$ such that $D^{\natural} - \frac14L_G = VV^T$ with the columns of $V$ denoted by $v_1,\dots,v_n$, meaning that $y^T\left( D^{\natural} - \frac14L_G\right)^Ty = \left\| V^T y\right\|^2 = \sum_{k=1}^n (v_k^Ty)^2$. Hence, for any $y\in\RR^n$,
+\begin{equation}\label{eq:8.5:SOScertificateMaxCut}
+\mathcal{R}\mathrm{MaxCut} - \frac14 y^TL_Gy   = \sum_{k=1}^n (v_k^Ty)^2+ \sum_{i=1}^n D_{ii}^{\natural}\left( y_i^2 - 1 \right).
+\end{equation}
+
+There is a particularly fruitful interpretation of the equality~\eqref{eq:8.5:SOScertificateMaxCut}: It provides a certificate that no cut of $G$ is larger than $\mathcal{R}\mathrm{MaxCut}$. Indeed, if $y\in\{\pm1\}^n$ then $y_i^2=1$ and so $\sum_{i=1}^n D_{ii}^{\natural}\left( y_i^2 - 1 \right)=0$ while $\sum_{k=1}^n (v_k^Ty)^2\geq 0$ since it is a sum of squares (of degree 2). Furthermore, while it certifies a bound on $2^n$ many possible assignments $y\in\{\pm1\}^n$,~\eqref{eq:8.5:SOScertificateMaxCut} can be verified efficiently: because it needs to hold for all $y\in\RR^n$, it amounts to checking that the coefficients of the quadratic polynomials on the left- and right-hand sides match.
+
+
+This is known as a sum-of-squares certificate~\cite{Barak_Steurer_surveyICM,Barak_SOS_LectureNotes,Parrilo_thesis_SOS,Lassere_01_SOS,Shor_87_SOS,Nesterov_00_SOS}; by following this argument in reverse one can show that $\mathcal{R}\mathrm{MaxCut}$ is precisely the smallest real number for which a certificate of the type of~\eqref{eq:8.5:SOScertificateMaxCut} exists (while $\mathrm{MaxCut}$ is the smallest real number for which $\mathrm{MaxCut} - \frac14 y^TL_Gy$ is non-negative in the hypercube. This gap shrinks if one allows sum-of-square certificates of higher degree\footnote{This is related to Hilbert's 17th problem~\cite{Schmudgen_Hilbert17} and Stengle's Positivstellensatz~\cite{Stengle_Positivstellensatz} }).
+
+The remarkable fact is that sum-of-squares certificates of at most a specified degree can be found using Semidefinite programming~\cite{Parrilo_thesis_SOS,Lassere_01_SOS} (in fact, the SDP~\eqref{MAXCUTproblem_SDP_LG_Dual} is finding the smallest real number $\Lambda$ for which a certificate such as~\eqref{eq:8.5:SOScertificateMaxCut} (of degree 2) exists.  
+On the other hand, the primal is in some sense constraining the degree $2$ moments of $y$, $X_{ij}=y_iy_j$. Many natural questions remain open towards a precise understanding of the power of SDPs corresponding to higher degree sum-of-squares certificates. There are several very nice lecture notes, surveys, and courses on Sum-of-Squares, see for example~\cite{Barak_SOS_LectureNotes,Fleming-etal-proofsandalgorithms,Steurer-etal-ICM2018}\footnote{There are also very nice courses and notes on the topic, such as courses by Boaz Barak and David Steurer (\url{https://www.sumofsquares.org/public/index.html}), by Tselil Schramm (\url{https://tselilschramm.org/sos-paradigm/winter21.html}), by Sam Hopkins (\url{http://www.samuelbhopkins.com/teaching/sos-fall-24/sos-fall-24.html}), Tim Kunisky (\url{http://www.kunisky.com/teaching/2022spring-sos/}), and Aaron Potechin (\url{https://canvas.uchicago.edu/courses/17604}).}
+
+\begin{remark}[triangular inequalities and Sum of squares level 4]\label{remark:9:SOS4MaxCut}
+A natural follow-up question is whether the relaxation of degree $4$ is actually strictly tighter than the one of degree $2$ for Max-Cut (in the sense of forcing extra constraints). What follows is an interesting set of inequalities that degree $4$ enforces and that degree $2$ does  not, known as triangular inequalities. This example helps illustrate the differences between Sum-of-Squares certificates of different degree.
+
+Since $y_i\in \{\pm 1\}$ we naturally have that, for all $i,j,k$
+\[
+y_iy_j + y_jy_k + y_ky_i \geq -1,
+\]
+this would mean that, for $X_{ij} = y_iy_j$ we would have,
+\[
+X_{ij} + X_{jk} + X_{ik} \geq -1,
+\]
+however it is not difficult to see that the SDP~\eqref{MAXCUTproblem_SDP_LG} of degree 2 is only able to constraint
+\[
+X_{ij} + X_{jk} + X_{ik} \geq -\frac32,
+\]
+which is considerably weaker. There are a few different ways of thinking about this, one is that the three vector $u_i,u_j,u_k$ in the relaxation may be at an angle of 120 degrees with each other. Another way of thinking about this is that
+the inequality $y_iy_j + y_jy_k + y_ky_i \geq -\frac32$ can be proven using sum-of-squares proof with degree $2$:
+\[
+(y_i+y_j+y_k)^2 \geq 0 \quad  \Rightarrow \quad y_iy_j + y_jy_k + y_ky_i \geq -\frac32
+\]
+However, the stronger constraint cannot.
+
+On the other hand, if degree $4$ monomials are involved, (let us say $X_S = \prod_{s\in S} y_s$, note that $X_{\emptyset} =1$ and $X_{ij}X_{ik} = X_{jk}$) then the constraint
+\[
+\left[\begin{array}{c}
+X_{\emptyset} \\
+X_{ij} \\
+X_{jk} \\
+X_{ki}
+\end{array}\right]
+\left[\begin{array}{c}
+X_{\emptyset} \\
+X_{ij} \\
+X_{jk} \\
+X_{ki}
+\end{array}\right]^T
+= 
+\left[\begin{array}{cccc}
+1       & X_{ij} & X_{jk} & X_{ki} \\
+X_{ij} & 1      & X_{ik} & X_{jk} \\
+X_{jk} & X_{ik}& 1       & X_{ij} \\
+X_{ki} & X_{jk} & X_{ij} & 1
+\end{array}\right]
+\succeq 0
+\]
+implies $X_{ij} + X_{jk} + X_{ik} \geq -1$ just by taking
+\[
+\1^T  \left[\begin{array}{cccc}
+1       & X_{ij} & X_{jk} & X_{ki} \\
+X_{ij} & 1      & X_{ik} & X_{jk} \\
+X_{jk} & X_{ik}& 1       & X_{ij} \\
+X_{ki} & X_{jk} & X_{ij} & 1
+\end{array}\right]   \1 \geq 0.
+\]
+Also, note that the inequality $y_iy_j + y_jy_k + y_ky_i \geq -1$ can indeed be proven using sum-of-squares proof with degree $4$ (recall that $y_i^2=1$):
+\[
+(1+y_iy_j+y_jy_k+y_ky_i)^2 \geq 0 \quad  \Rightarrow \quad y_iy_j + y_jy_k + y_ky_i \geq -1.
+\]
+Interestingly, it is known~\cite{Khot_Vishnoi_2013} that these extra inequalities alone will not increase the approximation power (in the worst case) of~\eqref{MAXCUTproblem_SDP}.
+\end{remark}
+
+
+
+
+\section{Community detection}\label{s:community}
+
+The problem of detecting communities in network data is a central problem in data science, examples of interest include social networks, the internet, or biological and ecological networks. In Chapter~\ref{c:graphs} we discussed clustering in the context of graphs, and described performance guarantees for spectral clustering (based on Cheeger's Inequality) that made no assumptions on the underlying graph. While these guarantees are remarkable, they are worst-case and hence pessimistic in nature. In an effort to understand the performance of some of these approaches on more realistic models of data, we will now analyze a generative model for graphs with community structure, the stochastic block model. On the methodology side, we will focus on convex relaxations, based on semidefinite programming (as in Chapter~\ref{maxcutapprox}), and will show that this approach achieves exact recovery of the communities on graphs drawn from this model. The techniques developed to prove these guarantees mirror the ones used to prove analogous guarantees for a variety of other problems where convex relaxations yield exact recovery (such as some of the problems covered in Chapter~\ref{c:lowrank}).
+
+
+
+\subsection{The Stochastic Block Model}
+
+The Stochastic Block Model is a random graph model that produces graphs with a community structure. While, as with any model, we do not expect it to capture all properties of a real world network (examples include network hubs, power-law degree distributions, and other structures) the goal is to study a simple graph model that produces community structure, as a test bed for understanding fundamental limits of community detection and analyzing the performance of recovery algorithms. 
+
+\begin{definition}[Stochastic Block Model]
+Let $n$ and $k$ be positive integers representing respectively the number of nodes and communities, $c\in [k]^n$ be the vector of community memberships for the different nodes, and $P\in [0,1]^{k\times k}$ a symmetric matrix of connectivity probabilities. A graph $G$ is said to be drawn from the Stochastic Block Model on $n$ nodes, when for each pair of nodes $(i,j)$ the probability that $(i,j)\in E$ is independent from all other edges and given by $P_{c_i,c_j}$.
+\end{definition}
+
+We will focus on the special case of the two communities ($k=2$) balanced symmetric block model where $n$ is even, both communities are of the same size, and
+\[
+P = \left[\begin{array}{cc} p & q \\ q & p \end{array}\right],
+\]
+where $p,q\in[0,1]$ are constants, cf.~Figure~\ref{fig:sbm}. Furthermore, we will focus on the associative case ($p>q$), while noting that all that follows can be easily adapted to the disassociate case ($q>p$). 
+ 
+We note also that when $p=q$ this model reduces to the classical Erd\H{o}s-Reny\'{i} model described in Chapter~\ref{c:graphs}. Since there are only two communities we will identify their membership labels with $+1$ and $-1$.
+
+\begin{figure}[h]
+\begin{center}
+\subcaptionbox{}{\includegraphics[width=0.3\textwidth,height=0.28\textwidth]{figures/Chapter8-SBMblack}}\qquad
+\subcaptionbox{}{\includegraphics[width=0.6\textwidth,height=0.28\textwidth]{figures/Chapter8-SBMblue}}
+\caption{A graph generated form the stochastic block model with 600 nodes and 2 communities, scrambled in Fig.~\ref{fig:sbm}(a),  clustered and color-coded in Fig.~\ref{fig:sbm}(b). 
+Nodes in this graph connect with probability $p = 6/600$ within communities and $q = 0.1/600$ across communities. (Image courtesy of Emmanuel Abbe.)}
+\label{fig:sbm}
+\end{center}
+\end{figure}
+
+
+
+
+Many fascinating questions can be asked in the context of this model. Natural questions include to characterize statistics of the model, such as number of triangles or larger cliques. In this chapter, motivated by the problem of community detection, we are interested in understanding when is it possible to reconstruct, or estimate, the community memberships from an observation of the graph, and what efficient algorithms succeed at this inference task.
+
+Before proceeding we note that the difficulty of this problem should certainly depend on the value of $p$ and $q$. As illustrative examples, this problem is trivial when $p=1$ and $q=0$ and hopeless when $p=q$ (notice that even in the easy case the actual membership can only be determined up to a re-labeling of the communities). As $p>q$, we will attempt to recover the original partition by trying to compute the minimum bisection of the graph; while related to the Max-Cut problem described in Section~\ref{c:maxcut}, notice how the objective here is to produce the minimum balanced cut.
+
+
+\subsection{Spike model prediction}
+
+A natural approach is to draw motivation from Chapter~\ref{c:graphs} and to use a form of spectral clustering to attempt to partition the graph.
+
+Let $A$ be the adjacency matrix of $G$,
+\begin{align}
+A_{ij} = \left\{ \begin{array}{cc} 1 & \text{ if } (i,j)\in E(G) \\ 0 & \text{ otherwise.} \end{array}  \right.
+\end{align}
+Note that in our model, $A$ is a random matrix.  We would like to solve
+\begin{align}
+\max\ & \sum_{i,j}A_{ij}x_ix_j \nonumber\\
+\text{s.t.}\ &x_i=\pm1, \forall i \label{eq:10:MinBisection}\\
+ & \sum_j x_j = 0, \nonumber
+\end{align}
+The optimal solution $x$ of \eqref{eq:10:MinBisection} takes the value $+1$ on one side of a partition and $-1$ on the other side, where the partition is balanced and achieves the minimum cut between the resulting clusters.
+
+Relaxing the condition $x_i=\pm1,\ \forall_i$ to $\|x\|_2^2=n$ would yield a spectral method
+\begin{align}
+\max\ & \sum_{i,j}A_{ij}x_ix_j \nonumber\\
+\text{s.t.}\ & \|x\|_2 = \sqrt{n} \label{MLE_A_spectralmethod}\\
+ & \1^T x = 0 \nonumber
+\end{align}
+The solution of~\eqref{MLE_A_spectralmethod} corresponds to the leading eigenvector of the matrix obtained by projecting $A$ on the orthogonal complement of the all-ones vector $\1$.
+
+The matrix $A$ is a random matrix whose expectation is given\footnote{For simplicity we assume that self-loops also have probability $p$. This does not affect any of the conclusions, as it does not give information about the community memberships.} by
+\[
+ \EE[A_{ij}] =  \left\{ \begin{array}{cl} p & \text{ if $i$ and $j$ are in the same community } \\ q & \text{ otherwise.} \end{array}  \right.
+\]
+Let $g$ denote the vector corresponding to the true community memberships, with entries $+1$ and $-1$; note that this is the vector we want to recover.\footnote{We want to recover either $g$ or $-g$, as they correspond to different labelings of the same community structure.} We can write
+\[
+ \EE[A] = \frac{p+q}2 \1\1^T +  \frac{p-q}2 gg^T,
+\]
+and
+\[
+ A = \big(A-\EE[A]\big) +  \frac{p+q}2 \1\1^T +  \frac{p-q}2 gg^T.
+\]
+In order to remove the term $\frac{p+q}2 \1\1^T$ we consider the random matrix
+\[
+ \AAAA = A - \frac{p+q}2 \1\1^T.
+\]
+It is easy to see that
+\[
+ \AAAA = \big(\AAAA-\EE[\AAAA]\big) +  \frac{p-q}2 gg^T.
+\]
+This means that $\AAAA$ is the sum of a random matrix whose expected value is zero and a rank-1 matrix, i.e. $$\AAAA = W + \lambda vv^T$$ where $W = \big(\AAAA-\EE[\AAAA]\big)$ and $\lambda vv^T  = \frac{p-q}2n \left(\frac{g}{\sqrt{n}}\right)\left(\frac{g}{\sqrt{n}}\right)^T$. In Chapter~\ref{c:svd} we saw that for a large enough rank-1 additive perturbation to a Wigner matrix, there is an eigenvalue associated with the perturbation that pops outside of the distribution of eigenvalues of a Wigner Gaussian matrix $W$. Moreover, whenever this happens, we saw that the leading eigenvector has a non-trivial correlation with $g$. 
+
+Since $\AAAA$ is simply $A$ minus a multiple of $\1\1^T$, problem~\eqref{MLE_A_spectralmethod} is equivalent to
+\begin{align}
+\max\ & \sum_{i,j}\AAAA_{ij}x_ix_j \nonumber\\
+\text{s.t.}&\ \|x\|_2 = \sqrt{n} \label{MLE_A_spectralmethod_2}\\
+ & \1^T x = 0 \nonumber
+\end{align}
+
+Since we have subtracted a multiple of $\1\1^T$, we will drop the constraint $\1^T x =0$. Notice how a deviation from $\1^T x =0$ would be penalized in the new objective, the fact that the multiple we subtracted is sufficient for us to drop the constraint will be confirmed by the success of the new optimization problem, now given by
+\begin{align}
+\max\ & \sum_{i,j}\AAAA_{ij}x_ix_j \nonumber\\
+\text{s.t.}&\ \|x\|_2 = \sqrt{n} \label{MLE_A_spectralmethod_22},
+\end{align}
+whose solution corresponds to the leading eigenvector of $\AAAA$.
+
+Recall that if $\AAAA-\EE[\AAAA]$ is a Wigner matrix with i.i.d. entries with zero mean and variance $\sigma^2$ then its empirical spectral density follows the semicircle law and it is essentially supported in $[-2\sigma\sqrt{n},2\sigma\sqrt{n}]$. We would then expect the top eigenvector of $\AAAA$ to correlate with $g$ as long as
+\begin{equation}\label{conditionspike}
+ \frac{p-q}2n  > \frac{2\sigma\sqrt{n}}2.
+\end{equation}
+
+Unfortunately $\AAAA-\EE[\AAAA]$ is not a Wigner matrix in general. In fact, half of its entries have variance $p(1-p)$ while the variance of the other half is $q(1-q)$.
+
+Putting rigor aside for a second, if we were to take $\sigma^2 = \frac{p(1-p)+q(1-q)}2$ then \eqref{conditionspike} would suggest that the leading eigenvector of $\AAAA$ correlates with the true partition vector $g$ as long as
+\begin{equation}\label{condition_notjustified}
+ \frac{p-q}2  > \frac1{\sqrt{n}}\sqrt{\frac{p(1-p)+q(1-q)}2},
+\end{equation}
+This argument is of course not valid, because the matrix in question is not a Wigner matrix. The special case $q = 1-p$ can be easily salvaged, since all entries of $\AAAA-\EE[\AAAA]$ have the same variance and they can be made to be identically distributed by conjugating with $\mathrm{diag}(g)$. This is still an impressive result, it says that if $p=1-q$ then $p-q$ needs only to be around $\frac1{\sqrt{n}}$ to be able to make an estimate that correlates with the original partitioning!
+
+An interesting regime (motivated, for example, by friendship networks in social sciences) is when the average degree of each node is constant. This can be achieved by taking $p = \frac{a}n$ and $q = \frac{b}n$ for constants $a$ and $b$. While the argument presented to justify condition \eqref{condition_notjustified} is not valid in this setting, it nevertheless suggests that the condition on $a$ and $b$ needed to be able to make an estimate that correlates with the original partition, often referred to as partial recovery, is
+\begin{equation}\label{condition_notjustified_ab}
+ (a-b)^2  > 2(a+b).
+\end{equation}
+
+Remarkably this was posed as a conjecture by Decelle et al.~\cite{Decelle_SBM} and proved in a series of works by Mossel et al.~\cite{Mossel_SBM1,Mossel_SBM2} and Massoulie~\cite{Massoulie_SBM}. While describing the proof of this conjecture is outside the scope of this book, we note that the conjectures were obtained by studying fixed points of a certain linearization of belief propagation using techniques from statistical physics. The lower bound can be proven by showing contiguity between the two models below the phase transition, and the upper bound is obtained by analyzing an algorithm that is an adaptation of belief propagation and studying the so-called non-backtracking operator. We refer the reader to the excellent survey of Abbe~\cite{Abbe_SBM_survey} and references therein for further reading.
+
+\begin{remark}[More than three communities]
+The balanced symmetric stochastic block model with $k>3$ communities is conjectured to have a fascinating statistical-to-computational gap. In the sparse regime of inner probability $p=\frac{a}{n}$ and outer probability $q = \frac{b}{n}$ it is believed that, for $k>3$ there is a regime of the parameters $a$ and $b$ such that the problem of partially recovering the community memberships is statistically, or information-theoretically, possible but that there does not exist a polynomial-time algorithm to perform this task. These conjectures are based on insight obtained with tools from statistical physics. We refer the reader to~\cite{Decelle_SBM,Zhang_Moore_2014,Ghasemian_Moore_SBM_2015,Abbe_Sandon_KSbound} for further reading.
+\end{remark}
+
+
+
+\subsection{Exact recovery}
+
+
+
+We now turn our attention to the problem of recovering the cluster membership of every single node correctly, not simply having an estimate that correlates with the true labels. We will keep our focus on the balanced, symmetric, two communities setting. This will serve as an illustration for two phenomena: (i) the fact that convex relaxations often find optimal solutions, not just approximations, when the input are ``typical instances''; (ii) convex relaxations such as semidefinite programs over random instances can often be readily understood via matrix concentration inequalities (such as the ones in Chapter~\ref{c:probability-matrixconcentration}). If the inner-probability is $p = \frac{a}n$ then it is not hard to show that each cluster will (with high probability) have isolated nodes, making it impossible to recover the membership of every possible node correctly. In fact this is the case whenever $p \leq  \frac{(2-\eps)\log n}n$, for some $\eps>0$. For that reason we focus on the regime
+\begin{equation}
+p = \pp \text{ and } q = \qq,
+\end{equation}
+for some constants $\alpha>\beta$.
+
+A natural algorithm would be to compute the minimum bisection~\eqref{eq:10:MinBisection} which corresponds to the Maximum Likelihood Estimator, and also the Maximum a Posteriori Estimator when the community memberships are drawn uniformly at random. In fact, it is known (see~\cite{Abbe_SBMExact} for a proof) that if
+\begin{equation}\label{condition_MLE}
+\sqrt{\alpha} - \sqrt{\beta}  > \sqrt{2},
+\end{equation}
+then, with high probability, (\ref{eq:10:MinBisection}) recovers the true partition. Moreover, if
+\[
+\sqrt{\alpha} - \sqrt{\beta}  < \sqrt{2},
+\]
+no algorithm can, with high probability, recover the true partition.
+
+In this section we will analyze a semidefinite programming relaxation, analogous to the ones described in Section~\ref{c:maxcut} for Max-Cut. By making use of convex duality, we will derive conditions for exact recovery with this particular algorithm, reducing the problem to a problem in random matrix theory. We will present a solution to the resulting random matrix question, using the matrix concentration tools developed in Chapter~\ref{c:probability-matrixconcentration}. While not providing the strongest known guarantee, this approach is extremely adaptable and can be used to solve a large number of similar questions.\footnote{A tight guarantee can be obtained by adapting the random matrix theory part of the argument, the convex geometry part can remain the same; this is briefly discussed below.}
+
+
+
+
+
+\subsection{A semidefinite relaxation}
+
+Let $x\in\RR^n$ with $x_i =\pm 1$ represent a partition of the nodes (recall that there is an ambiguity in the sense that $x$ and $-x$ represent the same partition).
+Note that if we remove the constraint $\sum_j x_j = 0$ in (\ref{eq:10:MinBisection}) then the optimal solution becomes $x=\1$. Let us define $B = 2A - (\1\1^T -I)$, meaning that
+
+\begin{align}
+B_{ij} = \left\{ \begin{array}{rl} 0 & \text{ if } i=j \\ 1 & \text{ if } (i,j)\in E(G) \\ -1 & \text{ otherwise} \end{array}  \right.
+\end{align}
+It is clear that the problem
+
+\begin{align}
+\max\ & \sum_{i,j}B_{ij}x_ix_j \nonumber\\
+\text{s.t.}\ &x_i=\pm1, \forall_i \label{MLE_B_old}\\
+ & \sum_j x_j = 0 \nonumber
+\end{align}
+has the same solution as (\ref{eq:10:MinBisection}). However, when the constraint is dropped,
+
+\begin{align}
+\max\ & \sum_{i,j}B_{ij}x_ix_j \nonumber\\
+\text{s.t.}\ &x_i=\pm1, \forall_i \label{MLE_B},
+\end{align}
+$x= \1$ is no longer an optimal solution. As with~\eqref{MLE_A_spectralmethod_22} above, the penalty created by subtracting a large multiple of $\1\1^T$ will be enough to discourage unbalanced partitions (the reader may notice the connection with Lagrangian duality). In fact, (\ref{MLE_B}) is the problem we will set ourselves to solve.
+
+Unfortunately (\ref{MLE_B}) is in general NP-hard (one can encode, for example, \emph{Max-Cut} by picking an appropriate $B$). We will relax it to an easier problem by the same technique used to approximate the  Max-Cut problem in the previous section (this technique is often known as \emph{matrix lifting}). If we write $X=xx^T$ then we can formulate the objective of (\ref{MLE_B}) as
+\[
+\sum_{i,j}B_{ij}x_ix_j = x^TBx = \tr(x^TBx) = \tr(Bxx^T) = \tr(BX)
+\]
+Also, the condition $x_i = \pm1$ implies $X_{ii} = x_i^2 = 1$. This means that (\ref{MLE_B}) is equivalent to
+
+\begin{align}
+\max\ \qquad & \tr(BX)\nonumber\\
+\text{s.t.}\ \qquad &X_{ii}=1, \forall_i \label{eq:relaxation_SBM}\\
+ & X=xx^T  \text{ for some } x\in\RR^n.\nonumber
+\end{align}
+
+The fact that $X=xx^T$ for some $x\in\RR^n$ is equivalent to $\rank(X) = 1$ and $X\succeq 0$. This means that (\ref{MLE_B}) is equivalent to
+\begin{align}
+\max\ \qquad& \tr(BX)\nonumber\\
+\text{s.t.}\ \qquad &X_{ii}=1, \forall_i \\
+ & X \succeq 0 \nonumber\\
+ & \rank(X) = 1.\nonumber
+\end{align}
+We now relax the problem by removing the non-convex rank constraint
+\begin{align}
+\max\ \qquad & \tr(BX)\nonumber\\
+\text{s.t.}\ \qquad & X_{ii}=1, \forall_i \label{MLE_SDP}\\
+ & X \succeq 0 \nonumber.
+ \end{align}
+This is an SDP that can be solved (up to arbitrary precision) in polynomial time~\cite{LVanderberghe_SBoyd_1996} (note that it is the same SDP as~\eqref{MAXCUTproblem_SDP_LG}, with a different coefficient matrix).
+
+Since we removed the rank constraint, the solution to (\ref{MLE_SDP}) is no longer guaranteed to be rank-1. We will take a different approach from the one we used in Section~\ref{c:maxcut} to obtain an approximation ratio for \texttt{Max-Cut}, which was a worst-case approximation ratio guarantee. In this section we will show that, for some values of $\alpha$ and $\beta$, with high probability, the solution to (\ref{MLE_SDP}) not only satisfies the rank constraint but it coincides with $X = gg^T$ where $g$ corresponds to the true partition. From $X$ one can compute $g$ by simply calculating its leading eigenvector. Besides being a good approximation algorithm, SDP relaxations such as~\eqref{MAXCUTproblem_SDP_LG} provide optimal solutions in many instances (but not always).
+
+
+
+
+
+\subsection{Convex duality}
+
+A standard technique to show that a candidate solution is the optimal one for a convex problem is to use convex duality, which we discussed in Section~\ref{ss:KKT}. Note that unlike in Chapter~\ref{c:optimization}, problems here are formulated as maximization problems.
+
+We will now describe duality with a game theoretical intuition in mind. The idea will be to rewrite \eqref{MLE_SDP} without imposing constraints on $X$ but rather have the constraints be implicitly enforced. Consider the following optimization problem.
+
+\begin{equation}\label{MLE_SDP_Lagrangian}
+\max_{X} \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).
+\end{equation}
+
+Let us provide a game theoretical interpretation for~\eqref{MLE_SDP_Lagrangian}. Suppose that there is a {\em primal player} (picking $X$) whose objective is to maximize the objective and a {\em dual player} (picking $Z$ and $Q$ after seeing $X$) trying to make the objective as small as possible. If the primal player does not pick $X$ satisfying the constraints of \eqref{MLE_SDP} then we claim that the dual player is capable of driving the objective to $-\infty$. Indeed, if there is an $i$ for which $X_{ii} \neq 1$ then the dual player can simply pick $Z_{ii} = -c\frac1{1-X_{ii}}$ and make the objective as small as desired by taking a large enough $c$. Similarly, if $X$ is not positive semidefinite, then the dual player can take $Q=c vv^T$ where $v$ is such that $v^TXv <0$. If, on the other hand, $X$ satisfies the constraints of \eqref{MLE_SDP} then
+\[
+ \tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).
+\]
+Since equality can be achieved if for example the dual player picks $Q = 0_{n\times n}$, then it is evident that the values of \eqref{MLE_SDP} and \eqref{MLE_SDP_Lagrangian} are the same:
+\[
+ \max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) = \max_{X} \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right)
+\]
+With this game theoretical intuition in mind, it is clear that if we change the ``rules of the game'' and have the dual player decide their variables before the primal player (meaning that the primal player can pick $X$ knowing the values of $Z$ and $Q$) then it is clear that the objective can only increase, which means that:
+\[
+ \max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right).
+\]
+Note that we can rewrite
+\[
+  \tr(BX) + \tr(QX) + \tr\left(Z\left(I_{n\times n}-X\right)\right) = \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z).
+\]
+When playing:
+\[
+  \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z),
+\]
+if the dual player does not set $B+Q-Z=0_{n\times n}$ then the primal player can drive the objective value to $+\infty$, this means that the dual player is forced to chose $Q = Z-B$ and so we can write
+\[
+  \min_{\substack{Z,\ Q \\ Z \text{ is diagonal } \\ Q\succeq 0}} \max_{X}  \tr\left(\left( B + Q - Z \right)X\right) + \tr(Z) = \min_{\substack{Z,\\ Z \text{ is diagonal } \\ Z-B\succeq 0}} \max_{X}  \tr(Z),
+\]
+which clearly does not depend on the choices of the primal player. This means that
+\[
+  \max_{\substack{X,\\ X_{ii}\ \forall_i \\ X\succeq 0}} \tr(BX) \leq \min_{\substack{Z,\\ Z \text{ is diagonal } \\ Z-B\succeq 0}}  \tr(Z).
+\]
+This is known as weak duality (strong duality says that, under some conditions the two optimal values actually match, see for example~\cite{LVanderberghe_SBoyd_1996}, recall that we used strong duality when giving a sum-of-squares interpretation to the Max-Cut approximation ratio, a similar interpretation can be given in this problem, see~\cite{Bandeira_PCC}).
+
+Also, the problem
+\begin{align}
+\min\ \qquad & \tr(Z)\nonumber\\
+\text{s.t.}\ \qquad & Z \text{ is diagonal} \label{MLE_SDP_DUAL}\\
+ & Z - B  \succeq 0 \nonumber
+ \end{align}
+is called the dual problem of (\ref{MLE_SDP}).
+
+The derivation above explains why (in maximization optimization problems) the objective value of the dual problem is always greater or equal to the primal problem (for minimization problems the opposite is true; in fact,~\eqref{MLE_SDP} is the dual to~\eqref{MLE_SDP_DUAL}). Nevertheless, there is a much simpler proof (although not as enlightening): let $X,Z$ be  a feasible point of (\ref{MLE_SDP}) and (\ref{MLE_SDP_DUAL}), respectively.
+Since $Z$ is diagonal and $X_{ii}=1$, it follows that $\tr(ZX)=\tr(Z)$. Also, $Z-B\succeq 0$ and $X\succeq 0$, therefore $\tr[(Z-B)X] \geq 0$. Altogether,
+\[
+\tr(Z) - \tr(BX) = \tr[(Z-B)X] \geq 0,
+\]
+as stated.
+
+Recall that we want to show that $gg^T$ is the optimal solution of (\ref{MLE_SDP}). Then, if we find $Z$ diagonal, such that $Z-B \succeq 0$ and
+\[
+\tr[(Z-B)gg^T] = 0,  \quad \text{(this condition is known as complementary slackness)}
+\]
+then $X=gg^T$ must be an optimal solution of (\ref{MLE_SDP}). To ensure that $gg^T$ is the unique solution we just have to ensure that the nullspace of $Z-B$ only has dimension 1 (which corresponds to multiples of $g$). Essentially, if this is the case, then for any other possible solution $X$ one could not satisfy complementary slackness.
+
+This means that if we can find $Z$ with the following properties:
+\begin{enumerate}[leftmargin=10mm,itemsep=0.2pt,topsep=2pt]
+\item[(1)] $Z$ is diagonal
+\item[(2)] $\tr[(Z-B)gg^T] = 0$
+\item[(3)] $Z-B \succeq 0$
+\item[(4)] $\lambda_2(Z-B)> 0$,
+\end{enumerate}
+ then $gg^T$ is the unique optimum of (\ref{MLE_SDP}) and so recovery of the true partition is possible (with an efficient algorithm).
+ $Z$ is known as the dual certificate, or dual witness (note that this essentially corresponds to establishing the KKT conditions discussed in Section~\ref{ss:KKT}).
+
+
+
+
+
+
+
+
+
+ \subsection{Building the dual certificate}
+
+The idea to build $Z$ is to construct it to satisfy properties (1) and (2) and try to show that it satisfies (3) and (4) using concentration. In fact, since $Z$ is diagonal this design problem has $n$ free variables. If $Z-B \succeq 0$ then condition (2) is equivalent to $(Z-B)g=0$ which provides $n$ equations, as the resulting linear system is non-singular, the candidate arising from using conditions (1) and (2) will be unique.
+ 
+ A couple of preliminary definitions will be useful before writing out the candidate $Z$. Recall that the degree matrix $D$ of a graph $G$ is a diagonal matrix where each diagonal coefficient $D_{ii}$ corresponds to the number of neighbors of vertex $i$ and that $\lambda_2(M)$ is the second smallest eigenvalue of a symmetric matrix $M$.
+\begin{definition}\label{Def:L_SBM}
+Let $\Gp$ (resp. $\Gm$) be the subgraph of $G$ that includes the edges that link two nodes in the same community (resp.\ in different communities) and $A$ the adjacency matrix of $G$. We denote by $\Dp$ (resp.\ $\Dm$) the degree matrix of $\Gp$ (resp.\ $\Gm$) and define the Stochastic Block Model Laplacian to be
+\begin{eqnarray*}
+L_{SBM}= \Dp-\Dm-A.
+\end{eqnarray*}
+\end{definition}
+Note that the inclusion of  self loops does not change $L_{SBM}$. Also, we point out that $L_{SBM}$ is not in general positive-semidefinite.
+
+Now we are ready to construct the candidate $Z$. Condition (2) implies that we need $Z_{ii} = \frac1{g_i}B[i,:]g$. Since $B = 2A - (\1\1^T -I)$ we have
+\[
+Z_{ii} = \frac1{g_i}(2A - (\1\1^T -I))[i,:]g = 2\frac1{g_i}(Ag)_i + 1,
+\]
+meaning that
+\[
+Z = 2(\Dp-\Dm) + I.
+\]
+This is our candidate dual witness.
+As a result
+\[
+Z - B = 2(\Dp-\Dm) + I - \left[ 2A - (\1\1^T -I) \right] = 2 L_{SBM} +11^T.
+\]
+It trivially follows (by construction) that
+\[
+(Z-B)g = 0.
+\]
+This immediately gives the following lemma.
+
+\begin{lemma} \label{lemma:lemma1SDP}
+Let $L_{\text{SBM}}$ denote the Stochastic Block Model Laplacian as defined in Definition~\ref{Def:L_SBM}. If
+\begin{equation}
+\lambda_2(2 L_{\text{SBM}} +11^T) >0 \label{SDP:condition},
+\end{equation}
+then the relaxation~\eqref{MLE_SDP} recovers the true partition.
+\end{lemma}
+Note that $2 L_{\text{SBM}} +11^T$ is a random matrix and so this reduces to ``an exercise" in random matrix theory.
+
+
+
+
+
+
+
+\subsection{Matrix concentration and Matrix Bernstein Inequality}\label{sc:matrixBernstein}
+
+We will dedicate Chapter~\ref{c:probability-matrixconcentration} to random matrix theory and matrix concentration inequalities that aim to control the largest eigenvalue or spectral norm of random matrices. 
+In this section we present a general use concentration inequality for sums of independent random matrices, while noting that, as with scalars, many random variables can be written as sums of independent random variables even when it's not trivially apparent (and we will see below that this is the case for the matrix appearing in Lemma~\ref{lemma:lemma1SDP}).
+
+Let us recall Bernstein's inequality (Theorem~\ref{thm:Bernstein}) copied here with slightly different notation, and with only one of the tails: If $X_1,X_2,\ldots,X_n$ are independent centered random variables satisfying $|X_i| \leq r$ and $\mathbb{E}[X_i^2]=\frac1n\nu^2$. Then,
+\begin{equation}\label{prob:Bernstein:scalar}
+\Prob \left\{ \sum_{i=1}^n X_i > t \right\} \leq \exp\left(-\frac{t^2}{2\nu^2 + \frac{2}{3}rt}\right).
+\end{equation}
+
+A very useful generalization of this inequality exists for bounding the largest eigenvalue of the sum of independent random matrices
+\begin{theorem}[Matrix Bernstein Inequality, Theorem~1.4 in~\cite{Tropp:TailBoundsRM}]\label{thm:4:MatrixBernstein}
+ Let $\{X_k\}_{k=1}^n$ be a sequence of independent random symmetric $d\times d$ matrices. Assume that each $X_k$ satisfies:
+ \[
+  \mathbb{E} X_k = 0 \text{ and } \lambda_{\max}\left( X_k \right) \leq R \text{ almost surely.}
+ \]
+Then, for all $t\geq 0$,
+\[
+ \Prob\left\{ \lambda_{\max}\left( \sum_{k=1}^n X_k \right) \geq t \right\} \leq d \cdot \exp\left( \frac{-t^2}{2\sigma^2 + \frac23Rt} \right) \text{ where } \sigma^2 = \left\| \sum_{k=1}^n\mathbb{E}\left(X_k^2\right) \right\|.
+\]
+\end{theorem}
+Recall that $\|A\|$ denotes the spectral norm of $A$. Comparing with \eqref{prob:Bernstein:scalar} the attentive reader will notice an extra dimensional factor of $d$; a simple change of variables shows that this corresponds to a poly-logarithmic factor on the random variable, a factor that will be discussed later in this chapter where we will also include an improved inequality (Theorem~\ref{thm:improvedBernstein}).
+Theorem~\ref{thm:4:MatrixBernstein} can be easily extended to rectangular matrices, see e.g.~Theorem~1.6 in~\cite{Tropp:TailBoundsRM}.
+
+
+In Chapter~\ref{c:probability-matrixconcentration} we will discuss matrix concentration inequalities in detail and prove inequalities similar to Theorem~\ref{thm:4:MatrixBernstein} (for the proof of the precise bound in Theorem~\ref{thm:4:MatrixBernstein}, which is based on a different toolkit than what we will explore in Chapter~\ref{c:probability-matrixconcentration}, we point the reader to~\cite{Tropp:TailBoundsRM}). For now we will use this inequality to show that the SDP approach presented above achieves exact recovery of communities in the stochastic block model.
+
+
+\subsection{Using matrix concentration}
+In this section we show how the resulting question amounts to controlling the largest eigenvalue of a random matrix, which can be done with the matrix concentration tools described above.  
+
+
+Let us start by noting that
+\[
+\EE\left[ 2 L_{\text{SBM}} +11^T \right] = 2\EE L_{\text{SBM}} +11^T = 2\EE \Dp- 2\EE \Dm- 2\EE A  +11^T,
+\]
+and
+$\EE \Dp = \frac{n}2 \pp I$, $\EE\Dm = \frac{n}2 \qq I$. Moreover, $\EE A$ is a matrix with four $\frac{n}2\times \frac{n}2$ blocks where the diagonal blocks have entries $\pp$ and the off-diagonal blocks have entries $\qq$.\footnote{For simplicity we assume the possibility of self-loops; notice however that the matrix in question does not depend on this, only its decomposition in the degree matrices and $A$.} In other words 
+$$\EE A = \frac12\left( \pp + \qq \right)11^T +  \frac12\left( \pp - \qq \right)   gg^T.$$
+This means that
+\[
+\EE\left[ 2 L_{\text{SBM}} +11^T \right] = \left( (\alpha-\beta) \log n\right)I  + \left( 1 - (\alpha+\beta)\frac{\log n}n \right)11^T - (\alpha-\beta)\frac{\log n}n gg^T.
+\]
+
+Since $L_{\text{SBM}}g=0$ and $11^Tg = 0$, we can safely ignore what happens in the span of $g$, and it is not hard to see that
+\[
+\lambda_2 \left( \EE\left[ 2 L_{\text{SBM}} +11^T \right] \right) = (\alpha-\beta) \log n.
+\]
+
+
+Thus, it is enough to show that
+\begin{equation}\label{largedeviations_matrix}
+\left\|  L_\text{SBM}  - \EE\left[ L_\text{SBM} \right] \right\| < \frac{\alpha-\beta}2 \log n,
+\end{equation}
+which is a large deviation inequality; recall that $\|\cdot\|$ denotes operator norm.
+
+The idea is to write $L_\text{SBM}  - \EE\left[ L_\text{SBM} \right]$ as a sum of  independent random matrices and use the Matrix Bernstein Inequality (Theorem~\ref{thm:4:MatrixBernstein}). This gives an illustrative example of the applicability of matrix concentration tools, as many random matrices of interest can be rewritten as sums of independent matrices.
+
+Let us start by defining, for $i$ and $j$ in the same community (i.e. $g_i=g_j$), 
+\begin{align*}
+\gamma^+_{ij}=\begin{cases} 1 & \text{ if } (i,j)\in E \\ 0 & \text{otherwise,}\end{cases}
+\end{align*}
+and
+\begin{align*}
+\Delta^+_{ij}&= (e_i-e_j)(e_i-e_j)^T,
+\end{align*}
+where $e_i$ (resp. $e_j$) is the vector of all zeros except the $i^{th}$ (resp. $j^{th}$) coefficient which is 1.
+
+For $i$ and $j$ in different communities (i.e. $g_i \neq g_j$), define 
+\begin{align*}
+\gamma^-_{ij}=\begin{cases} 1 & \text{ if } (i,j)\in E \\ 0 & \text{otherwise,} \end{cases}
+\end{align*}
+and
+\begin{align*}
+\Delta^-_{ij}&= -(e_i+e_j)(e_i+e_j)^T.
+\end{align*}
+ We have
+\[
+L_\text{SBM} = \sum_{i<j: g_i=g_j} \gamma^+_{ij} \Delta^+_{ij}+\sum_{i<j: g_i\neq g_j} \gamma^-_{ij} \Delta^-_{ij}.
+\]
+We note how $(\gamma_{ij}^+)_{i,j}$ and  $(\gamma_{ij}^-)_{i,j}$ are jointly independent random variables with expectations $\EE (\gamma_{ij}^+) = \frac{\alpha\log n}{n}$ and $\EE (\gamma_{ij}^-)= \frac{\beta\log n}{n}$. $ \Delta^+_{ij}$ and $\Delta^-_{ij}$ are deterministic matrices. This means that
+\[
+L_\text{SBM} - \EE L_\text{SBM} = \sum_{\substack{i<j:\\ g_i=g_j}} \left(\gamma^+_{ij} - \frac{\alpha\log n}{n}\right) \Delta^+_{ij}+\sum_{\substack{i<j:\ g_i\neq g_j}} \left(\gamma^-_{ij} - \frac{\beta\log n}{n} \right) \Delta^-_{ij}.
+\]
+
+We can then use Theorem~\ref{thm:4:MatrixBernstein} by setting
+\begin{equation}\label{eq:matrix_inside_sigma2}
+\sigma^2 = \Big\|  \mathrm{Var}\left[\gamma^+\right]\sum_{i<j:\ g_i=g_j}\left(\Delta^+_{ij}\right)^2+ \mathrm{Var}\left[\gamma^-\right]\sum_{i<j:\ g_i\neq g_j}\left(\Delta^-_{ij}\right)^2  \Big\|,
+\end{equation}
+and $R=2$, since $\left\|\Delta^+_{ij}\right\|=\left\|\Delta^-_{ij}\right\|=2$ and both $(\gamma_{ij}^+)_{i,j}$ and $(\gamma_{ij}^-)_{i,j}$ take values in $[-1,1]$. Note how this bound is for the spectral norm of the summands, not just the largest eigenvalue, as our goal is to bound the spectral norm of the random matrix.
+In order to compute $\sigma^2$, we write
+$$ \sum_{i<j:\ g_i=g_j}\left(\Delta^+_{ij}\right)^2 = nI - \left(\1\1^T + gg^T\right),$$
+and
+$$ \sum_{i<j:\ g_i\neq g_j}\left(\Delta^-_{ij}\right)^2 = nI + \left(\1\1^T - gg^T\right)$$.
+
+Since $\mathrm{Var}\left[\gamma^+\right] \leq \frac{\alpha\log n}{n}$, $\mathrm{Var}\left[\gamma^-\right] \leq \frac{\beta\log n}{n}$, and all the summands are positive semidefinite we have
+\[
+\sigma^2 \leq \left\| \frac{(\alpha+\beta)\log n}{n}\left(nI-gg^T\right) - \frac{(\alpha-\beta)\log n}{n}\1\1^T \right\| = (\alpha+\beta)\log n.
+\]
+
+Using Theorem~\ref{thm:4:MatrixBernstein} for $t= \frac{\alpha-\beta}2\log n$ on both the largest and smallest eigenvalue gives
+\begin{align*}
+& \Prob\left\{ \left\|  L_\text{SBM}  - \EE\left[ L_\text{SBM} \right] \right\| \geq \frac{\alpha-\beta}2  \log n \right\}    \leq{}  \\
+ &  \hspace*{47mm} \le    2n \cdot \exp\left(  \frac{-\left( \frac{\alpha-\beta}2 \log n \right)^2}{2\left(\alpha+\beta\right) \log n  + \frac43\left( \frac{\alpha-\beta}2 \log n \right)} \right) \hspace*{40mm} \\
+ & \hspace*{47mm} =  2 \cdot \exp\left( -\frac{(\alpha-\beta)^2 \log n }{8\left(\alpha+\beta\right)  + \frac{8}3\left( \alpha-\beta  \right)} + \log n \right)\\
+ & \hspace*{47mm} =  2 n^{-\left(\frac{(\alpha-\beta)^2 }{8\left(\alpha+\beta\right)  + \frac{8}3\left( \alpha-\beta  \right)} -1 \right)}.
+\end{align*}
+
+Together with Lemma~\ref{lemma:lemma1SDP}, this implies that as long as
+\begin{equation}\label{SBM_exact_suboptimalcondition}
+(\alpha-\beta)^2 > 8\left(\alpha+\beta\right) + \frac{8}3\left( \alpha-\beta  \right),
+\end{equation}
+the semidefinite programming relaxation~\eqref{MLE_SDP} recovers the true partition, with probability tending to $1$ as $n$ increases.
+
+
+
+
+
+
+While it is possible to obtain a stronger guarantee for this relaxation, the derivation above illustrates the matrix concentration technique in a simple, yet powerful, instance. In fact, the analysis in~\cite{Abbe_SBMExact} uses the same technique. 
+ In order to obtain a sharp guarantee (Theorem~\ref{thm:10:SBM_extact_SDP} below) one needs more specialized tools. We refer the interested reader to~\cite{Bandeira_Laplacian} or~\cite{Hajek_et_al_SBM_SDP} for a discussion and proof of Theorem~\ref{thm:10:SBM_extact_SDP}; the main idea is to separate the diagonal from the non-diagonal part of $L_\text{SBM}  - \EE\left[ L_\text{SBM} \right]$, treating the former with scalar concentration inequalities, and the latter with specialized matrix concentration inequalities such as the ones in~\cite{Bandeira_NARandomMatrixBound}.
+
+
+
+
+\begin{theorem}\label{thm:10:SBM_extact_SDP}
+Let $G$ be a random graph with $n$ nodes drawn according to the stochastic block model on two communities with edge probabilities $p$ and $q$. Let $p = \frac{\alpha \log n}n$ and $q = \frac{\beta \log n}n$, where $\alpha> \beta$ are constants. Then, as long as
+\begin{equation}\label{eq:conditionsalphabetaSBMcor_2}
+ \sqrt{\alpha} - \sqrt{\beta} > \sqrt{2},
+\end{equation}
+ the semidefinite program considered above coincides with the true partition with high probability. \end{theorem}
+
+Note that, if 
+\begin{equation}\label{eq:10:exactrecoveryfails}
+ \sqrt{\alpha} - \sqrt{\beta} < \sqrt{2},
+\end{equation}
+then exact recovery of the communities is impossible, meaning that the SDP algorithm is optimal. Furthermore, in this regime~\eqref{eq:10:exactrecoveryfails}, one can show that there will be a node on each community that is more connected to the other community than to its own, meaning that a partition that swaps them would have more likelihood. The fact that the SDP will start working essentially when this starts happening appears naturally in the analysis in~\cite{Bandeira_Laplacian}. Later, it was proven that the spectral method~\eqref{MLE_A_spectralmethod}, followed by a simple thresholding step, also gives exact recovery of the communities~\cite{Abbe_et_al_spectralexact}. An analogous analysis has recently been obtained for the (normalized or unnormalized) graph Laplacian in place of the adjacency matrix, see~\cite{denglingstrohmer}. However, the proof techniques for the graph Laplacian are different and a bit more involved, since---unlike the adjacency matrix---the graph Laplacian does not  exhibit row/column-wise independence. 
+
+
+\begin{remark}
+An important advantage of semidefinite relaxations is that they are often able to produce certificates of optimality. Indeed, if the solution of the relaxation~\eqref{MLE_SDP} is rank 1 then the user is sure that it must be the solution of~\eqref{MLE_B}. These advantages, and ways of producing such certificates while bypassing the need to solve the semidefinite program are discussed in~\cite{Bandeira_PCC}.  Semidefinite relaxation has also been effectively used to show rigorously that spectral clustering can indeed outperform clustering via $k$-means~\cite{ling2020certifying,boedihardjo2021performance,deng2021strong}
+\end{remark}
+
+
+
+
+\bigskip
+
+
+In fact, the convex relaxation of optimization problems involving low-rank constraints plays an important role in many areas of science and engineering. There one often one seeks to minimize the rank of a matrix subject to linear or convex constraints. Rank minimization is intrinsically non-convex and combinatorial, making it computationally intractable in general. A standard convex relaxation replaces the rank function with the {\em nuclear norm} (or Schatten-1 norm), defined as the sum of the singular values of a matrix. 
+
+This relaxation leads to tractable convex programs—often semidefinite programs or efficiently solvable via first-order methods—that promote low-rank solutions while retaining strong theoretical guarantees. Amazingly, under suitable conditions, nuclear norm minimization is provably {\em exact}, recovering the original minimum-rank solution. As a result, convex nuclear norm minimization provides a principled and computationally efficient surrogate for rank minimization in a wide range of applications, including matrix completion, system identification, and robust principal component analysis. We will discuss this idea and several applications in detail in Chapter~\ref{c:lowrank}.
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}
+[\level \level \sep Max-Cut Bound]
+\label{prob:max-cut-bound}
+Show that every undirected graph with $|E|$ edges contains a cut that separates at least $|E|/2$ edges.
+\begin{hint}
+Consider the expected cut value of a random partition $(S,S^c)$ where each vertex has probability $1/2$ to be in $S$.   
+\end{hint}
+\end{myexercise}
+
+\begin{myexercise}[\level \level \sep Random MaxCut and Boosting]
+    \label{prob:random_max_cut}
+    We consider the following naive (but surprisingly effective) procedure to find a large cut in a graph $G$ with an even number of vertices: choose a set $S$ of $n/2$ vertices uniformly at random in $G$. We want to show that the partition $(S, S^c)$ cuts a large number of edges with some (small but positive) probability. Then we boost the procedure to increase the probability of finding a large cut. 
+
+    \begin{enumerate}[(a)]
+        \item Show that for any fixed $\eps \in (0, \frac{1}{2})$
+        $$
+        \Prob \left( \cut(S) > \left(\frac{1}{2} - \eps\right) |E|  \right) \ge \eps,
+        $$
+        where $|E|$ is the number of edges in graph $G$. 
+        \begin{hint}
+        For (a) it may be easier to study the set of edges that are NOT being cut.
+        \end{hint}
+        \item The result of the previous subproblem is rather unsatisfying, since if we want to find a cut with $0.49 |E|$ edges, the probability of success may be as low as $0.01$. For this reason we will modify our procedure, namely to improve our accuracy we sample $S$ several times.
+
+
+        Suppose we run the procedure $k$ times and get sets $S_1, \dots, S_k$. We want to construct a set $S^*$ from these outputs such that for any $\delta \in (0,1)$,
+        $$
+        \Prob\left(\cut(S^*) > \left(\frac{1}{2} - \eps\right) |E|  \right) \ge 1 - \delta
+        $$
+        
+        Find such cut and give an estimate on the required number of trials $k(\delta, \epsilon)$ depending on probability parameter~$\delta$ and approximation parameter $\epsilon$.
+    \end{enumerate}
+
+\emph{Remark: observe that the same technique can be applied to other randomized algorithms as well. }
+
+
+\end{myexercise}
+
+\begin{myexercise}[\level \level \sep Dual SDP]
+    \label{prob:dual_sdp}
+       To find the solution to the community detection problem in SBM, in the course we introduce convex relaxation of the problem and subsequently use convex duality to certify the optimality. In this problem, we will find the dual problem using the Lagrangian function. 
+    
+    Recall the definition of a semidefinite program (SDP).
+
+    \begin{definition}
+    A semidefinite program (SDP) is an optimization problem of the following type:
+    \begin{equation}\label{eq:SDP_def}
+        \max_{X\in \R^{n\times n}} \langle A, X \rangle \quad \text{subject to } X \succeq 0, \langle B_i, X \rangle = b_i,\quad i = 1, \dots, m,
+    \end{equation}
+    
+    
+    where $A, B_1, \dots, B_m \in \mathbb{R}^{n \times n}$ and $b_i \in \mathbb{R}$ are given.
+    \end{definition}
+
+    In SDPs, one of the constraints is positive semidefiniteness of a matrix. This constraint can be incorporated in the Lagrangian function as follows:
+    $$
+    \mathcal L(X, \nu, Y) =  \langle A, X \rangle + \sum_{i=1}^m \nu_i ( b_i - \langle B_i, X \rangle) + \langle Y, X \rangle,
+    $$
+    where $Y \in \R^{n\times n}$ is positive semidefinite matrix, and $\nu \in \R^m$. Using this Lagrangian, we can easily check that 
+    $$
+    p^* = \max_X \min_{\substack{\nu, Y\\Y \succeq 0}}\mathcal L(X, \nu, Y)
+    $$
+    coincides with the optimal value of the original SDP \eqref{eq:SDP_def}.
+    \begin{enumerate}[(a)]
+        \item Using the expression for the Lagrangian function, find the dual function 
+        $$
+        g(Y, \nu) =  \max_{X\in \R^{n\times n}} \mathcal L(X, \nu, Y)
+        $$
+        defined for PSD matrices $Y\in \R^{n\times n}$ and $\nu \in R^m$ (note that the dual function may be infinite for certain values of $Y$). Then write the dual program of the SDP \eqref{eq:SDP_def} (the dual program just minimizes the dual function and contains the constraints that prevent the dual function from being infinite). 
+
+        \item Using (a), find the dual of the following semidefinite program: 
+        \begin{align*}
+        \max\quad &\tr(BX) \\
+        \text{s.t.}\quad &X_{ii} = 1 \quad\text{ for each } i\\
+        &X\succeq 0.
+        \end{align*}
+
+    \end{enumerate}
+    
+\end{myexercise}
+
+\begin{myexercise}[\level\level\level\sep Connectedness of the Erd\H{o}s-R\'enyi graph]
+    \label{prob:erdos_renyi_connectedness}
+
+ 
+
+
+We define the Erd\H{o}s-R\'enyi graph as a random graph $G \sim \mathcal{G}(n,p)$ with $n$ vertices generated by placing each possible edge independently at random with probability $p$. The Erd\H{o}s-R\'enyi graph is a popular model to study the performance of several optimization algorithms on graphs. Many of these algorithms rely on the graphs being connected and in this problem we study when this is the case for the Erd\H{o}s-R\'enyi model.
+ 
+
+We define $p:=\frac{\lambda\log n}{n}$ for some constant $\lambda >0$.
+
+\begin{enumerate}[(a)]
+    
+    \item Prove that if $\lambda \le 1-c$, where $c>0$ is an absolute constant, then the graph $G$ has an isolated vertex with probability $1-o(1)$. (We use the standard asymptotic notation,  $f(n) = o(1)$ if $\lim_{n \rightarrow \infty}f(n) = 0$.)
+    
+    
+
+    \begin{hint}
+       For (a) consider the random variable that counts the number of isolated vertices.
+    \end{hint}
+
+    \begin{hint}
+        Use Problem~\ref{prob:paley_zygmund}.
+    \end{hint}
+    
+    \item Now observe the following: A graph is disconnected if and only if there exits a set of $k$ nodes such that $k\le \floor{\frac{n}{2}}$ and there is no edge connecting the set of $k$ nodes with the complement set of $n-k$ nodes. Use this fact to prove that if $\lambda \ge 1+c$ for an absolute constant $c>0$, then the graph is connected with probability $1-o(1)$.
+    
+\end{enumerate}
+
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Sum of Squares Proof]
+    \label{prob:sos_proof}
+        Let $x,y$ be real numbers, prove
+        $$ x^4 + y^4 + 4xy + 2 \geq 0.$$
+        \begin{hint}
+        Add and subtract an appropriate monomial.
+    \end{hint}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Smallest Eigenvalue Program]
+    \label{prob:smallest_eigenvalue}
+
+Let $A \in \R^{d \times d}$ be a symmetric matrix. Prove that the following optimization problem has the smallest eigenvalue of $A$ as optimal value:
+\begin{align*}
+        \min \quad &\Tr(AX) \\
+        \text{s.t.}\quad &\Tr(X) = 1 \\
+        &X\succeq 0.
+        \end{align*}
+(Recall that $X \succeq 0$ means that $X$ is PSD.)
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Discrepancy Relaxation]
+    \label{prob:discrepancy_relaxation}
+    
+    Let $A \in \R^{d \times m}$ be a matrix. We define its discrepancy as the optimal value of the following minimization problem:
+    $$ \operatorname{disc}(A) = \min_{\eps \in \{-1,1\}^m} \norm{A \eps}_{\infty}.$$
+    The vector discrepancy of $A$ is the minimal value of the problem
+    $$ \operatorname{vecdisc}(A) = \min_{u_1, \ldots, u_m \in \mathbb{S}^{m-1}} \max_{1 \leq i \leq d} \norm{ \sum_{j=1}^m A_{i,j}u_j}_2,$$
+    where $\mathbb{S}^{m-1} \subset \R^m$ denotes the euclidean unit sphere, so $\norm{u_i}_2 = 1$ for all $1\leq i \leq m$. The goal of this exercise is to show that vector discrepancy is a convex relaxation of discrepancy, which can be solved using a semidefinite program.
+    \begin{enumerate}[(a)]
+        \item Prove the inequality
+        $$ \operatorname{vecdisc}(A)^2 \leq \operatorname{disc}(A)^2.$$
+        \item Prove that the quantity $\operatorname{vecdisc}(A)^2$ is the optimal value of the following semidefinite program:
+        \begin{align*}
+        \min \quad &D \in \R\\
+        \text{s.t.}\quad &(AXA^\top)_{i,i} \leq D \quad \forall 1 \leq i \leq d  \\
+        \text{and} \quad &X_{i,i} = 1 \quad \forall 1 \leq i \leq m \\
+        &X\succeq 0 \in \R^{m \times m}.
+        \end{align*}
+    \begin{hint}
+        Use the square-root of the matrix $X$ to construct your unit vectors.
+    \end{hint}
+    \end{enumerate}
+    
+\end{myexercise}
+
+\begin{myexercise}[\level\level\level\sep Minimum Bisection and Community Detection]
+    \label{prob:min_bisection_community_detection}
+    
+    The goal of this exercise is to relate the minimum bisection problem with exact recovery in the community detection problem. Assume that $n$ is even and consider the graph with $n$ vertices drawn from the stochastic block model with two balanced communities, i.e, each community has size $n/2$, moreover, the two communities are chosen uniformly at random. Let $p$ be the probability that an edge is placed inside the communities and $q$ across the communities with $p>q$. 
+
+Our goal is to estimate the partition $\Omega$ induced by the communities with an estimator $\hat{\Omega}(G)$ that depends only on one sample of the random graph $G$. Prove that the estimator that minimizes the probability of error is equivalent to solve the minimum bisection of the observed graph $G$ (the minimum bisection is a partition into two equally-sized subsets, such that the number of edges being cut by such a partition is minimal). The probability of error $P_e$ is given by
+\begin{equation*}
+P_e:=\mathbb{P}(\hat{\Omega}\neq \Omega) = \sum_{g}\mathbb{P}(\hat{\Omega}(G)\neq \Omega|G=g)\mathbb{P}(G=g).
+\end{equation*}
+Here the sum is taken over all possible realizations of the random graph $G$.
+
+\begin{hint}
+    Use Bayes' rule to simplify and note that you can ignore terms that do not depend on $\hat{\Omega}$.
+\end{hint}
+
+\end{myexercise}
+
+\begin{myexercise}[\level\sep PSD Set Convexity]
+    \label{prob:psd_convexity}
+    Show that the set $S_n^+ = \{A \in \R^{n\times n}: A \succeq 0 \}$ is convex and that it is invariant under multiplication with a positive scalar.
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Spectral Algorithm for Planted Clique]
+    \label{prob:spectral_planted_clique}
+
+    We want to analyze parts of a spectral algorithm, which is used to find the largest clique in a graph $G$ on $n$ vertices. This algorithm is often analyzed for the planted clique model, where $G \sim \mathcal{G}(n,1/2)$ is random Erd\H{o}s-R\'enyi graph and then $k$ vertices of $G$ are randomly uniformly selected and then edges will be added to $G$ until these $k$ vertices become a clique (fully connected amongst each other). We call the graph we get after this procedure $\tilde{G}$. The goal is to find this planted clique with the so called "AKS spectral algorithm", which relies on computing the top eigenvector of the matrix $M \coloneqq A - \frac12 \mathbf{1}_n\mathbf{1}_n^\top$, where $A$ is the adjacency matrix of $\tilde{G}$ and $\mathbf{1}_n \in \R^n$ is the all-ones vector. The idea behind this algorithm is that the matrix $M$ is typically close to the matrix $\frac 12 \mathbf{1}_S \mathbf{1}_S^T$, where $\mathbf{1}_S$ is the indicator vector of the planted clique $S$, and if the matrices are close, then their top eigenvectors should in some sense also be close. This is the part that you will prove in this exercise:
+    \begin{enumerate}[(a)]
+        \item Let $0<  \eps < 1$, and suppose there exists a symmetric matrix $M \in \R^{n \times n}$ and a subset $S \subset [n]$ with the property $\abs{S} > 2(1+ \eps^{-1})\norm{M- \frac12 \mathbf{1}_S \mathbf{1}_S^\top}$, where $\mathbf{1}_S \in \R^n$ is the indicator vector of $S$ (so $1$ whenever the coordinate is in $S$ and $0$ otherwise). If $v$ is an eigenvector corresponding to the largest eigenvalue of $M$ with norm $\norm{v}_2^2 = \abs{S}$, prove that the following inequality holds:
+        $$ \min \{ \norm{v - \mathbf{1}_S}_2^2 , \norm{-v - \mathbf{1}_S}_2^2 \} \leq 2\abs{S} \eps^2.$$
+        You may use the following theorem without proof:
+        \begin{theorem}
+            Let $M \in \R^{n \times n}$ be a symmetric matrix and let $v$ be an eigenvector corresponding to the largest eigenvalue of $M$. Let $y \in \R^n$ be any vector and let $\theta$ be the angle between $y$ and $v$, then
+            $$ \abs{\sin(\theta)} \leq \frac{\norm{M-  yy^\top}}{|\norm{yy^\top} - \norm{M-  yy^\top}|}$$
+        \end{theorem} 
+
+        
+
+    \begin{hint}
+        Use the fact that the dot product of $\mathbf{1}_S$ and $v$ depends on the angle between these vectors.
+    \end{hint}
+    \end{enumerate}
+\end{myexercise}
+
+
+
+
+\begin{myexercise}[\level\level\sep "Baby" Davis-Kahan Theorem]
+    \label{prob:baby_davis_kahan}
+    The aim of this problem is to prove the matrix peturbation theorem you were given in Problem~\ref{prob:spectral_planted_clique}. Let $M \in \R^{n \times n}$ be a symmetric matrix and let $v$ be a unit-length eigenvector corresponding to the largest eigenvalue of $M$ (in magnitude). Let $y \in \R^n$ be any vector and let $\theta$ be the angle between $y$ and $v$, then
+    $$ \abs{\sin(\theta)} \leq \frac{\norm{M-  yy^\top}}{|\norm{yy^\top} - \norm{M-  yy^\top}|}$$
+     \begin{enumerate}[(a)]
+        \item Let $P_{y^\perp}$ be the $n \times n$ orthogonal projection matrix that projects a vector onto the orthogonal complement of $y$ and let $\lambda$ be the eigenvalue of $M$ corresponding to $v$. Prove
+        $$ |\lambda| \norm{P_{y^\perp}v } \leq \norm{M-yy^\top}. $$
+        \item Prove $|\lambda| \geq |\norm{yy^\top} - \norm{M-  yy^\top}|$.
+        \item Show $\abs{\sin(\theta)} =  \norm{P_{y^\perp}v } $ and finish the proof of the theorem.
+    \end{enumerate}
+    
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level\sep Sign Rounding]
+    \label{prob:sign_rounding}
+    As seen in the lecture, often we would like to round an eigenvector we computed in a spectral algorithm to a sign vector. A very naive (but sometimes effective) method is to simply take the sign of every entry of the vector. So given $x \in \R^d$ we define $\operatorname{sgn}(x) \in \R^d$ by $\operatorname{sgn}(x)_i = 1$ if $x_i \geq 0$ and $\operatorname{sgn}(x)_i = -1$ otherwise. This method works well when the eigenvector is already close to a sign vector as you will show.
+     \begin{enumerate}[(a)]
+        \item Let $x \in \R^d$ be a vector and let $y \in \{-1,+1\}^d$ be a sign vector. Prove that if 
+        $$ \norm{x-\frac{1}{\sqrt{d}}y}_2 \leq \varepsilon,$$
+        then the number of indices $i$ with $\operatorname{sgn}(x)_i \neq y_i$ is at most $\eps^2 d$.
+        \item Conclude $ \frac{1}{\sqrt{d}}\norm{\operatorname{sgn}(x)-y}_2 \leq 2\varepsilon.$
+    \end{enumerate}
+    
+\end{myexercise}
+
+
+
+
+
+\begin{myexercise}[\level\level\sep Little Grothendieck Problem]
+    \label{prob:little_grothendieck}
+    Let $C\succeq 0$ ($C \in \R^{n \times n}$ is positive semidefinite). In this problem you will show an approximation ratio of $\frac{2}{\pi}$ to the problem
+\[
+ \max_{x_i=\pm 1}\sum_{i,j=1}^n C_{ij}x_ix_j.
+\]
+
+Similarly to \texttt{Max-Cut}, we consider
+\[
+ \max_{\substack{v_i\in \R^n \\ \|v_i\|^2 = 1}}\sum_{i,j=1}^n C_{ij}v_i^Tv_j.
+\]
+
+The goal is to show that, for $ g \sim\mathcal{N}\left(0,I_{n\times n}\right)$, taking $x_i= \operatorname{sign}(v_i^T g)$ a randomized rounding,
+\begin{equation}\label{eq:lilGrothendieck}
+ \E \left[ \sum_{i,j=1}^n C_{ij}x_i x_j  \right] \geq \frac{2}{\pi} \sum_{i,j=1}^n C_{ij}v_i^Tv_j
+\end{equation}
+The difficulty lies in the fact that $\E[x_i x_j]$ is not easy to compute, which is why we divide this exercise into two parts.
+
+\begin{enumerate}[(a)]
+    \item Compute the quantity $\E[\operatorname{sign}(v_i^T g) \langle v_j, g \rangle]$.
+    \begin{hint}
+        This number should only depend on the inner product between $v_j$ and $v_i$.
+    \end{hint}
+    \item Define the matrix $S \in \R^{n \times n}$ with entries 
+    $$S_{i,j} = (\langle v_i, g \rangle - \sqrt{\pi/2}\operatorname{sign}(v_i^T g))(\langle v_j, g \rangle - \sqrt{\pi/2}\operatorname{sign}(v_j^T g)).$$ Show that 
+    $$ \Tr(CS) \geq 0$$
+    holds, and use this fact to prove the inequality~\eqref{eq:lilGrothendieck}.
+\end{enumerate}
+\end{myexercise}
+
+
+
+
+
+\begin{myexercise}[\level\level\sep Minimum Bisection Relaxation]
+    \label{prob:min_bisection_relaxation}
+    
+    In Problem~\ref{prob:min_bisection_community_detection} we saw that the problem of community detection is equivalent to solving the minimum bisection problem in a graph $G$. Unfortunately, solving the minimum bisection problem is NP-hard, so we would like to solve a semidefinite relaxation of it. For a graph on $n$ vertices with adjacency matrix $A$ the semidefinite relaxation of the minimum bisection problem is given by 
+    \begin{align*}
+        \max \quad & \sum_{i,j=1}^n A_{i,j} \langle u_i, u_j \rangle  \in \R\\
+        \text{s.t.}\quad &\langle u_i, u_i \rangle =1 \quad \forall 1 \leq i \leq n  \\
+        \text{and} \quad &\sum_{i=1}^n u_{i} = 0 \\
+        &u_i \in \R^n \quad \forall 1 \leq i \leq n.
+    \end{align*}
+    Find matrices $B_1, \ldots, B_k$ and real numbers $b_1, \ldots, b_k$ for some integer $k$, such that the problem can be written as
+    \begin{equation}\label{eq:SDP_bisection}
+        \max_{X\in \R^{n\times n}} \langle A, X \rangle \quad \text{subject to } X \succeq 0, \langle B_i, X \rangle = b_i,\quad i = 1, \dots, k.
+    \end{equation}
+\end{myexercise}
+

@@ -1,0 +1,1252 @@
+\chapter{Large Sample Limit of Graph Laplacians}
+\label{c:convergence}
+
+We want to analyze the behavior of diffusion maps and other non-linear dimensionality reduction methods in the case where the data points $$x_1,x_2,\ldots,x_n \in \mathbb{R}^p$$ are i.i.d samples from a probability distribution over $\mathcal{M}$, a $d$-dimensional Riemannian manifold embedded in $\mathbb{R}^p$, i.e., $\operatorname{dim}M = d \ll p$. We call $\mathcal{M}$ the {\em intrinsic manifold} and $\mathbb{R}^p$ the {\em ambient space}. The weights are defined via a kernel function $K$ with a local scale $\sqrt{\varepsilon}$ as follows $$w_{ij} = K_{\varepsilon}(\|x_i - x_j \|) = K\left(\frac{\|x_i - x_j \|}{\sqrt{\varepsilon}}\right).$$  For example, weights for the Gaussian kernel are given by  $$w_{ij} = \exp{\left(-\frac{\|x_i - x_j\|^2}{2\varepsilon}\right)}.$$ We have previously discussed the random walk matrix $A = D^{-1}W$, the random walk Laplacian $L_{rw} = I - A$, the graph Laplacian $L = D - W$, and the normalized graph Laplacian $\LL = I - D^{-1}W$. We would like to understand the possible limits
+\begin{eqnarray*}
+D - W &\to& ? \\
+I - D^{-1}W &\to & ?
+\end{eqnarray*}
+as $n\to \infty$ and $\varepsilon \to 0$, and perhaps we also need to specify the dependency of $\eps$ on $n$ (i.e., $\varepsilon = \varepsilon_n$) for the limit to exist and in what sense. We expect that the discrete random walk would converge to a continuous diffusion process over the manifold, but we have to be careful when taking limits. Specifically, we need to be mindful of how to choose $\varepsilon$ as a function of $n$ to guaranty convergence, understand the convergence rate, and different types of convergence. Intuitively, one might hope that the discrete graph Laplacian converges to the Laplace-Beltrami operator over the manifold. It turns out that the limiting operator also depends on the distribution of sampled point clouds over the manifold, and different normalizations of the graph Laplacian can yield different limiting operators. Understanding the graph Laplacian at the large sample limit is a powerful tool for gaining insight into the behavior of diffusion maps and related algorithms for nonlinear dimension reduction and the main topic of this chapter.     
+
+
+
+
+
+\section{Non-parametric density estimation} 
+The problem of density estimation from a point cloud turns out to be intimately related to that of understanding large sample limits of graph Laplacians, and we therefore discuss it first.  
+
+\subsection{Non-parametric density estimation in 1-D}
+
+We first consider the problem of density estimation on the real line.
+Let $p(x)$ be the probability density function (pdf) of the random variable $X$, and let $x_1,x_2,\ldots,x_n$ be i.i.d observations of $X$.
+We employ the {\em Parzen Window} \cite{parzen1962estimation} for density estimation of the pdf $p(x)$ from the samples $\{x_i\}_{i=1}^n$.
+We assume that $p(x)$ is uniformly continuous.
+To build our estimator, consider a sum of bump functions for estimating $p(x)$, $p_{n,\varepsilon}(x)$:
+\[
+p_{n,\varepsilon}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{\sqrt{\varepsilon}} K\left(\frac{x-x_i}{\sqrt{\varepsilon}} \right)
+\]
+It makes sense to choose $K$ that satisfies the following conditions:
+\begin{itemize}
+\item $K \geq 0$
+\item $\int_\mathbb{R} K(x)\,dx = 1$
+\item $K(x) = K(-x)$
+\item $\lim_{|x|\to \infty} K(x)=0$
+\item $K$ is monotonic decreasing for $x>0$ (optional but makes sense)
+\item Bounded variation: $\int |K'(x)|\,dx < \infty$. If $K$ is monotonic, then $\int |K'(x)|\,dx = 2K(0)$.
+\item $K$ is continuous (because $p(x)$ is continuous).
+\end{itemize}
+The estimator $p_{n,\eps}$ is nothing but a smoothed histogram.
+
+In the limit $n\rightarrow \infty$, the Law of Large Numbers gives:
+\begin{equation}
+p_{n,\varepsilon}(x)
+\rightarrow \mathbb{E}\left[\frac{1}{\sqrt{\eps}}K\left(\frac{x-X}{\sqrt{\eps}}\right)  \right]
+= \frac{1}{\sqrt{\eps}} \int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy
+= (K_\eps \ast p)(x),
+\label{parzen}
+\end{equation}
+where $$K_\eps(x) = \displaystyle \frac{1}{\sqrt{\eps}} K \left(\displaystyle \frac{x}{\sqrt{\eps}}\right)$$
+is a scaled kernel whose width is $\sqrt{\eps}$ and height is $1/\sqrt{\eps}$.
+The estimator $p_{n,\eps}$ is a convolution of the kernel $K_\eps$ with the true density $p$ (i.e. blurring due to $\eps$). In order to reduce the blurring it is tempting to take
+$\eps \rightarrow 0$. This corresponds to narrower bumps about the data (like a delta function), and we see with the above expression that our estimator satisfies $$\lim_{\eps \to 0}\lim_{n\to \infty} p_{n,\eps}(x) \rightarrow p(x).$$
+In practice, we do not have an infinite number of samples, so taking $\eps$ too small can lead to significant errors. We move on to analyze the finite sample case.
+
+For small $\eps>0$ we use a change of variables $z = (y-x)/\sqrt{\eps}$ on the integral in (\ref{parzen}), and then a Taylor expansion to get:
+
+\begin{align}
+& \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)dy = \int_\mathbb{R} K(z)p(x+z\sqrt{\eps})\,dz\nonumber\\
+& \qquad \qquad = \int_\mathbb{R} K(z)\left(p(x)+\sqrt{\eps}p^\prime(x) z + \frac{\eps}{2}p^{\prime \prime}(x) z^2 + O(\eps^{3/2})\right)\,dz\nonumber\\
+& \qquad \qquad = p(x) + \eps \frac{m_2}{2} p^{\prime\prime} (x) + O(\eps^2), \label{eq:2}
+\end{align}
+where $$m_2 = \int K(z)z^2\,dz.$$
+In (\ref{eq:2}) the $\sqrt{\eps}p^\prime(x) z$ term drops out because $z$ is odd while $K$ is an even function of $z$. Similarly, all integrals involving odd powers of $z$ vanish.
+Thus, for $\eps>0$ our estimator does not converge to $p(x)$ as $n\to \infty$. The estimator is biased, with 
+$$\text{Bias} = p(x) - \mathbb{E}[p_{n,\eps}(x)] = O(\eps).$$
+
+Recall the bias-variance decomposition of the mean squared error derived in Chapter~\ref{ss:predictionrisk}.
+Now we turn our attention to the variance error of $p_{n,\eps}$ for finite $n$:
+\begin{eqnarray}
+\text{Var }[p_{n,\eps}(x)] &=& \frac{1}{n} \text{Var}\left[\frac{1}{\sqrt{\eps}} K\left( \frac{x-y}{\sqrt{\eps}}\right) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps} \int_\mathbb{R} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - \left(\frac{1}{\sqrt{\eps}} \int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy\right)^2\right] \nonumber \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps} \int_\mathbb{R} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - O(1) \right] \label{var2}\\
+&=& \frac{1}{n} \left[ \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K^2(z)p(x+\sqrt{\eps}z)\,dz + O(1) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K^2(z)\,dz \;p(x) + O(1) \right] \nonumber\\
+&=:& \frac{1}{n\sqrt{\eps}} \left[M_2 p(x) + O(\sqrt{\eps})\right]\label{var5}
+\end{eqnarray}
+where for (\ref{var2}), as $\eps \rightarrow 0$, we showed that it approaches $p(x)$, so it is $O(1)$.
+In (\ref{var5}) we define
+$$M_2 = \int_\mathbb{R} K^2(z)\,dz.$$
+Overall,
+\begin{equation}
+\label{eq:density_estimation_MSE}
+p_{n,\eps}(x) = p(x) + \eps \frac{m_2}{2} p^{\prime\prime} (x) + \xi_{n,\eps} + O(\eps^2),
+\end{equation}
+where
+$$
+\mathbb{E}[\xi_{n,\eps}] = 0 \,\,\text{ and }\,\, \text{Var}[\xi_{n,\eps}] = \frac{M_2 p(x)}{n\sqrt{\eps}}\left[1 + O(\sqrt{\eps})\right].
+$$
+
+We see as we try to take $\eps \rightarrow 0$, that the standard deviation $\sigma(\xi_{n,\eps}) = \sqrt{\text{Var}[\xi_{n,\eps}]} \rightarrow \infty$, so we must pick some optimal choice of $\eps = \eps_n$ to balance things out. The MMSE criterion
+$$\min_{\eps} \text{Bias}^2 + \text{Var} = \min_{\eps} O(\eps^2) + O(\frac{1}{n\eps^{1/2}})$$
+gives
+$$\eps_n = n^{-2/5}.$$
+The decay of $\eps_n$ to 0 is rather slow: the bandwidth is $\sqrt{\eps_n} = n^{-1/5}$. For this choice, the MSE decays as $n^{-4/5}$ instead of the usual $n^{-1}$ decay in parametric estimation. The decay of the MSE to 0 means that we get pointwise convergence: for every $x$, as $n\to \infty$, $p_{n,\eps}(x)\to p(x)$ with probability 1.
+
+
+
+
+
+\subsection{Non-parametric density estimation in higher dimensions}
+Suppose $x_1,\ldots,x_n$ are i.i.d samples of a random variable $X$ in $\mathbb{R}^d$.
+We define the density estimator as
+$$p_{n,\eps}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{\eps^{d/2}}K\left(\frac{x-x_i}{\sqrt{\eps}}\right)$$
+If
+$$\int_{\mathbb{R}^d} K(x)\,dx = 1$$
+then
+$$K_{\eps}(x) = \frac{1}{\eps^{d/2}}K(\frac{x}{\sqrt{\eps}})$$
+satisfies
+$$\int_{\mathbb{R}^d} K_{\eps}(x)\,dx = 1$$
+We also assume that the kernel function is radially symmetric, that is, it is only a function of the distance:
+$$K(x) = k(\|x\|)$$
+
+\subsection{Bias term and the Laplacian}
+As before, we calculate the expectation using the change of variables $z = \frac{x-y}{\sqrt{\eps}}$
+\begin{eqnarray*}
+\mathbb{E}[p_{n,\eps}(x)] &=& \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy \\
+&=& \int_{\mathbb{R}^d} K(z)p(x+\sqrt{\eps}z)\,dz \\
+&=& \int_{\mathbb{R}^d} K(z)\left[p(x) + \sqrt{\eps}\sum_{i=1}^n \frac{\partial p(x)}{\partial x_i} z_i + \frac{\eps}{2}\sum_{i,j=1}^n \frac{\partial^2 p(x)}{\partial x_i \partial x_j} z_i z_j + \cdots \right]\,dz \\
+&=& p(x) + \eps  \frac{m_2}{2} \sum_{i=1}^n \frac{\partial^2 p}{\partial x_i^2}(x) + O(\eps^2) \\
+&=& p(x) + \eps  \frac{m_2}{2} \Delta p(x) + O(\eps^2)
+\end{eqnarray*}
+where
+$$m_2 = \int_{\mathbb{R}^d} K(z)z_i^2\,dz = \frac{1}{d} \int_{\mathbb{R}^d} K(z)\|z\|^2\,dz.$$
+Notice that integrals involving mixed terms $z_iz_j$ for $i\neq j$ vanish due to the radial symmetry of $K$. We see that the Laplacian emerges in a natural way. Let us explain the emergence of the Laplacian from a different viewpoint. Suppose $K$ is the Gaussian kernel
+$$K(x) = \frac{1}{(2\pi)^{d/2}}e^{-\frac{\|x\|^2}{2}}.$$
+For $\eps = 2t$ we have
+$$K_{2t}(x) = \frac{1}{(4\pi t)^{d/2}}e^{-\frac{\|x\|^2}{4t}}$$
+which is the heat kernel in $\mathbb{R}^d$. The convolution
+$$K_{2t}\ast p(x)$$
+is simply the solution of the heat equation
+$$u_t(t,x) = \Delta u(t,x),\quad x\in \mathbb{R}^d, \quad t > 0,$$
+with the initial condition $$u(0,x) = p(x).$$
+In other words, the Gaussian kernel $K_{2t}(x)$ is the Green function for the heat equation. 
+Formally, the solution is
+$$K_{2t}\ast p = u(t,x) = e^{t\Delta}p = (I + t\Delta + \cdots)p(x) = p(x) + t\Delta p(x) + O(t^2).$$
+This shows that for the Gaussian kernel
+$$K_{\eps}\ast p = p(x) + \frac{\eps}{2}\Delta p(x) + O(\eps^2),$$
+so that $m_2 = 1$ (which we already know, since the variance of the standard Gaussian is 1). The Laplacian appears in the bias for all kernels: the only difference is the coefficient $m_2$.
+\subsection{Variance term and optimal choice of $\eps_n$}
+Now, let us calculate the variance. The calculation is similar to the one dimensional case: 
+\begin{eqnarray*}
+\text{Var }[p_{n,\eps}(x)] &=& \frac{1}{n} \text{Var}\left[\frac{1}{\eps^{d/2}} K\left( \frac{x-y}{\sqrt{\eps}}\right) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^d} \int_{\mathbb{R}^d} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - \left(\frac{1}{\eps^{d/2}} \int_{\mathbb{R}^d} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy\right)^2\right] \nonumber \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^d} \int_{\mathbb{R}^d} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - O(1) \right] \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K^2(z)p(x+\sqrt{\eps}z)\,dz + O(1) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K^2(z)\,dz \;p(x) + O(1) \right] \nonumber\\
+&=& \frac{1}{n\eps^{d/2}} \left[M_2 p(x) + O(\eps)\right]
+\end{eqnarray*}
+where
+$$M_2 = \int_{\mathbb{R}^d} K^2(z)\,dz.$$
+Minimizing the mean squared error
+$$\text{MMSE} = \min_{\eps} \eps^2 + \frac{1}{n\eps^{d/2}}$$
+gives
+$$\eps = \frac{C_d}{n\eps^{d/2+1}}$$
+or
+$$\eps^{d/2 + 2} = C_d n^{-1}$$
+so
+$$\eps_n = O\left(n^{-\frac{1}{\frac{d}{2}+2}}\right).$$
+The MSE is
+$$\text{MSE} = O\left(n^{-\frac{1}{\frac{d}{4}+1}}\right).$$
+This is another form of the curse of dimensionality. The number of sample points needed for a given approximation error (MSE) increases exponentially with the dimension $d$:
+$$n = O\left(\frac{1}{\text{MSE}^{d/4+1}}\right).$$
+
+
+
+\section{Pointwise convergence of graph Laplacians}
+We now turn our attention back from density estimation to the problem of convergence of graph Laplacians in the large sample limit. Note that there are different notions of convergence, and here we choose to focus on pointwise convergence, which although weaker than spectral convergence of eigenvalues and eigenvectors, it does not require too advanced analysis yet highlights the main concepts. The convergence of graph Laplacians is covered in numerous papers and remains a topic of active research \cite{belkin2005towards,hein2005graphs,singer2006graph,belkin2006convergence,gine2006empirical,singer2017spectral,trillos2018variational,garcia2020error,calder2022improved}.        
+
+
+\subsection{Laplacians in $\mathbb{R}^d$}
+
+Suppose $x_1,x_2,\ldots,x_n$ are i.i.d samples from a distribution over $\mathbb{R}^d$ with pdf $p(x)$. We construct an $n\times n$ weight matrix $W$ with
+$$w_{ij} = \frac{1}{n}K_\eps(x_i-x_j)$$
+The graph Laplacian is the $n\times n$ matrix $$L = D-W$$ and the random walk Laplacian is
+$$L_{rw} = I - D^{-1}W$$
+We view all matrices as operators from $\mathbb{R}^{|V|} \to \mathbb{R}^{|V|}$. That is, we can apply the matrices to vectors of length $n=|V|$ that are functions over the data. In other words, we regard the vector $$f=(f_1,f_2,\ldots,f_n)\in \mathbb{R}^{|V|}$$ as $$f = (f(x_1),f(x_2),\ldots,f(x_n))$$ with $f_i = f(x_i)$. We abuse notation and think of the vector $f$ as $n$ samples of the function $f : \mathbb{R}^d \to \mathbb{R}$, where the exact usage should be clear from the context. We regard the function $f$ as being deterministic. That is, given $x$ the value $f(x)$ is completely known. Furthermore, we assume that $f$ is a nice function in the sense that $f\in C^4(\mathbb{R}^d)$.
+
+\subsection{Limiting operator of $L = D-W$}
+The entries of the diagonal matrix $D$ are given by
+$$D_{ii} = \sum_{j=1}^n w_{ij} = \frac{1}{n}\sum_{j=1}^n K_{\eps}(x_i - x_j)$$
+The previous discussion about kernel density estimators shows that for a fixed value of $\eps$,
+$$\mathbb{E}[D_{ii}] = p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i) + O(\eps^2)$$
+Since $f$ is deterministic, we also have
+$$\mathbb{E}[(Df)(i)] = \mathbb{E}[D_{ii}f(x_i)] = f(x_i)p(x_i) + \eps\frac{m_2}{2}f(x_i)\Delta p(x_i) + O(\eps^2)$$
+We remark that the term corresponding to $w_{ii}$ needs to be excluded from the sum, since it is deterministic. However, its contribution is only $\frac{K(0)}{n}$ and tends to 0 as $n\to \infty$.
+Now, let us consider $Wf$:
+$$(Wf)(i) = \frac{1}{n}\sum_{j=1}^n K_{\eps}(x_i-x_j)f(x_j)$$
+and its expected value is given by
+\begin{eqnarray*}
+\mathbb{E}[(Wf)(i)] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y)f(y)p(y)\,dy \\
+&=& f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2).
+\end{eqnarray*}
+It follows that
+\begin{eqnarray*}
+\mathbb{E}[(Lf)(i)] &=& \mathbb{E}[(D-W)f(i)] \\
+&=& [p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i)]f(x_i) - [f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i)] + O(\eps^2) \\
+&=& \eps\frac{m_2}{2} [f\Delta p - \Delta(fp)](x_i) + O(\eps^2) \\
+&=& \eps\frac{m_2}{2} [f\Delta p - f\Delta p - 2\nabla f \cdot \nabla p - p\Delta f](x_i) + O(\eps^2)\\
+&=& -\eps\frac{m_2}{2} [p\Delta f + 2\nabla p \cdot \nabla f](x_i) + O(\eps^2)
+\end{eqnarray*}
+Therefore,
+\begin{eqnarray*}
+-\frac{1}{\eps}(Lf)(i) &\to& \frac{m_2}{2} [p\Delta f + 2\nabla p \cdot \nabla f](x_i) + O(\eps) \\
+&=& \frac{m_2 p(x_i)}{2} [\Delta f + 2\frac{\nabla p}{p} \cdot \nabla f](x_i) + O(\eps)
+\end{eqnarray*}
+almost surely as $n\to \infty$. For the uniform distribution, $p(x)=const$ the gradient vanishes $\nabla p = 0$ and we end up with the Laplacian. However, for non-uniform distributions, we get a different operator with diffusion constant and drift that both depend on $p$. We conclude that
+$$\lim_{\eps\to 0}\lim_{n\to \infty} -\frac{1}{\eps}(Lf)(i) = \frac{m_2 p(x_i)}{2} [\Delta f + 2\frac{\nabla p}{p} \cdot \nabla f](x_i)$$
+
+\subsection{Limiting operator of $L_{rw}=I - D^{-1}W$}
+Let us consider the limiting operator for the random walk Laplacian $$L_{rw} = I - A = I - D^{-1}W$$ We have
+$$(L_{rw}f)(i) = f(x_i) - \frac{\sum_{j=1}^n w_{ij}f(x_j)}{\sum_{j=1}^n w_{ij}}$$
+We cannot simply conclude that the expected value $\mathbb{E}[(L_{rw}f)(i)]$ is the ratio of expectations of the numerator and of the denominator since they are not independent. Instead, we use the Law of Large Numbers to conclude that as $n\to \infty$
+\begin{align*}
+& (L_{rw}f)(i) \to f(x_i) - \frac{f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2)}{p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i) + O(\eps^2)} \\
+& \quad = f(x_i) - \frac{f(x_i)p(x_i) + \eps\frac{m_2}{2}f(x_i)\Delta p(x_i) + \eps\frac{m_2}{2}\left(p \Delta f + 2\nabla p \cdot \nabla f \right) + O(\eps^2)}{p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i) + O(\eps^2)} \\
+%&=& f(x_i) - \frac{1}{p(x_i)}\left(f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2) \right)\left(1 - \eps\frac{m_2}{2}\frac{\Delta p(x_i)}{p(x_i)} + O(\eps^2) \right) \\
+%&=& -\eps\frac{m_2}{2}\frac{\Delta (fp) - f\Delta p}{p}(x_i) + O(\eps^2) \\
+%&=& -\eps\frac{m_2}{2}\frac{p\Delta f + 2\nabla f \nabla p + f\Delta p - f\Delta p}{p}(x_i) + O(\eps^2) \\
+& \quad = -\eps\frac{m_2}{2}\left(\Delta f + 2\frac{\nabla p}{p}\cdot \nabla f \right)(x_i) + O(\eps^2).
+\end{align*}
+For the uniform distribution ($p=const$) we get that the random walk Laplacian converges to the Laplacian. In the non-uniform case, we get convergence to the backward Fokker-Planck operator \cite{nadler2006diffusion}: Define a potential function $$U(x) = -2\log p(x),$$ then $$\nabla U = -2\frac{\nabla p}{p}$$ and we have
+$$-\frac{1}{\eps}(L_{rw}f)(i) \to \frac{m_2}{2}\left(\Delta f - \nabla U \cdot \nabla f\right)(x_i) + O(\eps)$$
+For example, if the samples come from a Gaussian distribution, i.e., $$p(x) = \frac{1}{(2\pi)^{d/2} (\det \Sigma)^{1/2}} e^{-\frac{1}{2}x^T \Sigma^{-1} x}$$ then $$U(x)=x^T\Sigma^{-1}x + const$$ is a parabolic potential, and the diffusive particle sees a linear drift towards the origin with a slope depending on the location.
+
+
+\subsection{The effect of curvature}
+Suppose that the data points are sampled from a regular $C^3$ curve embedded in $\mathbb{R}^p$ parameterized as $\gamma(s)$, where $s$ is the natural arc-length parameterization, satisfying
+$$\|\gamma'(s)\|=1$$
+Differentiating $\|\gamma'(s)\|^2=1$ gives
+$$\gamma'(s)\cdot \gamma''(s) = 0$$
+that is, $\gamma''(s)$ is perpendicular to $\gamma'(s)$. Taylor expansion near $s=0$ gives
+$$\gamma(s) = \gamma(0) + \gamma'(0)s + \frac{1}{2}\gamma''(0)s^2 + O(s^3)$$
+We can set a local coordinate system with the origin at $\gamma(0)$, the $x$-axis in the direction of $\gamma'(0)$, and the $y$-axis in the direction of $\gamma''(0)$ (if $\gamma''(0)=0$ then just pick the $y$-axis to be in any direction orthogonal to the $x$-axis). In the local coordinate system
+$$\gamma(s) = (s, \frac{1}{2}as^2, 0, 0, \ldots, 0) + O(s^3)$$
+where $a = \|\gamma''(0)\|$ is the curvature. This just means that locally every regular curve looks like a planar parabola. We also need information about the third derivative. Differentiating $\gamma'(s)\cdot \gamma''(s) = 0$ gives
+$$\|\gamma''\|^2 + \gamma' \cdot \gamma''' = 0$$
+so
+$$\gamma'(0) \cdot \gamma'''(0) = -a^2$$
+This gives a slightly refined Taylor expansion
+$$\gamma(s) = (s - \frac{1}{6}a^2 s^3, \frac{1}{2}as^2, 0, 0, \ldots, 0) + (o(s^3),O(s^3),O(s^3),\ldots,O(s^3))$$
+
+In practice, however, we can only measure Euclidean distances in $\mathbb{R}^p$. We have no knowledge of the curve and we cannot measure geodesic distances.
+Luckily, the Euclidean distance is a very good approximation of the geodesic distance for short distances. Specifically, for the chordal distance:
+$$\|\gamma(s)\|^2 = s^2 - \frac{1}{3}a^2 s^4 + \frac{1}{4}a^2 s^4 + o(s^4) = s^2(1 - \frac{1}{12}a^2 s^2 + o(s^2))$$
+hence
+\begin{eqnarray}
+\|\gamma(s)\| &=& s\sqrt{1 - \frac{1}{12}a^2 s^2 + o(s^2)} = s(1 - \frac{1}{24}a^2 s^2 + o(s^2)) \nonumber \\
+&=& s-\frac{1}{24}a^2 s^3+o(s^3) \label{eq:u}
+\end{eqnarray}
+so we see that the chordal and geodesic distances are the same up to both first and second order.
+Let $u=\|\gamma(s)\|$ be the chordal distance, then
+$$u = s - \frac{1}{24}a^2 s^3+o(s^3)$$
+and
+$$s = u + \frac{1}{24}a^2 u^3+o(u^3)$$
+so
+$$\frac{ds}{du} = 1 + \frac{1}{8}a^2 u^2 + o(u^2).$$
+
+Suppose that the distribution of samples along our path has density $p(s)$, and $x_i=0$. The expectation of $D_{ii} = \sum_{j=1}^n w_{ij}$ is (we neglect the contribution of the term $j=i$ which is $O(n^{-1})$) 
+\begin{eqnarray*}
+\mathbb{E}\left[D_{ii}\right] &=& \mathbb{E}\left[\sum_{j=1}^n w_{ij}\right] \\
+&=& \mathbb{E}\left[K_\eps(\|x_i-X\|)\right] \\
+&=& \int \frac{1}{\sqrt{\eps}} K\left(\frac{\|\gamma(s)\|}{\sqrt{\eps}} \right)p(s)\,ds\\
+ &=& \int \frac{1}{\sqrt{\eps}} K\left(\frac{u}{\sqrt{\eps}}\right)p(u+O(u^3))(1+\frac{a^2u^2}{8} + o(u^2))\,du  \\
+&=& \int K(z) p(\sqrt{\eps}z + O(\eps^{3/2}))(1+\frac{\eps}{8}a^2z^2+o(\eps))\, dz\\
+&=& \int K(z) ( p(0)+\sqrt{\eps}zp^\prime (0) + \frac{\eps}{2}p^{\prime \prime}(0)z^2 + O(\eps^{3/2})   )(1+\frac{\eps}{8}a^2z^2+o(\eps))\, dz \nonumber \\
+&=& p(0) + \eps \frac{m_2}{2}\left[p^{\prime \prime}(0) + \frac{a^2}{4}p(0) \right] + o(\eps)
+\end{eqnarray*}
+In the calculation of the integral we substituted $u =\|\gamma(s)\|$, and used the change of coordinates $\frac{ds}{du} = 1 + \frac{1}{8}a^2u^2+ o(u^2)$, and then
+substituted $z = u/\sqrt{\eps}$, rewrote $m_2 := \int K(z)z^2\,dz$, and used the fact that $\int K(z)dz=1$, and its symmetry $K(z)=K(-z)$. If the curve is $C^4$ then the $o(\eps)$ can be replaced by $O(\eps^2)$.
+
+It follows that
+$$\mathbb{E}[Df] = fp + \eps \frac{m_2}{2}\left[fp'' + \frac{a^2}{4}fp \right] + o(\eps)$$
+and
+$$\mathbb{E}[Wf] = fp + \eps \frac{m_2}{2}\left[(fp)'' + \frac{a^2}{4}fp \right] + o(\eps)$$
+Therefore
+\begin{eqnarray*}
+\mathbb{E}[Lf] &=& \mathbb{E}[(D-W)f] \\
+&=&  \eps \frac{m_2}{2}\left[fp^{\prime \prime} - (fp)''  \right] + o(\eps) \\
+&=& -\eps \frac{m_2}{2}\left[f''p + 2f'p'   \right] + o(\eps)
+\end{eqnarray*}
+While curvature affects both $D$ and $W$, luckily the effect cancels out for the Laplacian! This means that it does not matter how the curve is embedded in $\mathbb{R}^p$, you can bend and twist it, yet $L$ remains the same (to leading order). In that sense, $L$ depends only on the intrinsic geometry of the data.
+
+A similar cancellation of the curvature effect also applies to the random walk Laplacian:
+\begin{eqnarray*}
+L_{rw}f &\to& f - \frac{fp + \eps \frac{m_2}{2}\left[(fp)'' + \frac{a^2}{4}fp \right] + o(\eps)}{p + \eps \frac{m_2}{2}\left[p'' + \frac{a^2}{4}p \right] + o(\eps)} \\
+&=& f - \frac{fp + \eps \frac{m_2}{2}\left[fp'' + \frac{a^2}{4}fp + pf'' + 2p'f'  \right] + o(\eps)}{p + \eps \frac{m_2}{2}\left[p'' + \frac{a^2}{4}p \right] + o(\eps)} \\
+&=& -\eps\frac{m_2}{2}\left[f'' + 2\frac{p'}{p}f' \right].
+\end{eqnarray*}
+Thus, even though we have curvature, our normalization brings us back to the Fokker-Planck operator.
+
+\subsection{General manifold}
+What happens on a general manifold?
+In 1-d we saw that the effect of curvature can be summarized as $$p'' \to p'' + \frac{a^2}{4} p.$$
+In general, through any point on a $d$-dimensional manifold we can find an orthogonal system of geodesics.
+Suppose we can take through a point $x$ a direction $x_1$, and an orthogonal direction $x_2$, and another $x_3$, etc.
+We have a system $s_1, s_2, \ldots, s_d$.
+
+The Laplace Beltrami operator takes the form
+$$
+\Delta_M f = \sum_{i=1}^d \frac{\partial^2 f}{ \partial s_i^2}.
+$$
+In the case $\operatorname{dim}(\mathcal{M}) = d$, every direction may have different curvature $a_1(x), a_2(x), \ldots, a_d(x)$, and thus there will be a correction term in the Laplacian.
+In 1D, the correction was $\frac{a^2}{4}p$.
+Similarly, it can be shown that in $d$ dimensions the correction term $E(x)$ in $$\Delta_M p(x) + \frac{1}{4}E(x)p(x)$$ is
+$$
+E(x) = \sum_{i=1}^da_i^2(x) - \sum_{i=1}^d\sum_{j\neq i}a_i(x)a_j(x).
+$$
+
+Still, the curvature term $E(x)$ drops in both $L$ and $L_{rw}$ and we have
+$$\lim_{\eps\to 0} \lim_{n\to \infty} -\frac{1}{\eps}Lf = \frac{m_2}{2} \left[p \Delta_M f + 2\nabla p \cdot \nabla f \right]$$
+and
+$$\lim_{\eps\to 0} \lim_{n\to \infty} -\frac{1}{\eps}L_{rw}f = \frac{m_2}{2} \left[\Delta_M f + 2\frac{\nabla p}{p} \cdot \nabla f \right].$$
+
+\subsection{Backward and Forward Fokker-Planck operators and the Neumann boundary condition}
+
+Again, if we define a potential $U(x) = -2\log p(x)$ then the random walk Laplacian converges to the backward Fokker-Planck operator
+$$\mathcal{L}f = \Delta_M f - \nabla U \cdot \nabla f.$$
+The backward Fokker-Planck operator plays a significant role in the analysis of stochastic ordinary differential equations (SDEs) and It\^o diffusion processes. Similar to the Laplacian that appears in the heat/diffusion equation describing the evolution of the probability density function of the Brownian motion, the time evolution of the probability density function of a Brownian motion in a potential well $U(x)$ (i.e., Brownian motion + drift)  is governed by the forward Fokker-Planck equation.
+
+The Laplace-Beltrami operator is a self-adjoint operator. Indeed, if we integrate over a manifold with no boundary, we see that
+\[
+\int_\mathcal{M} f \Delta_M g = \int_\mathcal{M} g \Delta_M f
+\]
+i.e. $\langle f, \Delta g \rangle = \langle \Delta f, g \rangle$.
+This fact that the Laplacian is self adjoint is left as an exercise.\\
+
+The adjoint $\mathcal{L}^*$ of the backward Fokker-Planck operator, known as the forward Fokker-Plank operator, is given by
+\[
+\mathcal{L}^*g = \Delta_M g + \nabla ( g \nabla U ).
+\]
+
+The forward operator can be written as divergence of flux:
+$$\mathcal{L}^* g = \nabla \cdot \left[\nabla g + g\nabla U \right] = -\nabla \cdot J$$
+where
+$$-J = \nabla g + g\nabla U.$$
+Here, the first term is flux due to concentration gradient and the second term is due to the drift $F = -\nabla U$.
+
+Intuitively, the discrete random walk on the graph of data points cannot get absorbed and the total probability is conserved. As the random walk reaches a boundary point it has no choice but to be reflected back into another data point on the manifold. We therefore have a reflection boundary condition, or no-flux boundary condition given by $J=0$. Let us derive the corresponding boundary condition for $f$ and show that $\mathcal{L}^*$ is indeed the adjoint of $\mathcal{L}$.
+\begin{eqnarray*}
+\int_{\mathcal{M}} f \mathcal{L}^* g \,dv &=& -\int_{\mathcal{M}} f \nabla \cdot J \,dv\\
+&=& -\int_{\mathcal{M}} \nabla \cdot [fJ] \,dv + \int_{\mathcal{M}} J \cdot \nabla f \,dv \\
+&=& -\int_{\partial \mathcal{M}} fJ\,dS + \int_{\mathcal{M}} J\cdot \nabla f \,dv ~~~~~~~~~\text{no flux b.c.:}\, J=0\\
+&=& -\int_{\mathcal{M}} \left[\nabla g + g \nabla U \right] \cdot \nabla f \,dv \\
+&=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla g \cdot \nabla f \, dv \\
+&=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla\cdot(g\nabla f) + \int_{\mathcal{M}} g\Delta f\,dv \\
+&=& \int_{\mathcal{M}} g\left[\Delta f - \nabla U \cdot \nabla f  \right]\,dv - \int_{\partial \mathcal{M}} g \frac{\partial f}{\partial \nu}\,dS ~~~~~~~\text{adjoint b.c.: } \frac{\partial f}{\partial \nu}=0 \\
+&=& \int_{\mathcal{M}} g \mathcal{L} f \,dv
+\end{eqnarray*}
+This shows that $\mathcal{L}^*$ is the formal adjoint of $\mathcal{L}$ if the boundary condition for $f$ is the homogeneous Neumann
+$$\frac{\partial f}{\partial \nu} = 0$$
+
+The eigenvectors of $L_{rw}$ are discrete approximations of the eigenfunctions of the backward Fokker-Plank operator with homogeneous Neumann boundary condition in case $\partial \mathcal{M} \neq \emptyset$:
+
+\begin{eqnarray*}
+\mathcal{L}\phi &=& \lambda \phi,\quad x\in \mathcal{M}\\
+\frac{\partial \phi}{\partial \nu} &=& 0,\quad x\in \partial \mathcal{M}
+\end{eqnarray*}
+
+\subsection{Density invariant graph Laplacians}
+We now turn our attention to a different normalization of the similarities $w_{ij}$ that leads to different limiting operators.
+Recall that we began with the symmetric similarity matrix $$w_{ij} = w_{ji} = \frac{1}{n}K_{\eps}(x_i-x_j)$$ but now we introduce a new similarity:
+\[
+\tilde{w}_{ij} = \frac{w_{ij}}{d_i d_j} = \frac{1}{n}\frac{K_{\eps}(x_i-x_j)}{d_i d_j}
+\]
+where $$d_i = \sum_{j=1}^n w_{ij}$$ are the row sums.
+This yields the symmetric matrix
+\[
+\tilde{{W}} = {D}^{-1} {W} {D}^{-1}
+\]
+which can be used to define a new diagonal matrix $\tilde{D}$ with
+\[
+\tilde{D}_{ii} = \sum_{j=1}^n \tilde{w}_{ij}
+\]
+and a new Laplacian and a random walk Laplacian
+$$\tilde{L} = \tilde{D} - \tilde{W}$$
+and
+$$\tilde{L}_{rw} = I - \tilde{D}^{-1}\tilde{W}.$$
+Then, $\tilde{L}_{rw}$ converges to the Laplace-Beltrami operator independent of the density $p$, while $\tilde{L}$ still has some dependency on $p$:
+$$\lim_{\eps\to 0}\lim_{n\to \infty} -\frac{1}{\eps}\tilde{L}f = \frac{m_2}{2} \frac{1}{p(x_i)}\Delta_M f$$
+and
+$$\lim_{\eps\to 0}\lim_{n\to \infty} -\frac{1}{\eps}\tilde{L}_{rw}f = \frac{m_2}{2} \Delta_M f.$$
+This means that using this re-normalization the random walk Laplacian $\tilde{L}_{rw}$ approaches the Laplace-Beltrami operator, even if the sampling distribution is non-uniform.
+We don't even need to know the distribution of sampling (i.e. no density estimation required)!
+However, $d_i$ in some sense does give you the density.
+Indeed, $d_i \propto p(x_i)$ since we previously showed that:
+\begin{eqnarray}
+d_i &\to& p(x_i) + \eps \frac{m_2}{2}\left(\Delta_M p(x_i) + \frac{1}{4}E(x_i)p(x_i)\right) + O(\eps^2)
+\end{eqnarray}
+as $n\to \infty$. We have
+$$\frac{1}{d} \to \frac{1}{p} - \eps\frac{m_2}{2p}\left(\frac{\Delta p}{p} + \frac{1}{4}E \right) + O(\eps^2).$$
+Therefore,
+$$\tilde{w}_{ij} \to w_{ij}\left[\frac{1}{p(x_i)p(x_j)} - \eps\frac{m_2}{2p(x_i)p(x_j)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_j)}{p(x_j)} + \frac{1}{4}E(x_j)\right) + O(\eps^2) \right].$$
+Hence,
+\begin{eqnarray*}
+&& \tilde{D}_{ii} = \sum_{j=1}^n \tilde{w}_{ij}  \\
+&=& \frac{1}{n} \sum_{j=1}^n K_{\eps}(x_i-x_j)\left[\frac{1}{p(x_i)p(x_j)} - \eps\frac{m_2}{2p(x_i)p(x_j)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_j)}{p(x_j)} + \frac{1}{4}E(x_j)\right) + O(\eps^2) \right] \\
+&\to& \frac{1}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta 1 + \frac{1}{4}E(x_i) \right] - \eps\frac{m_2}{2p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i)\right) + O(\eps^2) \\
+&=& \frac{1}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\frac{1}{4}E(x_i) \right] - \eps\frac{m_2}{p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) \right) + O(\eps^2) \\
+&=& \frac{1}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]
+\end{eqnarray*}
+And similarly,
+\begin{eqnarray*}
+&& (\tilde{W}f)(x_i) = \sum_{j=1}^n \tilde{w}_{ij}f(x_j) \\
+&=& \frac{1}{n} \sum_{j=1}^n K_{\eps}(x_i-x_j)\left[\frac{f(x_j)}{p(x_i)p(x_j)} - \eps\frac{m_2 f(x_j)}{2p(x_i)p(x_j)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_j)}{p(x_j)} + \frac{1}{4}E(x_j)\right) + O(\eps^2) \right] \\
+%&\to& \frac{f(x_i)}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta f(x_i) + \frac{1}{4}E(x_i)f(x_i) \right] - \eps\frac{m_2f(x_i)}{2p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i)\right) + O(\eps^2) \\
+&\to& \frac{f(x_i)}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta f(x_i)+\frac{1}{4}E(x_i)f(x_i) \right] - \eps\frac{m_2f(x_i)}{p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) \right) + O(\eps^2) \\
+&=& \frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]
+\end{eqnarray*}
+Altogether,
+\begin{eqnarray*}
+(\tilde{L}f)(x_i) &=& (\tilde{D}-\tilde{W})f(x_i) \\
+&\to& \frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right] \\
+&& -\frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right] \\
+&=& -\eps \frac{m_2}{2}\frac{1}{p(x_i)}\Delta_M f(x_i) + O(\eps^2)
+\end{eqnarray*}
+For the random walk Laplacian,
+\begin{eqnarray*}
+(\tilde{L}_{rw}f)(x_i) &=& (I-\tilde{D}^{-1}\tilde{W})f(x_i) \\
+%&\to& f(x_i) - \frac{\frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]}{\frac{1}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]} \\
+&=& -\eps \frac{m_2}{2}\Delta_M f(x_i) + O(\eps^2)
+\end{eqnarray*}
+Thus, the density invariant normalized random walk Laplacian converges to the Laplace-Beltrami operator, regardless of the density. The normalization separates the density from the geometry.
+
+We remark that other normalizations and variations of the graph Laplacian have been proposed, analyzed, and applied in practice. For example, the bi-stochastic normalization that can be computed efficiently by Sinkhorn–Knopp (SK) iterations is robust to noise heteroskedasticity \cite{landa2021doubly,cheng2024bi}. Motivated by the success of self-tuning spectral clustering \cite{zelnik2004self}, variable bandwidth diffusion kernels and anisotropic diffusion were analyzed in \cite{singer2008non,berry2016variable}. Diffusion maps with affinity kernels based on non-Euclidean distances such as optimal transportation Wasserstein distances and others were considered in \cite{kileel2021manifold,Xu2026}.        
+
+\subsection{Variance error}
+For simplicity of exposition, we assume that the points are sampled in $\mathbb{R}^d$. The discussion can be extended to the $d$-dimensional manifold case without much difficulty.
+We previously derived the limiting operators for the graph Laplacian and the random walk Laplacian as the number of samples goes to infinity. In practice, however, the number of samples is finite and we need to choose $\eps = \eps_n$ in a suitable manner in order to ensure that the variance error is not too large. A similar consideration was made earlier for non-parametric density estimation. 
+
+We begin by considering the graph Laplacian
+$$Lf(i) = (D - W)f(i) = \frac{1}{n}\sum_{j=1}^n K_{\eps}(x_i-x_j) (f(x_i)-f(x_j))$$
+The variance is
+\begin{eqnarray*}
+\text{Var}(Lf(i)) &=& \frac{1}{n}\left[\int_{\mathbb{R}^d} K_{\eps}^2(x_i-y)(f(x_i)-f(y))^2p(y)\,dy + O(\eps^2)  \right] ~~~~~ (\mathbb{E}[Lf]=O(\eps))\\
+&=& \frac{1}{n\eps^{d/2}}\left[M_2 (f(x_i)-f(x))^2p(x)|_{x=x_i} + \eps \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(x))^2p(x))|_{x=x_i} + O(\eps^2) \right] \\
+&=& \frac{1}{n\eps^{d/2-1}} \left[\frac{m_{2,2}}{2}\Delta ((f(x_i)-f(x))^2p(x))|_{x=x_i} + O(\eps) \right]
+\end{eqnarray*}
+where
+$$m_{2,2} = \frac{1}{d}\int K(x)^2 \|x\|^2\,dx$$
+Typically, the leading order term is of size $\frac{1}{n\eps^{d/2}}$, but since the function vanishes at $x_i$ ($f(x_i) - f(x)|_{x=x_i} = 0$), the leading order term vanishes and we get an asymptotically smaller variance.
+Recall
+$$\Delta (g^2) = 2g\Delta g + 2\|\nabla g\|^2.$$
+Therefore, for the uniform distribution $p(x)=const$ and $g(x)=f(x_i)-f(x)$ we have
+$$\Delta(f(x_i)-f(x))^2|_{x=x_i} = 2\|\nabla f(x_i)\|^2$$
+Hence, for the uniform distribution the variance error is $O(\frac{1}{n\eps^{d/2-2}})$ whenever $\nabla f = 0$. For example, if the manifold is the sphere in $\mathbb{R}^3$, then $f(x,y,z)=z$ is extremal at the north and south poles, and the variance error is asymptotically smaller there.
+
+\subsection{Stochastic fluctuation for the random walk Laplacian}
+The random walk Laplacian is given by
+$$L_{rw}f(i) = (I - D^{-1}W)f(i) = \frac{\frac{1}{n}\sum_{j=1}^n K_{\eps}(x_i-x_j) (f(x_i)-f(x_j))}{\frac{1}{n}\sum_{j=1}^n K_{\eps}(x_i-x_j)}$$
+It is a ratio of two dependent random variables, therefore the variance cannot be simply computed. We can write
+$$L_{rw}f(i) = \frac{\sum_{j=1}^n F_j}{\sum_{j=1}^n G_j}$$
+where
+\begin{eqnarray*}
+F_j &=& K_{\eps}(x_i-x_j) (f(x_i)-f(x_j))\\
+G_j &=& K_{\eps}(x_i-x_j)
+\end{eqnarray*}
+We want to show that
+$$L_{rw}f(i) = \frac{\sum_{j=1}^n F_j}{\sum_{j=1}^n G_j} \approx \frac{\mathbb{E}[F_j]}{\mathbb{E}[G_j]}$$
+and to control the size of the fluctuation as a function of $n$ and $\eps$.
+Recall
+\begin{eqnarray*}
+\mathbb{E}[F_j] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y) (f(x_i)-f(y))p(y)\,dy \\ &=& \eps \frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps^2) \\
+\mathbb{E}[G_j] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y) p(y)\,dy \\ &=& p(x_i) + O(\eps)
+\end{eqnarray*}
+and
+\begin{eqnarray*}
+\mathbb{E}[F_j^2] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) (f(x_i)-f(y))^2 p(y)\,dy \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))^2p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}}) \\
+\mathbb{E}[G_j^2] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) p(y)\,dy \\
+&=& \frac{M_2}{\eps^{d/2}}p(x_i) + O(\frac{1}{\eps^{d/2-1}}) \\
+\mathbb{E}[F_j G_j] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) (f(x_i)-f(y))p(y)\,dy \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}})
+\end{eqnarray*}
+We conclude that
+\begin{eqnarray*}
+\text{Var}(F_j) &=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))^2p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}}) \\
+\text{Var}(G_j) &=& \frac{M_2}{\eps^{d/2}}p(x_i) + O(1,\frac{1}{\eps^{d/2-1}}) \\
+\text{Cov}(F_j, G_j) &=& \mathbb{E}[F_j G_j] - \mathbb{E}[F_j]\mathbb{E}[G_j] \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps,\frac{1}{\eps^{d/2-2}})
+\end{eqnarray*}
+The correlation between $F_j$ and $G_j$ is
+\begin{eqnarray*}
+\rho (F_j,G_j) &=& \frac{\text{Cov}(F_j,G_j)}{\sqrt{\text{Var}(F_j)}\sqrt{\text{Var}(G_j)}} \\
+&=& O\left(\frac{1}{\eps^{d/2-1}} \sqrt{\eps^{d/2 + d/2 - 1}}\right) \\
+&=& O(\sqrt{\eps})
+\end{eqnarray*}
+Altogether,
+\begin{eqnarray*}
+L_{rw}f(i) &=& \frac{\frac{1}{n}\sum_{j=1}^n F_j}{\frac{1}{n}\sum_{j=1}^n G_j} \\
+&=& \frac{\mathbb{E}[F_j] + \xi_{n,\eps}^f}{\mathbb{E}[G_j] + \xi_{n,\eps}^g} \\
+&=& \frac{\eps \frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps^2) + \xi_{n,\eps}^f}{p(x_i) + O(\eps) + \xi_{n,\eps}^g} \\
+&=& \eps\frac{\frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps) + O_P(\frac{1}{n^{1/2}\eps^{d/4+1/2}})}{p(x_i) + O(\eps) + O_P(\frac{1}{n^{1/2}\eps^{d/4}})}
+\end{eqnarray*}
+Therefore,
+$$\frac{1}{\eps}L_{rw}f(i) = \frac{m_2}{2p(x_i)}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps) + O_P(\frac{1}{n^{1/2}\eps^{d/4+1/2}})$$
+By balancing the variance and squared bias we get
+$$\eps^2 = \frac{1}{n \eps^{d/2+1}}$$
+or
+$$\eps^{d/2+3} = \frac{1}{n}$$
+so the optimal kernel bandwidth is
+$$\eps_n = O\left(\frac{1}{n^{1/(d/2+3)}}\right).$$
+
+\subsection{Large deviation bounds}
+We can also get bounds on large deviation with high probability. The random variables $F_j$ are uniformly bounded by $$c=O(\eps^{-d/2})$$ and their variance is $$\sigma^2 = O(\eps^{-(d/2-1)})$$ We see that $$\sigma^2 \ll c$$ so Bernstein's inequality could in principle provide a large deviation bound that is tighter than that provided by Hoeffding's inequality. Recall Bernstein's inequality
+$$\Pr \left\{\frac{1}{n}\sum_{j=1}^n (F_j - \mathbb{E}[F_j]) > \alpha \right\} \leq e^{-\frac{n\alpha^2}{2\sigma^2 + \frac{2}{3}c\alpha}}$$
+Since we estimate a quantity of size $O(\eps)$ (the prefactor of the Laplacian), we need to take $\alpha \ll \eps$. Let us take $\alpha=o(\eps)$. The exponent in Bernstein takes the form
+$$\frac{n\alpha^2}{2\sigma^2 + \frac{2}{3}c\alpha} = \frac{n \alpha^2}{O(\eps^{-(d/2-1)}) + o(\eps^{-d/2}\eps)} = O(n\alpha^2\eps^{d/2-1})$$
+Choosing
+$$n\alpha^2\eps^{d/2-1} = \log n $$
+means that the deviation happens with probability that goes to 0 as $n\to \infty$ (even at all points by union bound).
+This means that the deviation is of size
+$$\alpha = \frac{\sqrt{\log n}}{n^{1/2}\eps^{d/4-1/2}}.$$
+We see that the only price to pay in order to get a large deviation bound is a factor of $\sqrt{\log n}$. Taking a series $\eps_n\to 0$ with $\frac{\sqrt{\log n}}{n^{1/2}\eps_n^{d/4-1/2}}\to 0$ guarantees point-wise convergence, and also uniform convergence.
+
+In the case of data points sampled from a manifold, it is desirable to show that the discrete eigenvectors of the Laplacian operators converge to the eigenfunctions of the differential operators. The pointwise convergence and even the uniform convergence are unfortunately not sufficient to demonstrate this type of convergence. The precise treatment of such spectral convergence is beyond the scope of this textbook.  
+
+
+\subsection{Sturm-Liouville}
+Consider the eigenvalue problem
+\[
+\Delta f - \nabla U \cdot \nabla f = -\lambda f
+\]
+which in 1-D is
+\[
+f^{\prime \prime} - U^\prime f^\prime = -\lambda f
+\]
+and if we multiply by the integrating factor $\exp(-U)$ we get 
+\[
+(e^{-U} f^\prime)^\prime + \lambda e^{-U} f = 0,
+\]
+which is a Sturm-Liouville equation.
+Thus we know that it has a countable number of eigenvalues, its eigenfunctions form an orthonormal basis for the suitable weighted $L^2$ space, and everything else that comes with the Sturm-Liouville theory. In particular, Sturm-Liouville theory implies that the first non-trivial eigenfunction sorts points on an open curve according to its arclength, and the embedding of a closed curve in the plane encircles the origin exactly once (see rexercises at the end of this chapter).  
+
+\section{Can one hear the shape of the data?}
+Cheeger's inequality provides a geometric meaning for the second eigenvalue of the Laplacian as an isoperimtric inequality. It holds for both the discrete (graph) and the continuous (manifold) Laplacians. What other geometric information is encoded by the eigenvalues of the Laplacian? The continuous case has been widely explored, and it turns out that the eigenvalues encode some shape information, as was put famously by Mark Kac in his paper in the American Mathematical Monthly in 1966 \cite{kac1966}.
+
+\subsection{Wave equation}
+The Laplacian appears in many of the important PDEs describing physical phenomenon such as wave propagation, diffusion and heat equation, quantum mechanics (Schr\"odinger equation), and more. This is perhaps due to the fact that the Laplacian commutes with rotations and translations and therefore appears in the description of physical phenomenon with such symmetries.
+
+Consider a ``drum" or vibrating membrane $D \subset \mathbb{R}^2$, whose configuration over time $u(t,x)$ is described by the {\em{wave equation}}
+\begin{eqnarray*}
+u_{tt}(t,x) &=&c^2\Delta u (t,x), \quad x\in D, \; t>0,
+\end{eqnarray*}
+where $\Delta u = u_{x_1x_1} + u_{x_2x_2}$, and $c$ is the wave velocity. Fixing the boundary accounts for the Dirichlet boundary condition
+$$u(t,x) = 0, \quad x \in \partial D,\; t \geq 0.$$
+
+We can derive the solution using the usual separation of variables technique.  Suppose $u(t,x) = T(t) X(x)$, then
+\begin{eqnarray*}
+T''X&=&c^2T\Delta X\\
+&\Updownarrow&\\
+\frac{T''}{T} &=& c^2\frac{\Delta X}{X} = -\lambda\\
+\end{eqnarray*}
+resulting in  $T''(t)=-\lambda T \Rightarrow T(t) = e^{\pm \imath \sqrt{\lambda}t}$ and
+
+\begin{displaymath}
+\left\{
+     \begin{array}{lr}
+       c^2\Delta X = -\lambda X  &\;\;\text{($X$ is a Laplacian eigenfunction)}\\
+       X(x)=0 , x\in\partial D &\;\;\text{(Dirichlet boundary condition)}\\
+     \end{array}
+   \right.
+\end{displaymath}
+
+Therefore, we wish to find the eigenfunctions $\lbrace\varphi_n\rbrace_{n=1}^\infty$ of the Laplacian $\Delta$ with Dirichlet boundary condition:
+\begin{eqnarray*}
+       \Delta \varphi_n &=& -\lambda_n \varphi_n,\quad x\in D,\\
+       \varphi_n(x)&=&0, \quad \quad x\in\partial D,
+\end{eqnarray*}
+with eigenvalues $0 < \lambda_1 \leq \lambda_2 \leq \cdots \leq \lambda_n \leq \cdots$. We see that the following relationship holds: $$\lambda = c^2\lambda_n.$$
+Because $\varphi_1, \varphi_2, \cdots$ form an orthonormal basis to $L^2(D)$, we can write
+\begin{equation*}
+u(t,x)=\sum_{n=1}^\infty \left( a_n e^{\imath c\sqrt{\lambda_n} t} + b_n e^{-\imath c \sqrt{\lambda_n} t}\right) \varphi_n(x)\\
+\end{equation*}
+To find $a_n$ and $b_n$, we need initial conditions $$u(0,x)=f(x),$$ and $$u_t(0,x)=g(x).$$
+
+\subsection{Diffusion Equation}
+In 1-D, we have $u_t=\Delta u$ over the internal $x\in[0,L]$. With Neumann boundary conditions $u_x(t,0)=0$, $u_x(t,L)=0$, the eigenfunctions $$\phi_n''=-\lambda_n \phi_n$$ are given by
+$$\phi_n = \cos(\sqrt{\lambda_n} x)$$
+with
+$$\sin{(\sqrt{\lambda_n} L)} = 0 \Rightarrow \sqrt{\lambda_n} L=n\pi,$$
+$$\lambda_n=\frac{n^2 \pi^2}{L^2}, \; n=0,1,2,\ldots.$$
+Therefore,
+\begin{eqnarray*}
+u(t,x)&=&\sum_{n=0}^\infty a_n e^{-\lambda_n t} \cos{(\sqrt{\lambda_n} x)}\\
+&=&\sum_{n=0}^\infty a_n e^{-\frac{n^2 \pi^2}{L^2} t} \cos\left(\frac{n\pi x}{L}\right).\\
+\end{eqnarray*}
+
+In 2-D, the Laplacian is $\Delta u=u_{xx} + u_{yy}$. For a rectangle of size $L_x\times L_y$ we construct the eigenfunction $\phi_{n m}(x,y)$ by taking the tensor products of eigenfunctions of the respective 1-D equations, e.g., $$\phi_{n m}(x,y) = X_n(x)Y_n(y).$$ The eigenfunction problem then becomes
+\begin{equation*}
+-\Delta\phi_{nm} = \lambda_nX_nY_m + \lambda_mX_nY_m = (\lambda_n+\lambda_m) \phi_{nm}\\
+\end{equation*}
+Then $$\lambda_{nm} = \lambda_n+\lambda_m = \left(\frac{n\pi}{L_x}\right)^2+\left(\frac{m\pi}{L_y}\right)^2, \quad n,m=0,1,2,\ldots.$$ Notice that the growth of eigenvalues for 2-D is different than the 1-D case.
+
+We count the number of eigenvalues: $$N(\lambda) = \#\{\lambda_n \le \lambda\}.$$
+For the 1-D case: $\left(\frac{n\pi}{L}\right)^2 \le \lambda$, so $N(\lambda)=\sqrt{\frac{\lambda L^2}{\pi^2}}=\frac{L}{\pi}\lambda^{1/2}$\\
+For the 2-D case: $\left(\frac{n\pi}{L_x}\right)^2 + \left(\frac{m\pi}{L_y}\right)^2\le \lambda$, so $\frac{n^2}{\left(\frac{\sqrt{\lambda}L_x}{\pi}\right)^2} + \frac{m^2}{\left(\frac{\sqrt{\lambda} L_y}{\pi}\right)^2} \le 1$\\.
+
+In the 2-D, $N(\lambda)$ is the number of regular lattice points inside the first quadrant of the ellipse with semi axes $\frac{\sqrt{\lambda}L_x}{\pi}$ and $\frac{\sqrt{\lambda}L_y}{\pi}$. Therefore, $N(\lambda)$ is approximately $\frac{1}{4}$ the area of the ellipse
+\begin{eqnarray*}
+N(\lambda) & \approx & \frac{1}{4} \pi a b = \frac{1}{4}\pi \left(\frac{\sqrt{\lambda} L_x}{\pi}\right) \left(\frac{\sqrt{\lambda} L_y}{\pi}\right)\\
+&=& \frac{\lambda L_x L_y}{4\pi}.
+\end{eqnarray*}
+
+We see that in 1-D, $N(\lambda) = \frac{L}{\pi}\lambda^{1/2}$, and in 2-D, $N(\lambda) \sim \frac{\lambda L_x L_y}{4\pi}$. Similar considerations can be made for higher dimensional boxes.
+
+From this, we can guess that $N(\lambda) \sim c \lambda^{d/2}$, $c = c(d) |D|$, where $c(d)$ is some constant that depends on $d$ and $|D|$ is the volume of the domain.
+
+\subsection{Green Function/Heat Kernel}
+The Green's function $G_t(x,y)$ enables us to write the solution to the diffusion equation for any initial distribution $u(0,y)=f(y)$ as
+\begin{equation*}
+u(t,x)=\int\limits_D G_t(x,y)f(y)dy
+\end{equation*}
+We see that $G_t(x,y)$ needs to satisfy some conditions. First, from $u_t = \Delta u$ we must have
+\begin{equation*}
+\int\limits_D \frac{\partial G}{\partial t} f(y) dy = \int\limits_D \Delta_x G_t(x,y)f(y)dy.
+\end{equation*}
+Since we want it to hold for any $f$, then $G$ should satisfy the diffusion equation by itself
+\begin{equation*}
+\frac{\partial}{\partial t}G_t(x,y)=\Delta_x G_t(x,y).
+\end{equation*}
+Also, $G_t(x,y)$ must satisfy the initial and boundary conditions, e.g., $$G_t(x,y) \xrightarrow{t\rightarrow 0}\delta(x,y)$$ and
+$$G_t(x,y) = 0, \quad x\in \partial D,\; y\in D,$$
+for Dirichlet boundary condition, or
+$$\frac{\partial G_t(x,y)}{\partial n_x} = 0, \quad x\in \partial D,\; y\in D,$$
+for Neumann boundary condition.
+
+The heat kernel $G_t(x,y)$ has the following probabilistic interpretation: it is the probability density function of a Brownian motion $X(t)$ that starts at $X(0)=y$ at time 0 to be at $X(t)=x$ at time $t$. It can therefore be regarded as the propagator of the probability density. 
+
+Since $G_t(\cdot,y)$ satisfies the diffusion equation with the boundary condition, we can write $$G_t(x,y) = \sum_{n=1}^\infty a_n(y) e^{-\lambda_n t} \phi_n(x).$$ Also, for $t=0$ we formally have
+\begin{equation*}
+\delta(x,y) = G_0(x,y) = \sum_{n=1}^\infty a_n(y)\phi_n(x),
+\end{equation*}
+and upon taking inner product with $\phi_m$ we get
+\begin{equation*}
+a_m(y) = \phi_m(y),
+\end{equation*}
+where we used the orthogonality of Laplacian eigenfunctions. Therefore,
+$$G_t(x,y) = \sum_{n=1}^\infty e^{-\lambda_n t} \phi_n(x)\phi_n(y).$$
+Just like with spectral decomposition of finite matrices, the last equation gives the spectral decomposition of the heat kernel $G_t$ in terms of its eigenvalues and eigenfunctions.
+We can also understand the spectral representation of the heat kernel from the fact that the solution to the diffusion equation
+$$u_t = \Delta u$$
+is
+$$u = e^{t \Delta } f$$
+in the same way that the solution to a system of ODEs
+$$\frac{du}{dt} = Au$$
+with a constant coefficient matrix $A$ is
+$$u = e^{tA}u_0.$$
+
+The {\em{trace}} of $G$ is defined as
+\begin{eqnarray*}
+\text{Tr}(G_t) &=& \int_D G_t(x,x)\,dx\\
+&=&\sum_{n=1}^\infty e^{-\lambda_n t} \int_D  \phi_n^2(x)\, dx\\
+&=&\sum_{n=1}^\infty e^{-\lambda_n t}.
+\end{eqnarray*}
+
+If we know the spectrum $\{\lambda_n\}_{n=1}^\infty$ then we can construct the trace, and vice versa, from the trace we can get the eigenvalues (e.g., $$\lambda_1 = -\lim_{t\to \infty} \frac{\log \text{Tr}(G_t)}{t},$$ and we can peel-off the eigenvalues one by one).
+
+\subsection{Weyl's Law}
+Motivated by the eigenvalues of the Laplacian in a box, we conjectured that
+\begin{equation*}
+N(\lambda) \sim \lambda^{d/2},
+\end{equation*}
+or equivalently,
+\begin{equation*}
+\lambda_n \sim n^{2/d},
+\end{equation*}
+which is known as Weyl's law, that we now derive.
+
+First, we observe that $$\text{Tr}(G_t) = \sum_{n=1}^\infty e^{-\lambda_n t}$$ diverges as $t\to 0$ because it becomes an infinite sum of ones. At what rate does it diverge?
+We show that for a region $\Omega \subset \mathbb{R}^d$ we have
+\begin{equation*}
+\text{Tr}(G_t)=\int_\Omega G_t(x,x)\, dx = \sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{(4\pi t)^{d/2}},\quad \text{as } t\to 0.
+\end{equation*}
+
+\paragraph{Diffusion over the real line}
+We start with diffusion over the entire real line (no boundary conditions). In this case, the Green function is the Gaussian kernel. Indeed,
+the Green function satisfies $$\frac{\partial}{\partial t}G_t(x,y)=\frac{\partial^2}{\partial x^2}G_t(x,y),$$ with the initial condition $$\lim_{t\to 0}G_t(x,y)=\delta(x,y).$$  We ask then: what does the heat kernel $G_t(x,y)$ look like? The answer is $$G_t(x,y) = \frac{1}{\sqrt{4\pi t}} e^{-(x-y)^2/{4t}},$$
+so that the solution to the heat equation is obtained by convolving the initial distribution with $G_t$:
+\begin{equation*}
+u(x,t)=\int_{-\infty}^\infty G_t(x,y)f(y)\,dy = \frac{1}{\sqrt{4\pi t}}\int_{-\infty}^\infty e^{-\frac{(x-y)^2}{4t}}f(y)\,dy.
+\end{equation*}
+This result can be proven by taking the Fourier transform of the diffusion equation:
+\begin{equation*}
+\frac{\partial}{\partial t}\hat{G}_t(\xi,y)= -4\pi^2\xi^2\hat{G}_t(\xi,y),
+\end{equation*}
+which is a linear first order ODE for each $\xi$ and $y$ with solution
+\begin{equation*}
+\hat{G}_t(\xi, y) = A(\xi,y) e^{-4\pi^2 \xi^2 t}.
+\end{equation*}
+Taking the Fourier transform of the the initial condition
+\begin{equation*}
+G_0(x,y) = \delta(x,y),
+\end{equation*}
+we get
+\begin{equation*}
+\hat{G}_0(\xi,y) = \int_{-\infty}^\infty e^{-2\pi \imath \xi x} \delta(x,y)\,dx = e^{-2\pi \imath \xi y}.
+\end{equation*}
+Therefore,
+\begin{equation*}
+\hat{G}_0(\xi,y) = A(\xi,y) = e^{-2\pi \imath \xi y},
+\end{equation*}
+and we have
+\begin{equation*}
+\hat{G}_t(\xi, y) = e^{-2\pi \imath \xi y} e^{-4\pi^2 \xi^2 t}.
+\end{equation*}
+This is a shifted Gaussian in $\xi$. The (inverse) Fourier transform of a Gaussian is also a Gaussian. It can be easily verified that 
+\begin{equation*}
+G_t(x,y) = \int_{-\infty}^\infty e^{2\pi \imath \xi x}e^{-2\pi \imath \xi y} e^{-4\pi^2 \xi^2 t}\,d\xi = \frac{1}{\sqrt{4\pi t}} e^{-(x-y)^2/{4t}}.
+\end{equation*}
+
+\paragraph{Diffusion over the semi-infinite line}
+
+In considering $\mathbb{R}_+$ for $u_t=\Delta u$ with Neumann boundary condition $u_x(0)=0$, we use the {\em{method of images}} to derive the heat kernel. This is done by placing an imaginary diffusive particle at $-y$, so its trajectory enters the positive line whenever the original particle leaves it, thus preserving the no-flux boundary condition. The corresponding Green's function is therefore
+\begin{equation*}
+G_t(x,y)=\frac{1}{\sqrt{4\pi t}}e^{\frac{-(x-y)^2}{4t}}+\frac{1}{\sqrt{4\pi t}}e^{\frac{-(x+y)^2}{4t}}\\
+\end{equation*}
+Note that for the Dirichlet boundary condition at the origin, the Green's function is the difference between the two terms.
+
+\paragraph{Diffusion over a finite interval}
+It is a homework exercise to derive the heat kernel for diffusion in the finite interval $[0,L]$. This can be done using the method of images, but now an infinite number of images is required. Still, the short time asymptotic behavior is that of the heat kernel over the entire real line: at very short times our diffusive particle does not ``see" the boundary.
+
+{\textbf{Short-time asymptotics of the heat kernel}}: for small times ($t\rightarrow 0$), we obtain $G_t(x,y)\sim\frac{1}{\sqrt{4\pi t}} e^{\frac{-(x-y)^2}{4t}}$, again as $t\rightarrow0$.
+
+\subsection{Any domain $\Omega\subset\mathbb{R}^d$}
+Again, using the Fourier transform we can derive the heat kernel for diffusion in $\mathbb{R}^d$ and get
+\begin{equation*}
+G_t(x,y) = \frac{1}{(4\pi t)^{d/2}} e^{-\frac{\|x-y\|^2}{4t}}.
+\end{equation*}
+Alternatively, the heat kernel in $\mathbb{R}^d$ is the product of $d$ one-dimensional heat kernels, corresponding to independent Brownian motions in each dimension.
+This is also the short time asymptotic behavior of the heat kernel for any domain $\Omega \subset \mathbb{R}^d$, by arguing that at very short times the particle does not see the boundary.
+More formally, we can consider an asymptotic expansion of the form
+\begin{equation*}
+G_t(x,y)\sim\sum\limits_k \frac{1}{(4\pi t)^{d/2}}e^{-\frac{S_k^2(x,y)}{4t}}\sum_n Z_{k,n}(x,y)t^n,\quad \text{as } t\to 0.
+\end{equation*}
+
+Plugging this into the heat equation, we get the Eikonal equation $|\nabla S_k|=1$ for the $S_k$'s, and transport equations for the $Z_{k,n}$'s.  The $S_k$'s correspond to length of geodesics, or billiard trajectories from $y$ to $x$ that can be reflected from the boundary. The expansion of diagonal terms is $G_t(x,x)\sim\frac{1}{(4\pi t)^{d/2}}$. Therefore, the trace becomes
+\begin{equation*}
+\text{Tr}(G_t)=\int\limits_\Omega G_t(x,x)\,dx\sim\frac{|\Omega|}{(4\pi t)^{d/2}}
+\end{equation*}
+as $t\rightarrow0$.
+
+\subsection{Weyl's Law}
+To examine $N(\lambda)=\#\{\lambda_n<\lambda\}$, we look at
+\begin{equation*}
+\sum_{n=1}^\infty e^{-\lambda_n t} = \int_0^\infty e^{-\lambda t}\, dN(\lambda)\sim \frac{|\Omega|}{(4\pi t)^{d/2}}
+\end{equation*}
+Assuming $N(\lambda)\sim c \lambda^\alpha$ and $N'(\lambda)\sim\alpha c \lambda^{\alpha-1}$ we get
+\begin{eqnarray*}
+\frac{|\Omega|}{(4\pi t)^{d/2}}\sim\int\limits_0^\infty e^{-\lambda t}\alpha c \lambda^{\alpha-1}\,d\lambda &\underbrace{=}_\text{$s=\lambda t$}& \alpha c\int\limits_0^\infty e^{-s}\left(\frac{s}{t}\right)^{\alpha-1}\frac{ds}{t}\\
+&=&\frac{\alpha c}{t^\alpha}\underbrace{\int\limits_0^\infty e^{-s}s^{\alpha-1}ds}_\text{$\Gamma(\alpha)$}
+\end{eqnarray*}
+Hence,
+$$\alpha=\frac{d}{2}$$
+Therefore,
+\begin{equation*}
+\frac{|\Omega|}{(4\pi)^{d/2}} = \frac{d}{2}c \Gamma(\frac{d}{2}) \Rightarrow c=\frac{|\Omega|}{(4\pi)^{d/2}\frac{d}{2}\Gamma(\frac{d}{2})}\\
+\end{equation*}
+and so we get the asymptotic behavior (Weyl's Law):
+\begin{equation}
+N(\lambda)\sim\frac{|\Omega|}{(4\pi)^{d/2}\frac{d}{2}\Gamma(\frac{d}{2})}\lambda^{d/2}
+\end{equation}
+For $d=1$, we have
+\begin{eqnarray*}
+N(\lambda)&\sim&\frac{L}{\sqrt{4\pi}\frac{1}{2}\underbrace{\sqrt{\pi}}_\text{$\Gamma(\frac{1}{2})$}} \lambda^{1/2}\\
+&\sim&\frac{L}{\pi}\lambda^{1/2} \text{\hspace{1cm} (same as previous)}\\
+\end{eqnarray*}
+For $d=2$, we have
+\begin{eqnarray*}
+N(\lambda)&\sim&\frac{|\Omega|}{4\pi}\lambda, \hspace{0.5cm}|\Omega|=L_xL_y \text{\hspace{1cm} (same as previous)}\\
+\end{eqnarray*}
+
+From the spectrum we can therefore infer the dimension of the region and also its volume by considering the growth rate of the eigenvalues (e.g., by looking at the eigenvalues on a log-plot).
+
+For $d=2$, Kac found additional higher order terms in the asymptotic expansion:
+\begin{equation*}
+\sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{4\pi t}-\frac{|\partial\Omega|}{8(\pi t)^{1/2}}+\frac{1}{6}(1-h)+O(\sqrt{t})
+\end{equation*}
+basically showing that besides the area of the domain $|\Omega|$, we can hear the length of its boundary $|\partial \Omega|$ and the number of holes $h$ inside the domain. In fact, all these terms are just integrals over the boundary of curvature (Gauss' formula gives the area, length of boundary is clear, Euler's characteristic is given by the Gauss-Bonnet theorem, etc.)
+
+However, by just looking at the eigenvalues, it is typically impossible to {\textit{exactly}} determine the manifold/domain. There are domains which are different but have the same spectrum. These are called isospectral domains. So, no, one cannot hear the shape of the drum exactly. Still, the eigenvalues provide a spectral signature, acting as a hash function of the domain.\\
+
+\subsection{Diffusion map revisited}
+Define the embedding of the domain/manifold into $\ell^2$:
+\begin{equation*}
+\Phi_t(x) = \left(e^{-\lambda_1 t/2}\phi_1(x),e^{-\lambda_2 t/2}\phi_2(x), \ldots \right)
+\end{equation*}
+where
+\begin{equation}
+\Delta \phi_l = -\lambda_l \phi_l,
+\end{equation}
+are the eigenfunctions of the Laplacian over the manifold with Neumann boundary conditions (if there is a boundary) $0 = \lambda_1 < \lambda_2 \leq \lambda_3 \leq \cdots$.
+Indeed,
+\begin{equation*}
+\Phi_t(x)\in\ell^2,
+\end{equation*}
+because
+$$\|\Phi_t(x)\|^2=\sum_{n=1}^\infty e^{-\lambda_n t}\phi_n(x)^2 = G_t(x,x),$$ that is, the diagonal of the heat kernel is the squared norm, and in general, the inner products are given by $$\left\langle\Phi_t(x),\Phi_t(y)\right\rangle = \sum_{n=1}^\infty e^{-\lambda_n t}\phi_n(x)\phi_n(y) = G_t(x,y).$$
+(again, notice that $G_t$ is PSD.)
+
+From the short time asymptotic behavior $G_t(x,x)\sim\frac{1}{(4\pi t)^{d/2}}$ and $$\|\Phi_t(x)\|^2=G_t(x,x) \sim \frac{1}{(4\pi t)^{d/2}},$$ we conclude that all $\Phi_t(x)$ have roughly the same norm as $t\rightarrow 0$ for all $x$. In other words, $\Phi_t$ maps the domain/manifold to some subset of the sphere of radius $\frac{1}{(4\pi t)^{d/4}}$. Also, from the probabilistic interpretation of $G_t(x,y)$ it follows that $$G_t(x,y) \geq 0$$ for all $x$, $y$, and $t$. The angle between any two vectors $\Phi_t(x)$ and $\Phi_t(y)$ is acute. As a result $\Phi_t(\Omega)$ occupies only a small portion of the sphere.
+
+The diffusion distance
+\begin{eqnarray*}
+D_t^2(x,y) &=& \left\langle\Phi_t(x),\Phi_t(x)\right\rangle + \left\langle\Phi_t(y),\Phi_t(y)\right\rangle -2\left\langle\Phi_t(x),\Phi_t(y)\right\rangle\\
+&=& G_t(x,x)+G_t(y,y)-2 G_t(x,y)\\
+&\sim& \frac{1}{(4\pi t)^{d/2}} \left[1+1-2 e^{-\|x-y|^2/{4t}}\right]\\
+&=&\frac{2}{(4\pi t)^{d/2}} \left(1-e^{-\frac{\|x-y\|^2}{4t}}\right)\\
+&\sim&\frac{\|x-y\|^2}{(4\pi t)^{d/2} 2t}
+\end{eqnarray*}
+whenever $\|x-y\| \ll \sqrt{t}$. We see that the diffusion distance behaves locally like the geodesic distance. However, the global behavior is very different:
+\begin{equation*}
+D_t^2(x,y) \sim \frac{2}{(4\pi t)^{d/2}},
+\end{equation*}
+for $\|x-y\| \gg \sqrt{t}$ as $t\to 0$. That is, the distances between points of large geodesic distance are roughly the same, that is, the distance saturates.
+
+The idea of embedding Riemannian manifolds by their heat kernel goes back to B\'erard, Besson, and Gallot in 1994 \cite{berard1994embedding}. It took another decade until the idea was rediscovered by the applied math community.
+
+\subsection{Commute time distance}
+Let us turn our attention to the commute time distance introduced in Chapter~\ref{s:commute}.There, we defined the commute time embedding as
+\begin{equation*}
+\Psi(x) = \left(\frac{1}{\sqrt{\lambda_2}}\phi_2(x),\frac{1}{\sqrt{\lambda_3}}\phi_3(x),\ldots\right).
+\end{equation*}
+We claim that for $d\geq 2$, the embedding cannot be in $\ell^2$. Indeed,
+$$\|\Psi(x)\|^2 = \sum_{n=2}^\infty \frac{1}{\lambda_n} \phi_n^2(x).$$ Assume to the contrary that there is a constant  $M>0$ such that $$\|\Psi(x)\|^2 \leq M$$ for all $x\in \Omega$. Integrating over $\Omega$ gives
+$$\sum_{n=2}^\infty \frac{1}{\lambda_n} = \int_{\Omega} \|\Psi(x)\|^2\,dx \leq M |\Omega|.$$ But this is a contradiction to Weyl's Law, because
+$$\lambda_n\sim n^{2/d}$$
+and the sum
+$$\sum_{n=1}^\infty \frac{1}{n^{2/d}}$$
+diverges for $d \geq 2$. Only for $d=1$ the sum converges. Thus, the commute time embedding is in $\ell^2$ only for $d=1$.
+
+We can understand this in terms of the behavior of the Green's function for Poisson's equation in $\mathbb{R}^d$. The Green's function in that case is the fundamental solution for the electric/gravitational potential due to a point charge/mass. It is singular for dimension $d\geq 2$ (log singularity $\log(r)$ for $d=2$ and algebraic singularity $1/r^{d-2}$ for $d\geq 3$) and is regular only for $d=1$. Recall that Poisson's equation is
+$$\Delta u = f$$
+Again, we can write the solution in terms of the fundamental solution
+$$\Delta_x G(x,y) = \delta(x,y)$$
+with Neumann boundary conditions, as
+$$u(x) = \int G(x,y)f(y)\,dy.$$
+And similar to the previous derivation
+$$G(x,y) = \sum_{n=2}^\infty \frac{1}{\lambda_n}\phi_n(x)\phi_n(y)$$
+
+
+\subsection{The biharmonic distance}
+The operator $\Delta^2$ which is the second iterate of the Laplacian is called the {\textit{biharmonic operator}}. It appears in linear elasticity and fluid flow. The Green's function to
+$$\Delta^2 u = f$$
+with appropriate boundary conditions is
+$$G(x,y) = \sum_{n=2}^\infty \frac{1}{\lambda_n^2}\phi_n(x)\phi_n(y).$$
+By Weyl's Law
+$$\sum_{n=2}^\infty \frac{1}{\lambda_n^2} \sim \sum_{n=2}^\infty \frac{1}{n^{4/d}}$$
+which converges for $d < 4$, for which the fundamental solution is regular. The biaharmonic distance is popular in computer graphics in order to measure distances on surfaces: unlike the commute time distance it does not diverge as the mesh is refined, and unlike the diffusion distance it is global, i.e., the distance does not saturate. Up to a logarithmic factor, the biharmonic distance behaves similar to the geodesic distance.  In general, given the dimension $d$ of space, one can define an embedding using any suitable iterate of the Laplacian $\Delta^m$.
+
+
+
+\section{Vector diffusion maps and the graph connection Laplacian}\label{s:vectordiffusionmap}
+
+We conclude this chapter with vector diffusion maps and the graph connection Laplacian that extend diffusion maps and the graph Laplacian mathematical from scalar functions to vector fields \cite{ASinger_HTWu_2011_VDM}. 
+
+\subsection{Quick review of diffusion maps}
+
+To set the stage for vector diffusion maps, it is convenient to briefly recall the construction and some basic properties of standard diffusion maps. Recall that in this setting we have data points $x_1, x_2, \ldots, x_n$ that are related by affinities $w_{ij}$ in a weighted graph. We build the weight matrix $W$ from the affinities $w_{ij}$ and consider the random walk matrix $A = D^{-1}W$, where $D$ is the diagonal matrix of degrees $d_i = \sum \limits_{j} w_{ij}$. $A$ is similar to the symmetric matrix $D^{-1/2}WD^{-1/2}$. By the spectral theorem, this can be written as $V \Lambda V^T$, where $\Lambda$ is the diagonal matrix of eigenvalues $\lambda_i$ in decreasing order of magnitude, and $V$ is the matrix of eigenvectors. Then the eigenvectors of $A$ are $\phi_l = D^{-1/2}v_l$.
+
+Then recall that the \emph{diffusion map} is the function from the data to $\mathbb{R}^n$ given by:
+
+\[ \Phi_t(i) : x_i \to \left(\lambda_l^t\phi_l(i)\right)_{l=1}^n. \]
+The inner product between the embeddings of $x_i$ and $x_j$ is:
+\[ \langle \Phi_t(i), \Phi_t(j) \rangle = \sum \limits_{l=1}^n \lambda_l^{2t}\phi_l(i)\phi_l(j). \]
+This inner product can also be expressed, up to a normalizing factor, via the entries of $A^{2t}$. Indeed from the spectral decomposition of $A$:
+\[ A^{2t}(i,j) = \sum_{l=1}^n \lambda_l^{2t}\phi_l(i)\psi_l(j), \]
+where $\psi_l$ satisfy $\psi_l(j) = d_j \phi_l(j)$, therefore $$A^{2t}(i,j)/d_j = \langle \Phi_t(i), \Phi_t(j) \rangle.$$ Recall that $A^{2t}(i,j)$ gives the probability that starting at $i$, the random walk according to $A$ will end up at $j$ in $2t$ time steps.
+
+\subsection{Vector diffusion maps}
+
+The basic setup of vector diffusion maps is analogous to that of diffusion maps. We have data points $x_i$ and scalar affinities $w_{ij}$ between them, and we think of the data as forming a weighted graph. In addition, however, we also have orthogonal matrices $O_{ij}$ of size $d\times d$ (for some $d$) that give additional information about the similarity between the data points. For instance, if the data points are two-dimensional images, then $O_{ij}$ may be the in-plane rotation that aligns them best, assuming that the images have been centered.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/VDM_slide.png}
+\caption{In vector diffusion maps, the relations between data points are encoded by weights $w_{ij}$ and orthogonal transformations $O_{ij}$.}
+\end{center}
+\end{figure}
+
+\begin{figure}[h]
+\begin{center}
+\subcaptionbox{$I_i$}{
+\includegraphics[width=0.2\textwidth]{figures/one_left.jpg}
+}
+\qquad
+\subcaptionbox{$I_j$}{
+\includegraphics[width=0.2\textwidth]{figures/one_right.jpg}
+}
+\qquad
+\subcaptionbox{$I_k$}{
+\includegraphics[width=0.204\textwidth]{figures/two.jpg}
+}
+\end{center}
+\caption{An example of a weighted graph with orthogonal transformations: $I_i$ and $I_j$ are two different images of the digit one, corresponding to nodes $i$ and $j$ in the graph. $O_{ij}$ is the $2\times 2$ rotation matrix that rotationally aligns $I_j$ with $I_i$ and $w_{ij}$ is some measure for the affinity between the two images when they are optimally aligned. The affinity $w_{ij}$ is large, because the images $I_i$ and $O_{ij}I_j$ are actually the same. On the other hand, $I_k$ is an image of the digit two, and the discrepancy between $I_k$ and $I_i$ is large even when these images are optimally aligned. As a result, the affinity $w_{ik}$ would be small, perhaps so small that there is no edge in the graph connecting nodes $i$ and $k$. The matrix $O_{ik}$ is clearly not as meaningful as $O_{ij}$. If there is no edge between $i$ and $k$, then $O_{ik}$ is not represented in the weighted graph.}
+\label{fig:digits}
+\end{figure}
+
+In general, we can think of an abstract group $G$ acting on the set $X$ where the data comes from. If $g_{ij}$ denotes the group element that aligns the data points best, and $G$ has an orthogonal representation $\rho$, then $O_{ij}$ may correspond to $\rho(g_{ij})$.
+
+With this additional information we want to say that two data points are similar if they are connected by many of paths in the graph, but also if the transformations one obtains by traversing those paths and composing the $O_{ij}$ along the way are similar.
+
+We make use of the transformations by constructing the following block matrix $W_1$:
+
+\[W_1(i,j) = w_{ij}O_{ij}, \quad 1\leq i,j \leq n.\]
+
+Note that $W_1(i,j)$ is a $d \times d$ matrix, thus $W_1$ is of size $nd \times nd$. We think of $W_1$ as having $n \times n$ blocks of size $d \times d$. The diagonal blocks of $W_1$ are set to $w_{ii}I$. Since $O_{ij} = O_{ji}^T$ (e.g., the matrix that aligns $i$ to $j$ is the inverse of the matrix that aligns $j$ to $i$), we see that $W_1$ is a symmetric matrix. We can make $W_1$ sparse by setting some blocks $W_1(i,j)$ equal to zero, for instance those with small affinity $w_{ij}$.
+
+In analogy with diffusion maps, we also define the diagonal matrix $D_1$ of degrees of size $nd \times nd$:
+
+\[D_1(i,i) = d_i I_{d \times d},\]
+where $d_i = \sum_j w_{ij}$ is the node degree. We define the {\em graph connection Laplacian} as
+$$L_1 = D_1 - W_1$$ \vfill
+
+$$L_1(i,j) = \left\{\begin{array}{cc}
+                    -w_{ij}O_{ij} & i\neq j, \\
+                    \sum_{k\neq i} w_{ik}I_{d\times d} & i=j.
+                  \end{array}\right. $$ 
+
+The graph connection Laplacian $L_1$ can be applied to vectors $v$ of length $nd$, viewed as $n$ vectors in $\mathbb{R}^d$, i.e., $v = [v(1),\ldots,v(n)]^T$ with $v(i) \in \mathbb{R}^d$. Moreover, as a quadratic form $L_1$ satisfies 
+$$v^T L_1 v = \frac{1}{2} \sum_{i,j=1}^n w_{ij} \|v(i) - O_{ij} v(j)\|^2$$
+(the proof is left as an exercise). It follows that $L_1 \succeq 0$, and $L_1$ has a non-trivial null space iff there exists a non-zero $v$ such that $v(i) = O_{ij}v(j)$ for all $i\sim j$. We refer to $v^T L_1 v$ as the {\em frustration of $v$}, and can also define the {\em frustration of the connection graph} as the minimum over all $v$ with $\|v(i)\|=1$ for all $i$. It is possible to bound this frustration using the eigenvalues of graph connection Laplacian, which can be regarded as a generalization of Cheeger's inequality to the graph connection Laplacian \cite{Bandeira_Singer_Spielman_OdCheeger}.
+
+The matrix $D_1^{-1}W_1$ is similar to the symmetric matrix $D_1^{-1/2}W_1D_1^{-1/2}$ via
+\[D_1^{-1}W_1 = D_1^{-1/2}D_1^{-1/2}W_1D_1^{-1/2}D_1^{1/2}.\]
+Therefore, as in diffusion maps, $D_1^{-1}W_1$ has a complete basis of eigenvectors, but now there are $nd$ of them. These vectors are of length $nd$, and we think about them in blocks of $d$. 
+
+ Let us consider the spectral decomposition of the matrix $\tilde{W}_1=D_1^{-1/2}W_1D^{-1/2}$:
+
+\[\tilde{W}_1(i,j) = \sum \limits_{l=1}^{nd} \lambda_lv_l(i)v_l(j)^T. \]
+
+We emphasize that here the eigenvalues $\lambda_l$ are different from those of the random walk matrix $A = D^{-1}W$, in particular there are now $nd$ of them. From the above decomposition, we obtain as in the case of diffusion maps:
+
+\[\left( D_1^{-1}W_1\right)(i,j) = \sum \limits_{l=1}^{nd} \lambda_lw_l(i)u_l(j)^T = \sum \limits_{l=1}^{nd} \lambda_lw_l(i)w_l(j)^Td_j, \]
+where the vectors $w_l, u_l$ are defined by $w_l(i) = d_i^{-1/2}v_l(i)$ and $u_l(i) = d_i^{1/2}v_l(i)$. Then $D_1^{-1}W_1$ raised to the power $2t$ can be expressed as
+
+\[\left( D_1^{-1}W_1\right)^{2t}(i,j) = d_j\sum \limits_{l=1}^{nd} \lambda_l^{2t} w_l(i)w_l(j)^T.\]
+
+The matrix $\left( D_1^{-1}W_1\right)^{2t}$ plays a critical role in vector diffusion maps. Specifically, $\left( D_1^{-1}W_1\right)^{2t}(i,j)$ is obtained by considering all paths of length $2t$ between $i$ and $j$, and for each path summing the probability of traversing that path multiplied by the composition of transformations along the path. We want to define an affinity between our vertices so it depends on the `size' or `magnitude' of this matrix. If the transformations along several paths lead to similar transformations, then the overall magnitude will be large, while if the transformations cancel out, then the magnitude will be smaller. It turns out that the Frobenius (or Hilbert-Schmidt) norm
+
+\[\left\| \frac{\left( D_1^{-1}W_1\right)^{2t}(i,j)}{d_j}\right\|_{\text{F}}^2\]
+will be convenient for measuring the magnitude of that matrix. To understand this quantity, we use the formula derived above in terms of the eigenvalues and eigenvectors of $D_1^{-1/2}W_1D_1^{-1/2}$:
+
+\[\left\|\sum \limits_{l=1}^{nd} \lambda_l^{2t} w_l(i)w_l(j)^T\right\|_{\text{F}}^2 =
+\text{Tr}\left(\sum \limits_{l,r=1}^{nd} \lambda_l^{2t} \lambda_r^{2t}w_l(i)w_l(j)^T w_r(j)w_r(i)^T \right)\]
+
+Now we try to simplify the terms in the sum. Note that $w_l(j)^T w_r(j) = \langle w_l(j), w_r(j) \rangle$ is a scalar. In addition, the trace function is linear, so we can bring it inside the summation, and for each term factor out the scalar. Finally, we also have $\text{Tr}(AB)=\text{Tr}(BA)$ for any two matrices, and we can rewrite the above as:
+\[\left\|\sum \limits_{l=1}^{nd} \lambda_l^{2t} w_l(i)w_l(j)^T\right\|_{\text{F}}^2 = \sum \limits_{l,r=1}^{nd} (\lambda_l\lambda_r)^{2t} \langle w_l(i), w_r(i) \rangle \langle w_l(j), w_r(j) \rangle. \]
+Therefore, we define the \emph{vector diffusion map} as
+\[ V_t(i) : i \to \left((\lambda_l\lambda_r)^t\langle w_l(i), w_r(i) \rangle \right)_{l,r=1}^{nd}, \]
+and we have the identity
+\[\left\| \frac{\left( D_1^{-1}W_1\right)^{2t}(i,j)}{d_j}\right\|_{\text{F}}^2 = \langle V_t(i), V_t(j) \rangle. \]
+
+The vector diffusion map is an embedding of the data in a real Euclidean space, just like the ordinary diffusion map. However, we note some differences. The dimension of the space into which the data is embedded is now $(nd)^2$, as opposed to $n$ for diffusion map. Also, the coordinates of the embedding are given by inner products of eigenvectors, not just their evaluations. In fact, one way to think about the embedding is that it takes all eigenvectors $w_1,\ldots,w_{nd}$, looks at their $i$-th block, and evaluates all possible inner products between them. There is some redundancy in the current definition, since the coordinates $(l,r)$ and $(r,l)$ always agree. This way we can get a reduction by a factor of almost two in the dimension of the embedded space.
+
+From the interpretation of $\left( D_1^{-1}W_1\right)^{2t}(i,j)$ we see that $\langle V_t(i), V_t(j) \rangle$ gives us a notion of affinity between the vertices. We mention that we can also define vector diffusion distances $d_{\text{VDM},t}^2$ from the inner product $\langle V_t(i), V_t(j) \rangle$ as
+$$d_{\text{VDM},t}^2 = \langle V_t(i), V_t(i) \rangle + \langle V_t(j), V_t(j) \rangle - 2 \langle V_t(i), V_t(j) \rangle$$
+
+One apparently inconvenient feature of the vector diffusion map is its high dimensionality. However, the eigenvalues of $D_1^{-1}W_1$ help with this issue - indeed, all eigenvalues are at most one in absolute value (the proof is left as an exercise). Therefore, we can proceed as in diffusion maps, and truncate the embedding to keep only the largest eigenvalues. Note also that unlike diffusion maps, here it can happen that all eigenvalues have norm strictly less than one. Similar to diffusion maps, it is possible to use different normalizations of the graph connection Laplacian to define other normalized vector diffusion maps. For example, the mapping $i \to \left((\lambda_l\lambda_r)^t\langle v_l(i), v_r(i) \rangle \right)_{l,r=1}^{nd},$ (that uses $v$'s instead of $w$'s) corresponds to the unnormalized graph connection Laplacian. 
+
+\subsection{Vector diffusion maps in manifold learning}
+
+Next, we consider the manifold learning setup, where the data points are assumed to lie on a $d$-dimensional manifold $\mathcal{M}$ embedded in $\mathbb{R}^p$, where $d \ll p$. In this case, the transformations $O_{ij}$ can be obtained from the data, and below we outline a procedure for this task.
+
+For simplicity, we assume that the dimension $d$ of the manifold is known in advance. If that is not the case, it is possible to estimate it from the local variability of the data set computed at different scales using the SVD at each point \cite{AVLittle_YMJung_MMaggioni_2009_ManDim}. 
+
+\medskip
+\noindent
+{\textbf Obtaining the transformations $O_{ij}$:}
+If the dimension of the manifold is $d$, we construct $d$-dimensional orthogonal transformations as follows. The first step is known as \emph{local PCA}. We choose a parameter $\epsilon_{PCA}$ and perform PCA for each point $x_i$ on its set of neighbors closer than $\sqrt{\epsilon_{PCA}}$ in Euclidean distance, i.e., using $x_j$'s for which $\|x_j - x_i\| \leq \sqrt{\epsilon_{PCA}}$. The first $d$ singular vectors are a numerical approximation of the tangent plane to the manifold at $x_i$. An asymptotic order of magnitude of $\epsilon_{PCA}$ for which this procedure works well can be derived in terms of $n$ and $d$ \cite{ASinger_HTWu_2011_VDM}. 
+
+\begin{figure}
+\begin{center}
+\subcaptionbox{}{
+\includegraphics[width=0.45\textwidth]{figures/PAPER_projection_rotation.jpg}
+}
+\subcaptionbox{}{
+\includegraphics[width=0.45\textwidth]{figures/OiTOj.jpg}
+}
+\end{center}
+\caption{The orthonormal basis of the tangent plane $T_{x_i}\MMM$ is determined by local PCA using data points
+inside a Euclidean ball of radius $\sqrt{\epsilon_\text{PCA}}$ centered at $x_i$. The bases for $T_{x_i}\MMM$ and
+$T_{x_j}\MMM$ are optimally aligned by an orthogonal transformation $O_{ij}$ that can be viewed as a mapping from
+$T_{x_j}\MMM$ to $T_{x_i}\MMM$.}
+\end{figure}
+
+
+
+Let us denote by $O_i$ the $p \times d$ matrix obtained by local PCA at $x_i$. Then the columns of $O_i$ are orthonormal: $O_i^TO_i = I_{d\times d}$. Note that we could take any linear combination of the columns and still have the same approximation to the local tangent plane - however, the vector diffusion maps only depend on inner products of vectors, and these inner products are invariant to the choice of the basis.
+
+Now we come to the second step, known as \emph{alignment}. Here we use the $O_i$ and $O_j$ for neighboring $x_i$ and $x_j$ to obtain the $d\times d$ orthogonal transformation $O_{ij}$. We consider another scale parameter $\epsilon$, much larger than $\epsilon_{PCA}$. To make our final matrix $W_1$ sparse, we can set to zero all entries $W_1(i,j)$ where $\|x_i-x_j\|>\sqrt{\epsilon}$. We consider only the remaining pairs $(i,j)$.
+
+To see how the matrices $O_{ij}$ come about, we can look at the simple example when the manifold is $\mathbb{R}^2$ (i.e., flat manifold).  In that case, the matrices $O_i^TO_j$ are orthogonal, and show how to change basis from the local tangent plane at $x_j$ to the local tangent plane at $x_i$. In this case we can simply take $O_{ij} = O_i^TO_j$.
+
+However, for manifolds with non-vanishing curvature, $O_i^TO_j$ will not be orthogonal in general. Still, we can define $O_{ij}$ as the closest orthogonal transformation to $O_i^T O_j$:
+
+\[O_{ij} = \arg\min \limits_{O\in O(d)} \|O_i^TO_j - O\|_{\text{HS}}^2. \]
+This optimization problem can be solved efficiently using the SVD of $O_i^TO_j$. Namely, if the SVD is $O_i^TO_j = U\Sigma V^T$, then $O_{ij} = UV^T$. Thus, we construct $O_{ij}$ in two steps, using local PCA and alignment. Using this construction of $W_1$, we can proceed to compute the vector diffusion maps as before.
+
+\subsection{Parallel transport and the connection Laplacian}
+
+Now we want to give some interpretations of the above construction in the limit as the number of points $n$ tends to infinity, and as $\epsilon \to 0$. It turns out that in this limit $O_{ij}$ approximates the \emph{parallel transport} operator from differential geometry.
+
+Here we will give an intuitive explanation of the parallel transport operator. Consider two points $x_i$ and $x_j$ in the manifold $\mathcal{M}$. The parallel transport operator $P_{x_ix_j}$ is a linear mapping from the tangent space at $x_j$, denoted by $T_{x_j}$, to the tangent space $T_{x_i}$. Consider a geodesic between $x_i$ and $x_j$. If we take a vector in $T_{x_j}$, and slide it parallel to the geodesic to $T_{x_i}$, we get the image of the vector under parallel transport.
+
+It is possible to show that $O_{ij}$ constructed above gives a good approximation to the parallel transport operator for nearby points. We mention that obtaining the best orthogonal estimate as opposed to simply using $O_i^TO_j$ as an approximation is crucial for deriving convergence theorems \cite{ASinger_HTWu_2011_VDM}. 
+
+The operator $D_1^{-1}W_1$ can be viewed as an averaging operator over vector fields. Indeed,
+
+\[\left(D_1^{-1}W_1 v\right)(i) = \frac{1}{d_i}\sum_{j\sim i} w_{ij}O_{ij}v(j).\]
+
+Thus, each vector $v(j)$ is brought from the tangent plane $T_{x_j}$ to the tangent plane $T_{x_i}$ via parallel transport, and then weighted averaged by $w_{ij}$.
+
+We previously obtained the large sample limits for diffusion maps. Under uniform sampling, the discrete graph Laplacian converges to a differential operator known as the Laplace-Beltrami operator on the manifold in the limit of infinite sample. In that setup, the operator was acting on scalar functions on the manifold. As mentioned above, we now think of our vectors as having $n$ entries of dimension $d$. Thus, in this case, the limiting operator will act on tangent vector fields (or one-forms) on the manifold. We mention that it is possible to devise similar constructions for higher order forms as well by taking tensor powers of $O_{ij}$.
+
+For diffusion maps, we have the convergence result 
+\[\left(D^{-1}W - I\right)f  \to c\Delta f\]
+for sufficiently smooth functions $f$. In vector diffusion maps, we have an analogous statement:
+\[\left(D_1^{-1}W_1 - I\right)X  \to c\nabla^2 X\]
+where $X$ is a vector field and $\nabla^2$ denotes the \emph{connection Laplacian} over the manifold. 
+
+\subsection{Orientability and double cover} 
+
+Vector diffusion maps can be used to obtain topological information about the underlying manifold. For instance, orientability can be detected by forming the signed matrix of $\det(O_{ij})$ and considering its eigenvectors and eigenvalues \cite{ASinger_HTWu_2011_OrDM}. Specifically, we encode the information about reflections in a symmetric $n \times n$ matrix $Z$ with entries
+\begin{equation*}
+Z_{ij} = \left\{\begin{array}{ccl} \det O_{ij} & & (i,j)\in E, \\ 0 & & (i,j)\notin E.
+\end{array} \right.
+\end{equation*}
+That is, $Z_{ij}=1$ if no reflection is needed, $Z_{ij}=-1$ if a reflection is needed, and $Z_{ij}=0$ if the points are not nearby.
+We then normalize $Z$ by the node degrees, i.e., consider the eigenvalues of $D^{-1}Z$. 
+
+If the manifold is orientable, the matrix can be ``synchronized" in the sense that we can find a vector of signs $\{z_i\}_{i=1}^n$ such that
+$$\det(O_{ij}) = z_i z_j$$ 
+(equivalently, using our previous notation, the graph connection Laplacian has no frustration). This recovers the orientations of the local bases. Otherwise, it can be used to construct an embedding of the orientable double cover in Euclidean space. Thus, orientability can be detected with vector diffusion maps, which look only at local information about the data set.
+
+
+\begin{figure}[h]
+\begin{center}
+\subcaptionbox{$S^2$}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_s2orien.jpg}
+}
+\subcaptionbox{Klein bottle}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_klein.jpg}
+}
+\subcaptionbox{$\mathbb{R}P^2$}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_rp2.jpg}
+}
+\caption{Histogram of the values of the top eigenvector of $D^{-1}Z$.}
+\label{fig:vectordiffusion1}
+\end{center}
+\end{figure}
+
+Embedding obtained using the eigenvectors of the (normalized) matrix gives the double cover of non-orientable manifolds. 
+\begin{equation*}
+\left[
+\begin{array}{rr}
+Z & -Z\\
+-Z & Z
+\end{array}
+\right] = \left(
+            \begin{array}{rr}
+              1 & -1 \\
+              -1 & 1 \\
+            \end{array}
+          \right) \otimes Z,
+\end{equation*}
+
+\begin{figure}[h]
+\begin{centering}
+\subcaptionbox{}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_rp2doublecover.jpg}
+}
+\subcaptionbox{}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_kleindoublecover.jpg}
+}
+\subcaptionbox{}{
+\includegraphics[width=0.3\textwidth]{figures/PAPER_mobiusdoublecover.jpg}
+}
+\end{centering}
+\caption{Left: the orientable double covering of $\mathbb{R} P(2)$, which is $S^2$; Middle: the orientable double covering of the Klein bottle, which is $T^2$; Right: the orientable double covering of the M\"obius strip, which is a cylinder.}
+\label{double_rp2_klein}
+\end{figure}
+
+We remark that learning the topology of a manifold from random samples \cite{niyogi2008finding} is still an active area of research. Beyond the graph Laplacian and the connection Laplacian, other Laplacian operators, namely, the Hodge Laplacians reveal topological information such as the Betti numbers (number of connected components, number of holes, etc.) through their harmonic forms. Readers interested in topological data analysis are referred to \cite{carlsson2009topology} as a starting point for this topic.      
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}
+Find an `optimal kernel' $K$ that minimizes the variance error term for a given bias error of the density estimator (\ref{eq:density_estimation_MSE}). That is, find $K$ that minimizes
+$$
+\min_{K} \int_\mathbb{R} K^2(z)\,dz
+$$
+such that $K \geq 0$, $\int K(z)\,dz = 1$, $K(z) = K(-z)$, and $\int_{\mathbb{R}}K(z)z^2\,dz = m_2$.    
+\end{myexercise}
+
+\begin{myexercise}
+In the uniform sampling case, show that if $L_{rw}\phi = \lambda \phi$, as $n\rightarrow \infty$ followed by $\varepsilon \to 0$, then $\phi$ satisfies the boundary condition $\frac{\partial \phi}{\partial \nu} = 0$ $\forall x \in \partial \mathcal{M}$ where $\nu$ is the normal vector to the boundary $\partial \mathcal{M}$ at $x$.\\
+\begin{hint}
+Start with the 1D case where $\mathcal{M}$ is the interval $[0,L]$ and observe that at the endpoints (i.e., the boundary) the integral of the kernel function $K_{\eps}$ cannot be approximated any longer as a Dirac delta function plus an $O(\varepsilon)$ Laplacian (second derivative) correction term as we saw for interior points. At the boundary only half of the kernel function gets to be integrated, which can be viewed as half a Dirac delta function, and we also get an $O(\sqrt{\varepsilon})$ correction term involving the {\em first derivative}, because the integral involving the linear term does not vanish as it did before. Argue that the $O(\sqrt{\varepsilon})$ term must vanish which leads to the no-flux boundary condition. A rigorous treatment requires an asymptotic analysis in powers of $\sqrt{\varepsilon}$ and matching the outer solution to the boundary layer.   
+\end{hint}    
+\end{myexercise}
+
+\begin{myexercise}
+Suppose the normalization of $w_{ij}$ is
+\[
+w_{ij}^{(\alpha)} = \frac{w_{ij}}{d_i^\alpha d_j^\alpha}
+\]
+for $\alpha \in [0,1]$. That is,
+$$W^{(\alpha)} = D^{-\alpha} W D^{-\alpha}$$
+and define the corresponding diagonal matrix
+$$D^{(\alpha)}_{ii} = \sum_{j=1}^n w^{(\alpha)}_{ij}$$
+What are the limiting operators for $L^{(\alpha)}$ and $L_{rw}^{(\alpha)}$?
+For the random walk Laplacian we know that for $\alpha=0$ we get the backward Fokker-Planck operator, and for $\alpha=1$ we get the Laplace-Beltrami operator. What is the limiting operator for $\alpha$ between 0 and 1, and specifically for $\alpha=\frac{1}{2}$?  
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Spherical harmonics]
+Find the eigenfunctions and eigenvalues of the Laplacian on the sphere $\mathbb{S}^2 \subset \mathbb{R}^3$.
+ What are the multiplicities of the eigenvalues? (Hint: use the chain rule to get the Laplacian in spherical coordinates $(r,\theta,\phi)$ and find its form for functions that are independent of $r$).    
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Hermite polynomials]
+The density of a one-dimensional Gaussian is $$p(x) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{x^2}{2\sigma^2}},$$ and the corresponding potential function is $$U(x)=-2\log p(x) = \frac{x^2}{\sigma^2} + const.$$  Find the eigenfunctions $\phi_n(x)$ and eigevalues $\lambda_n$ of the backward Fokker-Planck operator
+    $$\phi_n'' - \frac{2x}{\sigma^2}\phi_n' = -\lambda_n \phi_n.$$
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Line segment + noise]
+Consider $n$ data points $z_1,z_2,\ldots,z_n$ in $\mathbb{R}^2$ sampled independently from the probability density function $p(x,y)$ (to avoid confusion, we denote the first coordinate of $z\in \mathbb{R}^2$ by $x$ and the second coordinate by $y$, that is, $z=(x,y)$):
+$$p(x,y) = p_1(x)p_2(y),$$
+where
+$$p_1(x) = \left\{\begin{array}{cc}
+\frac{1}{L} & 0\leq x \leq L \\
+0 & otherwise \\
+\end{array}\right.$$
+and
+$$p_2(y) = \frac{1}{\sqrt{2\pi\sigma^2}}e^{-\frac{y^2}{2\sigma^2}}.$$
+In other words, the $x$-coordinate is uniformly distributed on the interval $[0,L]$ and the $y$-coordinate has a normal distribution with zero mean and standard deviation $\sigma$.
+
+\begin{enumerate}
+\item Find the eigenfunctions and eigenvalues of the backward Fokker-Planck operator
+$$\Delta f - \nabla U \cdot \nabla f = -\lambda f,$$
+where $U(x,y) = -2\log (p_1(x)p_2(y))$ and $\Delta = \frac{\partial^2}{\partial x^2} + \frac{\partial^2}{\partial y^2}$.
+\begin{hint}Separation of variables. 
+\end{hint}
+
+\item Find the condition (in terms of $\sigma$ and $L$) for which the first non-trivial eigenfunction is a function of $x$ rather than a function of $y$. In other words, find a condition that ensures that the first coordinate of diffusion maps (in the limit of $n\to \infty$) would coincide with the $x$ coordinate (``the intrinsic coordinate"), rather than the $y$ coordinate (``the direction of noise").
+
+\item Find the $2 \times 2$ true covariance matrix $\Sigma = \mathbb{E}(Z-\mathbb{E}Z)(Z-\mathbb{E}Z)^T$ that corresponds to the density function $p(x,y)$. Find the condition (in terms of $\sigma$ and $L$) for which the first principal component coincides with the $x$ axis and the second principal component coincides with the $y$ axis. Compare your result to part (2) and try to explain why one of the methods succeeds in finding the intrinsic axis before the other.
+
+\end{enumerate}
+
+\end{myexercise}
+\begin{myexercise}
+Show that the first nontrivial eigenfunction of the second order ordinary differential equation $$f^{\prime \prime} - U^\prime f^\prime = -\lambda f$$ 
+is monotonic. Conclude that the first nontrivial eigenfunction basically orders the data points sampled from an open curve according to its arclength, i.e. $x_i \rightarrow \phi(x_i)$ is an embedding of the high dimensional data points in 1-D.
+ 
+\begin{hint}
+Use the Pr\"ufer transformation (see \cite{coddington_levinson}). 
+\end{hint}
+\end{myexercise}
+
+\begin{myexercise}
+For the Fokker-Planck operator in 1-D with periodic boundary conditions, show that we get an embedding that encircles the origin exactly once.
+Also show that the angle that the two eigenfunctions make for the different points on the curve is monotonic.
+\begin{hint}
+Again, the key to this proof is the Pr\"ufer transformation.   
+\end{hint}
+\end{myexercise}
+
+\begin{myexercise}
+Find the heat kernel for diffusion in the finite interval $[0,L]$ with Neumann boundary conditions at the endpoints. 
+\begin{hint}
+The method of images with an infinite number of images. 
+\end{hint}     
+\end{myexercise}
+
+\begin{myexercise}
+The Riemann $\zeta$-function is defined as
+$$\zeta(s) = \sum_{n=1}^\infty \frac{1}{n^s}.$$
+Define the $\zeta$-function of a domain (or, in general, a manifold) as
+$$\zeta(x,y,s) = \sum_{n=1}^\infty \frac{1}{\lambda_n^s}\phi_n(x)\phi_n(y).$$
+That is, $\zeta(x,y,s)$ is the Green function for $(-\Delta)^s$ with Dirichlet boundary conditions.
+Show that $\zeta(x,y,s)$ is given by the Mellin transform of the heat kernel, that is, show:
+$$\Gamma(s) \zeta(x,y,s) = \int_0^\infty G_t(x,y) t^{s-1}\,dt,$$
+where $\Gamma(s)$ is the Gamma function. Can you give a probabilistic interpretation of the right-hand-side integral of the heat kernel in terms of moments of first passage/hitting times?    
+\end{myexercise}
+
+\begin{myexercise}
+Consider the commute-time embedding of a domain $\Omega \subset \mathbb{R}^d$:
+$$x \mapsto (\frac{1}{\sqrt{\lambda_2}}\phi_2(x),\frac{1}{\sqrt{\lambda_3}}\phi_3(x),\ldots ),$$
+where $\Delta \phi_n = -\lambda_n \phi_n$.
+Explain the failure of this embedding for $d\geq 2$ in light of the Green functions $G(r)$ for Poisson's equation from electrostatics $\Delta u = f$ (i.e., $G(r)=\frac{1}{2\pi}\log r$ for $d=2$ and $G(r)=-\frac{1}{4\pi r}$ for $d=3$). Find the distance $D^2(x,y) = G(x,x)+G(y,y)-2G(x,y)$, where $G(x,y)$ is the Green's function for the Poisson equation on the interval $[0,L]$ and observe its relation to the geodesic distance.
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Biharmonic distance]
+In computer graphics $2$-dimensional surfaces in $\mathbb{R}^3$ are very popular and one often wants to have distances that resemble the geodesic distances. It was suggested in \cite{Lipman:2010:BD} to use the embedding
+$$x \mapsto (\frac{1}{\lambda_2}\phi_2(x),\frac{1}{\lambda_3}\phi_3(x),\ldots ),$$
+that corresponds to the Green function of the biharmonic equation $$\Delta^2 u = f.$$
+Find the Green function for the biharomic equation in $\mathbb{R}^2$  and derive the squared distance $D^2(x,y)$ $(x,y\in \mathbb{R}^2)$. To what extent does this distance resembles the geodesic distance $\|x-y\|$?    
+\end{myexercise}
+
+\begin{myexercise}
+Show that the graph connection Laplacian $L_1 = D_1 - W_1$ satisfies 
+$$v^T L_1 v = \frac{1}{2} \sum_{i,j=1}^n w_{ij} \|v(i) - O_{ij} v(j)\|^2$$
+for any $v \in \RR^{nd}$ viewed as $n$ vectors $v(1),\ldots, v(n) \in \RR^d$.
+\end{myexercise}
+
+\begin{myexercise}
+Show that if $\lambda$ is an eigenvalue of $\tilde{W}_1=D_1^{-1/2}W_1D^{-1/2}$ then $-1 \leq \lambda \leq 1$.     
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Vector spherical harmonics]
+Use a computer simulation to generate $n$ points on the unit sphere $S^2 \subset \mathbb{R}^3$ and compute the eigenvalues of $D_1^{-1}W_1$ (use $\epsilon_{\text{PCA}}$ and $\epsilon$ as you see fit). What are the multiplicities of the eigenvalues? The corresponding eigen-vector-fields are known as the ``vector spherical harmonics'' and are routinely used in geophysics and other applications. Try to derive the vector spherical harmonics from the scalar spherical harmonics by taking their gradient and projecting to the tangent plane to the sphere.    
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep $\mathbb{R}P^2$, orientability and double-cover]
+The real projective plane $\mathbb{R}P^2$ is the space of lines in $\mathbb{R}^3$ passing through the origin. $\mathbb{R}P^2$ can be regarded as the quotient of the two-sphere $$S^2 = \{(x,y,z) \in \mathbb R^3 : x^2+y^2+z^2 = 1\}$$ by the antipodal relation $$(x,y,z)\sim (-x,-y,-z).$$ It is a two-dimensional non-orientable manifold that cannot be embedded in $\mathbb{R}^3$ without intersecting itself, but it can be embedded in $\mathbb{R}^4$ and higher-dimensional Euclidean spaces.
+\begin{enumerate}
+\item Suppose we sample $n$ points from the uniform distribution on $S^2 \subset \mathbb{R}^3$ denoted $x_1,x_2,\ldots,x_n$ and define affinities $w_{ij}$ between them as
+$$w_{ij} = K(|\langle x_i , x_j \rangle |),$$
+where $K$ is a positive function, e.g., $$w_{ij} = |\langle x_i , x_j \rangle |^2, \quad \mbox{or} \quad w_{ij} = \exp\left\{\frac{1-|\langle x_i , x_j \rangle |^2}{\epsilon}\right\},$$ for some $\epsilon>0$. Determine the eigenfunctions and eigenvalues of the corresponding diffusion map matrix in the limit $n\to \infty$. 
+\begin{hint}Distinguish between odd and even functions on the sphere, and observe that the limiting operator commutes with reflection.
+\end{hint}
+
+\item Explain how to obtain an embedding $\Phi$ of $\mathbb{R}P^2$ in $\mathbb{R}^5$ using the diffusion map eigenfunctions from above.
+
+\item Use a computer simulation to embed $\mathbb{R}P^2$ in $\mathbb{R}^5$ using the above construction. Then, perform local PCA and alignment to construct $O_{ij}$ for vector diffusion map on $\mathbb{R}P^2$ (choose $\epsilon_{\text{PCA}}$ and $\epsilon$ as you see fit). Determine the multiplicities of the eigenvalues of the vector diffusion map matrix $D_1^{-1}W_1$. Can you explain your numerical findings?
+
+\item Use a computer simulation to construct the $n\times n$ symmetric matrix $Z$ with
+$$Z_{ij} = \det O_{ij}, \quad \mbox{for } \|\Phi(x_i)-\Phi(x_j)\| < \epsilon,$$
+and
+$$Z_{ij} = 0, \quad \mbox{for } \|\Phi(x_i)-\Phi(x_j)\| \geq \epsilon,$$
+where $\Phi$ is the diffusion map embedding in $\mathbb{R}^5$. That is, the elements of $Z$ are either $1$, $-1$ or $0$.
+Determine that $\mathbb{R}^2$ is non-orientable by inspecting the top eigenvalue and eigenvector of $D^{-1}Z$ (where $D$ is a diagonal $n\times n$ matrix with the weighted degrees on its diagonal).
+
+\item Use a computer simulation to construct the $2n \times 2n$ symmetric matrix $\tilde{Z}$ given by $$\tilde{Z} = Z \otimes \left(
+                                                                               \begin{array}{rr}
+                                                                                 1 & -1 \\
+                                                                                 -1 & 1 \\
+                                                                               \end{array}
+                                                                             \right).$$
+Observe the numerical multiplicities of $\tilde{D}^{-1}\tilde{Z}$ (where $\tilde{D}$ is a $2n\times 2n$ diagonal matrix with the weighted degrees).
+
+\item $S^2$ is the orientable double-cover of $\mathbb{R}P^2$. Use the eigenfunctions of $\tilde{D}^{-1}\tilde{Z}$ to embed $S^2$ in $\mathbb{R}^3$. Notice that we started with $n$ points sampled from $\mathbb{R}P^2$ embedded in $\mathbb{R}^5$ and ended up with $2n$ points from its double cover $S^2$ in $\mathbb{R}^3$. Explain how this procedure can be generalized to find the embedding of the double covering of any non-orientable manifold.
+
+\end{enumerate}
+
+\end{myexercise}
+
+

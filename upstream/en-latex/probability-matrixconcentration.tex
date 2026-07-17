@@ -1,0 +1,691 @@
+\chapter{Matrix Concentration Inequalities}
+\label{c:probability-matrixconcentration}
+
+
+There are many applications where one needs to control the spectrum of random matrices. Depending on the context, these matrices may represent the noise whose effect in a spectral algorithm is controlled by its spectral norm, or the size of a dual variable that needs to be controlled to show the exactness of a convex relaxation (such as in Chapter~\ref{c:community}). While some of the tools we developed in Chapter~\ref{c:surprises} could be used to control the size of the entries of random matrices, which could translate to spectral bounds, this would likely introduce many suboptimal dimensional factors. 
+
+In what follows we will state and prove various matrix concentration results, somewhat similar to Theorem~\ref{thm:4:MatrixBernstein} (in Section~\ref{sc:matrixBernstein}). We will focus on understanding, and bounding, the typical value of the spectral norm of random matrices by upper bounding $\EE\|X\|$, as these tend to be high dimensional objects themselves they often have enough concentration that tail bounds are then easy to obtain (as it was illustrated in Chapter~\ref{c:probability-gaussiananalysis} with~Proposition~\ref{proposition:4:WignerSpectralNormTail}). Our presentation will rely on Gaussian analysis (developed in Chapter~\ref{c:probability-gaussiananalysis}). Our treatment of the Non-commutative Khintchine inequality, and the Matrix Concentration inequality we will prove follows parts of~\cite{Ramon-StFlour-2022} and~\cite{Tropp_MatrixConcentrationElementary}.\footnote{For an approach to matrix concentration that includes a direct proof of Theorem~\ref{thm:4:MatrixBernstein}  we recommend Tropp's excellent monograph~\cite{Tropp:TailBoundsRM_Monograph}.}
+
+
+
+
+\section{Non-commutative Khintchine inequality}
+
+We start with a particularly important inequality involving the expected value of a random matrix. It is intimately related to the non-commutative Khintchine inequality~\cite{Pis03}, and for that reason we will often refer to it as Non-commutative Khintchine (see, for example,~(4.9) in~\cite{Tropp:TailBoundsRM}). We will prove this inequality in Section~\ref{subsec:proofNCK}.
+
+\begin{theorem}[Non-commutative Khintchine (NCK)]\label{thm:4:Gaussianseries}
+Let $A_1,\dots,A_n\in \RR^{d\times d}$ be symmetric matrices and $g_1,\dots,g_n\sim\NNN(0,1)$ i.i.d., then: 
+\begin{equation}\label{logterm}
+\EE \Big\| \sum_{k=1}^{n} g_k A_k \Big\| \leq \Big(  2\lceil \log d \rceil+1  \Big)^{\frac12} \sigma,
+\end{equation}
+where
+\begin{equation}\label{eq:4:sigma:forGaussianseries}
+\sigma^2 = \Big\| \sum_{k=1}^n A_k^2  \Big\|. 
+\end{equation}
+\end{theorem}
+
+
+Note that, akin to Proposition~\ref{proposition:4:WignerSpectralNormTail}, we can also use Gaussian Concentration to get a tail bound on $\left\| \sum_{k=1}^{n} g_k A_k \right\|$. We consider the function
+\[
+F:\RR^n \to \Big\| \sum_{k=1}^n g_kA_k \Big\|.
+\]
+We now estimate its Lipschitz constant; let $g,h\in\RR^n$ then
+\begin{eqnarray*}
+ \left| \Big\| \sum_{k=1}^n g_kA_k \Big\| -  \Big\| \sum_{k=1}^n h_kA_k \Big\| \right| & \leq & \Big\| \Big(\sum_{k=1}^n g_kA_k\Big) -  \Big( \sum_{k=1}^n h_kA_k \Big) \Big\| \\
+ & = & \Big\| \sum_{k=1}^n (g_k-h_k)A_k \Big\| \\
+ & = & \max_{v:\,\|v\|=1 } \Big|v^T\Big( \sum_{k=1}^n (g_k-h_k)A_k \Big) v \Big|\\
+ & = & \max_{v:\,\|v\|=1 } \Big| \sum_{k=1}^n (g_k-h_k)\Big(v^TA_kv\Big) \Big| \\
+ & \leq & \max_{v:\,\|v\|=1 } \sqrt{\sum_{k=1}^n (g_k-h_k)^2} \sqrt{\sum_{k=1}^n \Big(v^TA_kv\Big)^2}\\
+ & = & \sqrt{ \max_{v:\,\|v\|=1 } \sum_{k=1}^n \Big(v^TA_kv\Big)^2}\,  \|g-h\|_2,
+\end{eqnarray*}
+where in the first inequality we made use of the triangular inequality and in the last one we used Cauchy-Schwarz.
+
+This motivates us to define a new parameter, the weak variance $\sigma_\ast$.
+
+\begin{definition}[Weak Variance (see, for example,~\cite{Tropp:TailBoundsRM_Monograph})]
+ Given symmetric matrices $A_1,\dots,A_n\in\RR^{d\times d}$ . We define the weak variance parameter as
+ \[
+  \sigma_\ast^2 = \max_{v:\,\|v\|=1 } \sum_{k=1}^n \left(v^TA_kv\right)^2.
+ \]
+\end{definition}
+
+This means that, using Gaussian concentration (Theorem~\ref{theorem:4:gaussianconcentration}), and setting $t = u\sigma_\ast$, we have
+\begin{equation}
+\Prob\left\{ \Big\| \sum_{k=1}^{n} g_k A_k \Big\| \geq \Big(  2\lceil \log d \rceil+1 \Big)^{\frac12} \sigma + u\sigma_\ast \right\} \leq \exp\Big( - \frac12u^2 \Big).
+\end{equation}
+
+Thus, although the expected value of $\left\| \sum_{k=1}^{n} g_k A_k \right\|$ is controlled by the parameter $\sigma$, its fluctuations seem to be controlled by $\sigma_\ast$. We compare the two quantities in the following proposition.
+
+\begin{proposition}
+ Given $A_1,\dots,A_n\in\RR^{d\times d}$ symmetric matrices, recall that
+ \[
+  \sigma = \sqrt{\Big\| \sum_{k=1}^n A_k^2  \Big\|} \text{ and } \sigma_\ast = \sqrt{ \max_{v:\,\|v\|=1 } \sum_{k=1}^n \left(v^TA_kv\right)^2  }.
+  \]
+  We have
+ \[
+  \sigma_\ast \leq \sigma.
+ \]
+\end{proposition}
+
+\begin{proof}
+Using the Cauchy-Schwarz inequality,
+\begin{eqnarray*}
+ \sigma_\ast^2 & = & \max_{v:\,\|v\|=1 } \sum_{k=1}^n \left(v^TA_kv\right)^2  =  \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \left(v^T \left[A_kv\right]\right)^2 \\
+ & \leq & \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \left( \|v\| \|A_kv\|\right)^2  =  \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \|A_kv\|^2 \\
+ & = & \max_{v:\,\|v\|=1 } \sum_{k=1}^n  v^TA_k^2v  =  \Big\| \sum_{k=1}^n  A_k^2 \Big\|  =  \sigma^2.
+\end{eqnarray*}
+\end{proof}
+
+
+\subsection{How tight is the Non-commutative Khintchine inequality?}\label{sec:tightnessNCK}
+
+The following simple calculation is suggestive that the parameter $\sigma$ in Theorem~\ref{thm:4:Gaussianseries} is indeed the correct parameter to understand $\EE \left\| \sum_{k=1}^{n} g_k A_k \right\|$.
+\begin{eqnarray}
+ \EE \Big\| \sum_{k=1}^{n} g_k A_k \Big\|^2 & = & \EE \Big\| \Big( \sum_{k=1}^{n} g_k A_k \Big)^2 \Big\| = \EE \max_{v:\ \|v\|=1} v^T\Big( \sum_{k=1}^{n} g_k A_k \Big)^2v \nonumber\\
+ & \geq & \max_{v:\ \|v\|=1} \EE  v^T\Big( \sum_{k=1}^{n} g_k A_k \Big)^2v = \max_{v:\ \|v\|=1}  v^T\Big( \sum_{k=1}^{n} A_k^2 \Big)v = \sigma^2. \nonumber
+\end{eqnarray}
+
+But a natural question is whether the logarithmic term in~\eqref{logterm} is needed. Motivated by this question we will explore a couple of examples.
+
+\begin{example}\label{example:WignerMatrix}
+ We can write a $d\times d$ Wigner matrix $W$ (recall Section~\ref{subsection:WignerMatrices}) as a Gaussian series, by taking $A_{ij}$ for $i\leq j$ defined as
+ \[
+  A_{ij} = e_ie_j^T + e_je_i^T,
+ \]
+if $i\neq j$, and
+\[
+ A_{ii} = \sqrt{2} e_ie_i^T.
+\]
+It is not difficult to see that, in this case, $\sum_{i\leq j}A_{ij}^2 = (d+1)I_{d\times d}$, meaning that $\sigma = \sqrt{d+1}$. This implies that Theorem~\ref{thm:4:Gaussianseries} gives us
+\[
+ \EE\|W\| \lesssim \sqrt{d\log d},
+\]
+however, we know that $ \EE\|W\| \asymp \sqrt{d}$, meaning that the bound given by NCK (Theorem~\ref{thm:4:Gaussianseries}) is, in this case, suboptimal by a logarithmic factor.\footnote{By $a\asymp b$ we mean $a\lesssim b$ and $a \gtrsim b$.}
+\end{example}
+
+The next example will show that the logarithmic factor is in fact needed in some examples
+
+\begin{example}
+ Consider $A_k = e_ke_k^T\in\RR^{d\times d}$ for $k=1,\dots,d$. The matrix $ \sum_{k=1}^{n} g_k A_k$ corresponds to a diagonal matrix with independent standard Gaussian random variables as diagonal entries, and so its spectral norm is given by $\max_k |g_k|$. It is known that $\max_{1\leq k \leq d} |g_k| \asymp \sqrt{\log d}$. On the other hand, a direct calculation shows that $\sigma = 1$. This shows that the logarithmic factor cannot, in general, be removed.
+\end{example}
+
+This motivates the question of trying to understand when is it that the extra dimensional factor is needed. For both these examples, the resulting matrix $X = \sum_{k=1}^{n} g_k A_k$ has independent entries (except for the fact that it is symmetric). In the case of independent entries it is possible to write a stronger inequality using $\sigma_\ast$~\cite{Bandeira_NARandomMatrixBound}:\footnote{There are notable improvements of Theorem~\ref{thm:4:matrixconcentrationindependententries}, including a dimension free bounds~\cite{latala2018dimension}, bounds that often capture the right constant on the leading order term~\cite{Bandeiraetal_FreeProbability}, and bounds that capture Tracy-Widom level tails~\cite{vanHandel-Brailovskaya-indentries2024}.}
+
+\begin{theorem}[\cite{Bandeira_NARandomMatrixBound}]\label{thm:4:matrixconcentrationindependententries}
+ If $X$ is a $d\times d$ random symmetric matrix with Gaussian independent entries (except for the symmetry constraint) whose entry $i,j$ has variance $b_{ij}^2$ then
+ \[
+  \EE \| X\| \lesssim \sqrt{ \max_{1\leq i\leq d} \sum_{j=1}^d b_{ij}^2 } + \max_{ij}\left| b_{ij} \right| \sqrt{\log d}.
+ \]
+\end{theorem}
+
+
+
+\begin{remark}
+ $X$ in the theorem above can be written in terms of a Gaussian series by taking
+ \[
+  A_{ij} = b_{ij} \left( e_ie_j^T + e_je_i^T  \right),
+ \]
+for $i< j$ and $A_{ii} = b_{ii}e_ie_i^T$. One can then compute $\sigma$ and $\sigma_\ast$:
+\[
+ \sigma^2 = \max_{1\leq i\leq d} \sum_{j=1}^d b_{ij}^2 \text{ and } \sigma_\ast^2 \asymp \max_{i,j}b_{ij}^2.
+\]
+This means that, when the random matrix in NCK (Theorem~\ref{thm:4:Gaussianseries}) has independent entries (modulo symmetry) then
+\begin{equation}\label{eq:4:sigmasigmastar}
+ \EE\|X\| \lesssim \sigma + \sqrt{\log d}\,\sigma_\ast.
+\end{equation}
+\end{remark}
+
+Recently an improvement, using ideas from Free Probability to remove the dimensional factor in some situations, was obtained in~
+\cite{Bandeiraetal_FreeProbability} (see~\cite{Tatianaetal_Universality} for non-Gaussian extensions). Interestingly, the same work shows that \eqref{eq:4:sigmasigmastar} does not hold in general, disproving a conjecture that was included in an earlier version of this manuscript. See Section~\ref{subsec:freeprobimprovement} for a more thorough discussion on these improvements.
+
+
+
+
+\subsection{Proof of the Non-commutative Khintchine inequality}\label{subsec:proofNCK}
+
+We are now ready to prove Theorem~\ref{thm:4:Gaussianseries}, the Non-commutative Khintchine inquality (NCK). See Section 7.2. in \cite[Section 7.2]{Tropp:TailBoundsSecondOrder} and \cite{Ramon-StFlour-2022} for presentations of the same argument.
+
+
+
+\begin{proof}[of Theorem~\ref{thm:4:Gaussianseries}]
+
+Let $p$ be a positive integer. Let $X =  \sum_{k=1}^{n} g_k A_k$, we have
+\[
+\left(\EE\left\| X\right\|\right)^{2p} \leq \EE\left\| X \right\|^{2p} =  \EE\left\| X^{2p} \right\| \leq \EE \tr X^{2p} ,
+\]
+where the first inequality follows from Jensen and the second from the fact that the trace of a positive semidefinite matrix dominates its spectral norm.
+
+Using Gaussian integration by parts (Lemma~\ref{lemma:GIbP}) we get
+\begin{eqnarray*}
+\EE \tr X^{2p} &=& \EE \tr\sum_{k=1}^ng_kA_k X^{2p-1} =  \EE \tr\sum_{k=1}^n\sum_{q=0}^{2p-2}A_kX^qA_kX^{2p-2-q} \\ 
+&=&  \EE\sum_{k=1}^n\sum_{q=0}^{2p-2} \tr\left(A_kX^qA_kX^{2p-2-q}\right).
+\end{eqnarray*}
+
+If the matrices $A_1,\dots,A_n$ were commutative, then we would have that $\tr\left(A_kX^qA_kX^{2p-2}\right) = \tr\left(A_k^2X^{2p-2}\right)$ for all $q$. It turns out that this is the worst possible situation and the commutative upper bound always dominates. We state and prove in Lemma~\ref{lemma:commutativeisworstGIbP} below that, for all $0\leq q\leq 2p-2$, $\tr\left(A_kX^qA_kX^{2p-2}\right) \leq \tr\left(A_k^2X^{2p-2}\right)$. This implies that
+\begin{eqnarray*}
+\EE \tr X^{2p} &\leq & \EE\sum_{k=1}^n(2p-1) \tr\left(A_k^2X^{2p-2}\right) = (2p-1) \EE\tr\left(\left(\sum_{k=1}^nA_k^2\right)X^{2p-2}\right).
+\end{eqnarray*}
+H\"older's inequality on Schatten norms then gives
+\begin{eqnarray*}
+\EE \tr X^{2p} &\leq & (2p-1) \left\| \sum_{k=1}^nA_k^2 \right\| \EE\sum_{k=1}^n \tr\left(X^{2p-2}\right) = (2p-1)\sigma^2 \EE\sum_{k=1}^n \tr\left(X^{2p-2}\right).
+\end{eqnarray*}
+Iterating this procedure gives
+\begin{equation*}
+\EE \tr X^{2p} \leq (2p-1)!! \sigma^{2p} d,
+\end{equation*}
+which implies
+\begin{equation}
+\EE\|X\| \leq \left( \tr X^{2p} \right)^{\frac1{2p}} \leq  \left( (2p-1)!!\, \sigma^{2p} d \right)^{\frac1{2p}} \leq [(2p-1)!!]^{\frac1{2p}} \sigma d^{\frac1{2p}}.
+\end{equation}
+Taking $p = \lceil \log d \rceil$ and using the fact that $(2p-1)!! \leq \left( \frac{2p+1}{e} \right)^p$ (see~\cite{Tropp_MatrixConcentrationElementary} for an elementary proof consisting essentially of taking logarithms and comparing the sum with an integral, note also that Lemma~\ref{lemma:gaussianmoments} would yield the same bound up to a constant of $e$) we get
+\[
+\EE \|X\| \leq \left( \frac{2\lceil \log d \rceil+1}{e} \right)^{\frac12} \sigma d^{\frac1{2 \lceil \log d \rceil }} \leq \left( 2\lceil \log d \rceil+1 \right)^{\frac12} \sigma.
+\]
+\end{proof}
+
+
+\begin{lemma}[Commutative is the worst-case I]\label{lemma:commutativeisworstGIbP}
+Let $A$ and $X$ be symmetric matrices. For any $p,q$ non-negative integers satisfying $0\leq q \leq 2p-2$ we have
+\[
+\tr\left(AX^qAX^{2p-2-q}\right) \leq \tr\left(A^2X^{2p-2}\right).
+\] 
+\end{lemma}
+
+\begin{proof}
+Consider the spectral decomposition $X = \sum_{i=1}^d \lambda_i v_iv_i^T$, then
+\begin{eqnarray*}
+\tr\left(AX^qAX^{2p-2-q}\right) & = & \sum_{i,j=1}^d\lambda_i^q\lambda_j^{2p-2-q}\tr\left(Av_iv_i^TAv_jv_j^T\right) \\
+& = & \sum_{i,j=1}^d\lambda_i^q\lambda_j^{2p-2-q}\left(v_i^TAv_j\right)^2 \\
+& \leq & \left( \sum_{i,j=1}^d|\lambda_i|^{2p-2}\left(v_i^TAv_j\right)^2 \right)^{\frac{q}{2p-2}} \left( \sum_{i,j=1}^d|\lambda_j|^{2p-2}\left(v_i^TAv_j\right)^2 \right)^{\frac{2p-2-q}{2p-2}}\\
+& = & \sum_{i,j=1}^d|\lambda_i|^{2p-2}\left(v_i^TAv_j\right)^2 =  \sum_{i,j=1}^d\lambda_i^{2p-2}\left(v_j^TAv_i\right)\left(v_i^TAv_j\right) \\
+& = & \sum_{i,j=1}^d\tr\left(\lambda_i^{2p-2}v_j^TAv_iv_i^TAv_j\right) = \tr\left(A^2X^{2p-2}\right),
+\end{eqnarray*}
+where the inequality follows from H\"older's inequality (Proposition~\ref{prop:holderineq}, in particular~\eqref{eq:HolderRS}).
+\end{proof}
+
+
+
+
+\begin{remark}
+Theorem~\ref{thm:4:Gaussianseries} is an upper bound on a Gaussian process, and thus an orderwise optimal bound can (in theory) be obtained by Talagrand's generic chaining, and up to a logarithmic factor by covering number arguments via a Dudley's (see~\cite{Talagrand14}). Interestingly, there is no known proof of a bound that is optimal up to logarithmic factors based on these techniques (in other words, without using operator theoretical arguments). Such an argument would likely extend well beyond the setting of spectral norm in matrices, see~\cite{Lucca-et-al-TensorNCK} for a discussion on this and related problems.
+\end{remark}
+
+\section{Matrix concentration inequalities}
+
+In what follows, we closely follow~\cite{Tropp_MatrixConcentrationElementary} and present an elementary proof of a few useful matrix concentration inequalities using Theorem~\ref{thm:4:Gaussianseries}. We start with a Rademacher version of Theorem~\ref{thm:4:Gaussianseries}.
+
+\begin{theorem}\label{thm:4:RademacherSeries}
+ Let $H_1,\dots,H_n\in \RR^{d\times d}$ be symmetric matrices and $\eps_1,\dots,\eps_n$ i.i.d. Rademacher random variables (meaning $=+1$ with probability $1/2$ and $=-1$ with probability $1/2$), then: 
+\[
+\EE \left\| \sum_{k=1}^{n} \eps_k H_k \right\| \leq \Big(  \frac\pi2 + \pi\lceil\log(d)\rceil \Big)^{\frac12} \sigma,
+\]
+where
+\begin{equation}\label{eq:4:sigma:forrademacherseries}
+\sigma^2 = \left\| \sum_{k=1}^n H_k^2  \right\|.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Let $g_1,\dots,g_n$ by iid standard Gaussians independent from the Rademacher random variables, since the sign and absolute value of $g_k$ are independent and $\EE|g_k| = \sqrt{\frac2\pi}$, Jensen implies
+\begin{eqnarray*}
+\EE \left\| \sum_{k=1}^{n} \eps_k H_k \right\| & = &\frac{1}{\EE|g_1|} \EE \left\| \sum_{k=1}^{n} \left(\EE|g_k|\right)\eps_k H_k \right\| \\ & \leq & \sqrt{\frac{\pi}2} \EE \left\| \sum_{k=1}^{n} |g_k|\eps_k H_k \right\| = \sqrt{\frac{\pi}2} \EE \left\| \sum_{k=1}^{n} g_k H_k \right\|. 
+\end{eqnarray*}
+The conclusion then follows by applying Theorem~\ref{thm:4:Gaussianseries}.
+\end{proof}
+
+We note that Theorem~\ref{thm:4:RademacherSeries} holds without the extra $\frac{\pi}{2}$ factor (see~\cite{Tropp_MatrixConcentrationElementary} for a proof that boils down to the same as argument as the one above to prove its Gaussian counterpart, Theorem~\ref{thm:4:Gaussianseries}).
+
+Using Theorem~\ref{thm:4:RademacherSeries}, we will prove the following theorem.
+
+\begin{theorem}\label{thm:4:matrixconcentration:PSDcase}
+Let $T_1,\dots,T_n\in\RR^{d\times d}$ be random independent symmetric positive semidefinite matrices, then
+\[
+\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left[  \left\| \sum_{i=1}^n \EE T_i \right\|^{\frac12}  + \sqrt{C(d)} \left(   \EE \max_i \| T_i\|   \right)^{\frac12}    \right]^2,
+\]
+where
+\begin{equation}\label{eq:4:Cd_constant}
+C(d) \defeq 2\pi + 4\pi\lceil \log d \rceil.
+\end{equation}
+\end{theorem}
+
+
+A key step in the proof of Theorem~\ref{thm:4:matrixconcentration:PSDcase} is an idea that is extremely useful in Probability, the trick of symmetrization. For this reason we isolate it in a lemma. 
+\begin{lemma}[Symmetrization]\label{lemma:4:symmetrization}
+Let $T_1,\dots,T_n$ be independent random matrices (note that they do not necessarily need to be positive semidefinite, for the sake of this lemma) and $\eps_1,\dots,\eps_n$ random i.i.d. Rademacher random variables (independent also from the matrices). Then
+\[
+\EE \Big\| \sum_{i=1}^n T_i  \Big\| \leq \Big\| \sum_{i=1}^n \EE T_i \Big\| + 2 \EE  \Big\| \sum_{i=1}^n \eps_i T_i  \Big\|
+\]
+\end{lemma}
+\begin{proof}
+The triangular inequality gives 
+\[
+\EE \Big\| \sum_{i=1}^n T_i  \Big\| \leq \Big\| \sum_{i=1}^n \EE T_i \Big\| + \EE  \Big\| \sum_{i=1}^n  \Big(T_i - \EE T_i\Big)  \Big\|.
+\]
+Let us now introduce, for each $i$, a random matrix $T_i'$ identically distributed to $T_i$ and independent (all $2n$ matrices are independent). Then
+\begin{eqnarray*}
+\EE  \Big\| \sum_{i=1}^n  \Big(T_i - \EE T_i\Big)  \Big\| & = & \EE_T  \Big\| \sum_{i=1}^n  \Big(T_i -  \EE T_i - \EE_{T_i'}\Big[ T_i' - \EE_{T_i'}T_i' \Big]\Big)  \Big\|  \\ & = & \EE_T  \Big\| \EE_{T'} \sum_{i=1}^n  \Big(T_i -  T_i' \Big)  \Big\| \leq \EE  \Big\| \sum_{i=1}^n  \Big(T_i -  T_i' \Big)  \Big\|,
+\end{eqnarray*}
+where we use the notation $\EE_a$ to mean that the expectation is taken with respect to the variable $a$ and the last step follows from Jensen's inequality with respect to $\EE_{T'}$.
+
+Since $T_i-T_i'$ is a symmetric random variable,\footnote{Note that we use the notation ``symmetric random variable'' to mean $X\sim -X$ and ``symmetric matrix'' to mean $X^T=X$} it is identically distributed to $\eps_i \left( T_i - T_i' \right)$, which gives
+\begin{align*}    
+&\EE  \left\| \sum_{i=1}^n  \left(T_i -  T_i' \right)  \right\|  = \EE  \left\| \sum_{i=1}^n  \eps_i\left(T_i -  T_i' \right)  \right\|  \\
+ \leq \,\, & \EE  \left\| \sum_{i=1}^n  \eps_i T_i  \right\| + \EE  \left\| \sum_{i=1}^n  \eps_i T_i'  \right\| = 2 \EE  \left\| \sum_{i=1}^n  \eps_i T_i  \right\|,
+\end{align*}
+concluding the proof.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:4:matrixconcentration:PSDcase}]
+
+Using Lemma~\ref{lemma:4:symmetrization} and Theorem~\ref{thm:4:RademacherSeries} we get
+\[
+\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)} \EE \left\| \sum_{i=1}^n T_i^2  \right\|^{\frac12}
+\]
+
+The trick now is to make a term like the one in the LHS appear in the RHS. For that we start by noting (you can see Fact 2.3 in~\cite{Tropp_MatrixConcentrationElementary} for an elementary proof) that, since $T_i\succeq 0$,
+\[
+\left\| \sum_{i=1}^n T_i^2  \right\| \leq \max_i \| T_i\|   \left\| \sum_{i=1}^n T_i  \right\|.
+\]
+This means that
+\[
+\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)} \EE \left[ \left(  \max_i \| T_i\| \right)^{\frac12} \left\| \sum_{i=1}^n T_i  \right\|^{\frac12} \right].
+\]
+Furthermore, applying the Cauchy-Schwarz inequality for $\EE$ gives,
+\[
+\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)}  \left( \EE \max_i \| T_i\| \right)^{\frac12} \left( \EE \left\| \sum_{i=1}^n T_i  \right\|\right)^{\frac12},
+\]
+Now that the term $\EE \left\| \sum_{i=1}^n T_i  \right\|$ appears in the RHS, the proof can be finished with a simple application of the quadratic formula (see Section 6.1. in~\cite{Tropp_MatrixConcentrationElementary} for details).
+
+\end{proof}
+
+We now show an inequality for general symmetric matrices
+
+\begin{theorem}\label{thm:4:matrixconsymmetric}
+Let $Y_1,\dots,Y_n\in\RR^{d\times d}$ be random independent symmetric matrices satisfying $\EE Y_i=0$, then
+\[
+\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq \sqrt{C(d)}\sigma  + C(d) L,
+\]
+where,
+\begin{equation}
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{ and } L^2 = \EE \max_i \| Y_i\|^2
+\end{equation}
+and, as in~\eqref{eq:4:Cd_constant},
+\begin{equation*}
+C(d) \defeq 2\pi + 4\pi\lceil \log d \rceil.
+\end{equation*}
+\end{theorem}
+
+\begin{proof}
+
+Using Symmetrization (Lemma~\ref{lemma:4:symmetrization}) and Theorem~\ref{thm:4:RademacherSeries}, we get
+\[
+\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq 2 \EE_Y \left[  \EE_\eps \left\|   \sum_{i=1}^n \eps_i Y_i \right\| \right] \leq \sqrt{C(d)} \EE \left\| \sum_{i=1}^n Y_i^2  \right\|^{\frac12}.
+\]
+Jensen's inequality gives
+\[
+\EE \left\| \sum_{i=1}^n Y_i^2  \right\|^{\frac12} \leq \left( \EE \left\| \sum_{i=1}^n Y_i^2  \right\| \right)^{\frac12},
+\]
+and the proof can be concluded by noting that $Y_i^2\succeq 0$ and using Theorem~\ref{thm:4:matrixconcentration:PSDcase}.
+\end{proof}
+
+\begin{remark}[The rectangular case]
+One can extend Theorem~\ref{thm:4:matrixconsymmetric} to general rectangular matrices $S_1,\dots,S_n\in\RR^{d_1\times d_2}$ by setting
+\[
+Y_i = \left[ \begin{array}{cc}  0 & S_i \\ S_i^T & 0   \end{array} \right],
+\]
+the so-called Hermitian dilation, and noting that
+\[
+\left\| Y_i^2 \right\| = \left\| \left[ \begin{array}{cc}  0 & S_i \\ S_i^T & 0   \end{array} \right]^2   \right\| 
+= \left\| \left[ \begin{array}{cc}  S_iS_i^T & 0 \\ 0 & S_i^TS_i    \end{array} \right]   \right\| = \max\left\{ \left\| S_i^TS_i \right\|, \left\| S_iS_i^T \right\|  \right\}.
+\]
+For details we refer to~\cite{Tropp_MatrixConcentrationElementary}.
+\end{remark}
+
+
+
+\section{Improvements leveraging intrinsic freeness}\label{subsec:freeprobimprovement}
+
+In Section~\ref{sec:tightnessNCK} we saw that the logarithmic factor in the Non-commutative Khintchine (Theorem~\ref{thm:4:Gaussianseries}) inequality is required in the worst-case but superfluous in some instances. If we pay close attention to the proof of Theorem~\ref{thm:4:Gaussianseries}, we notice that there is a potential loss in using Lemma~\ref{lemma:commutativeisworstGIbP} when $A_1,\dots,A_n$ are non-commutative, and that perhaps the $(2p-1)$ factor coming from bounding every summand with the $q=0$ one, could be (in some cases) replaced by a constant, which would remove the logarithmic factor in the final bound.\footnote{It is worth noting that both the term $q=0$ and $q=2p-2$ are equal to the upper bound in Lemma~\ref{lemma:commutativeisworstGIbP}, however while it is tempting to hope to bound all other other terms by a smaller order parameter, this would yield a final bound of $\sqrt{2}\sigma$, which we know does not hold for Wigner matrices (which would need $2\sigma$). The notion of crossing and non-crossing partitions (See Definition~\ref{partitions:crossing}) is an elegant way of singling out which terms are substantial.}
+ Tropp~\cite{Tropp:TailBoundsSecondOrder} made an important early connection between improvements in the Non-commutative Khintchine inequality and ideas in Free Probability~\cite{NicaSpeicher-FreeProbability} showing an improvement of Theorem~\ref{thm:4:Gaussianseries} in~\cite{Tropp:TailBoundsSecondOrder}. This is done by using Gaussian Integration by parts twice and controlling, with a (sometimes) smaller parameter $\omega$ -- called the matrix alignment parameter -- the summands where the factors from different applications of Gaussian Integration by parts ``cross''. This allows for a more efficient iteration argument and replaces the $\theta\big((\log n)^{\frac12}\big)$ factor multiplying $\sigma$ by a $\theta\big((\log n)^{\frac14}\big)$ factor.
+
+We briefly describe below an improvement to Theorem~\ref{thm:4:Gaussianseries} in~\cite{Bandeiraetal_FreeProbability} that often yields sharp bounds. To describe it,  it is worth showing a slightly different proof of Theorem~\ref{thm:4:Gaussianseries}. Let $X=\sum_{k=1}^ng_kA_k$ and $p\geq 1$ as in Theorem~\ref{thm:4:Gaussianseries}. Wick's formula (Lemma~\ref{lemma:Wicksformula}) gives
+\begin{eqnarray*}
+\EE X^{2p} &=& \sum_{u:[2p]\to[n]} \EE[g_{u(1)}\cdots g_{u(2p)}] \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \\
+&=& \sum_{u:[2p]\to[n]} \sum_{\nu\in \PP_2[2p]} 1_{u \sim \nu}\tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \\
+&=& \sum_{\nu\in \PP_2[2p]}\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right).
+\end{eqnarray*}
+If the matrices $A_k$ were commutative then the summands 
+$$\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right)$$ would coincide for all pair partitions, and in particular with the pair partition $\nu_0 \defeq \{(1,2),(3,4),\dots,(2p-1,2p)\}$ on which the summand is given by
+\[
+\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu_0} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) = \sum_{\substack{u:[p]\to[n] } } \tr\left(A_{u(1)}^2\cdots A_{u(p)}^2\right)=\tr\left( \sum_{k=1}^n A_k^2\right)^p.
+\]
+The following Lemma is analogous to Lemma~\ref{lemma:commutativeisworstGIbP} and due to Buchholz~\cite{Buchholz01}.
+
+\begin{lemma}[Commutative is the worst-case II~\cite{Buchholz01}]\label{lemma:commutativeisworstWicks}
+For any $\nu\in\PP[2p]$ and $A_1\dots,A_{n}$ symmetric matrices
+\[
+\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \leq \tr\left( \sum_{k=1}^n A_k^2\right)^p.
+\]
+\end{lemma}
+
+If $\sum_{k=1}^n A_k^2$ is a multiple of the identity matrix, there are many pair partitions that match the upper bound above: whenever there is an adjacent pair, it can be ``peeled-off'' in the sum and potentially make adjacent pairs that were not adjacent before; the partitions that can be fully ``peeled-off'' this way are precisely the so-called \emph{non-crossing} partitions and they indeed match the upper bound above (see Lemma~\ref{prop:GUENONcrossingpairings}).
+
+\begin{definition}[Crossing and Non-crossing Partitions]\label{partitions:crossing}
+We say $\nu\in\PP[2p]$ is a crossing partition when it has pairs $(i_1,i_2)\in\nu$ and $(j_1,j_2)\in\nu$ such that $i_1< j_1 < i_2 < j_2$. Otherwise we say $\nu$ is \emph{non-crossing}. The set of non-crossing partition is denoted by $\NC[2p]\subset \nu\in\PP[2p]$.
+\end{definition}
+
+Bandeira, Boedihardjo, and van Handel~\cite{Bandeiraetal_FreeProbability} showed that, in many settings, the random matrix $X$ exhibits intrinsic freeness in the sense that only the summand corresponding to non-crossing partitions are non-negligible. 
+
+
+This is done by interpolating (using Gaussian Interpolation, Lemma~\ref{lemma:gaussianinterpolation}) the Gaussian model $X$ with a Free Probability model $X_{\mathrm{free}}$ where the Gaussians are replaced by a \emph{semi-circular family} -- these can be viewed, in a sense, as ``non-commutative random variables'' for which Wick's formula (Lemma~\ref{lemma:Wicksformula}) holds when summing only over $\mathrm{NC}[2p]$ (this can be viewed as the limiting behavior of Lemma~\ref{lemma:WicksformulaGUE} below, and indeed the argument can be viewed as replacing Gaussians by ever larger Wigner matrices). While the matrix alignment parameter of Tropp is a key component in the argument, intrinsic freeness is controlled by $v^2=\left\| \mathrm{Cov} X \right\|$, the spectral norm of the covariance matrix of the entries of $X$ (this covariance matrix is a $d^2\times d^2$ matrix). When $\frac{\sigma}{v} \gg\polylog(d) $ the improvement yields $\EE\|X\| \leq (2+o(1))\sigma$. 
+
+Furthermore, Brailovskaya and van Handel~\cite{Tatianaetal_Universality}  developed a universality principle that roughly states that for any sum of independent random matrices  $Y = \sum_{i=1}^n Y_i$ (such as in Theorem~\ref{thm:4:matrixconsymmetric}), as long as the summands are sufficiently small, the matrix $Y$ behaves like a Gaussian analogue $Y_G$ where the entries of $Y$ are replaced by Gaussian random variables with the same mean and covariance, and for which the results in~\cite{Bandeiraetal_FreeProbability} can be used (notice that this is different than the argument, based on symmetrization, done to prove Theorem~\ref{thm:4:matrixconsymmetric} from Theorem~\ref{thm:4:Gaussianseries}). Combining these two tools, one obtains an improvement over the matrix Bernstein inequality.
+
+
+
+\begin{theorem}[\cite{Bandeiraetal_FreeProbability,Tatianaetal_Universality}] \label{thm:improvedBernstein}
+Let $Y_1,\dots,Y_n\in\RR^{d\times d}$ be random independent symmetric matrices satisfying $\EE Y_i=0$, and such that $\|Y_i\|\leq R$, for all $i\in[n]$, almost surely. Then
+\[
+\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq 2\sigma + C \Big( v^{\frac12}\sigma^{\frac12}(\log d)^\frac34 + R^{\frac13}\sigma^{\frac23}(\log d)^\frac23 + R \log d \Big),
+\]
+and
+\[
+\PP\Big[  \left\| \sum_{i=1}^n Y_i  \right\| \geq 2\sigma + C \Big( v^{\frac12}\sigma^{\frac12}(\log d)^\frac34 + \sigma_\ast t^{\frac12}+ R^{\frac13}\sigma^{\frac23}t^\frac23 + R t \Big)    \Big] \leq de^{-t}
+\]
+where, $C$ is a universal constant, 
+\begin{equation}
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{, } v^2 = \left\| \mathrm{Cov}(Y) \right\| \text{ and } \sigma_\ast^2 = \sup_{\|u\|=\|w\|=1}\EE \left| u^TYw \right|^2.
+\end{equation}
+\end{theorem}
+
+Note that if $v,\sigma_\ast,R\ll \frac{1}{\polylog(d)}\sigma$, which happens often in applications (see~\cite{Bandeiraetal_FreeProbability,Tatianaetal_Universality}), then all terms multiplying the universal constant $C$ are negligible and, in the tail bound, the tail parameter $t$ only appears in low-order terms.
+
+
+
+\subsection{Crossings and Wick's formula for the GUE}
+
+An instructive pursuit is to compute an analogue of Wick's formula for a complex valued analogue of the Wigner matrix that has appeared in Section~\ref{subsection:WignerMatrices} and Example~\ref{subsection:WignerMatrices}). This is an instance in which the phenomenon of cancellations arising from crossing partitions is particularly transparent (and it is tightly connected to the seminal work of Voiculescu~\cite{Voiculescu1991} and Haagerup-Thorbj{\o}rnsen~\cite{HaagerupThorbjornsen2005}, and to the methods in~\cite{Bandeiraetal_FreeProbability} that give rise to the inequalities in Theorem~\ref{thm:improvedBernstein}).
+
+\begin{definition}[Gaussian Unitary Ensemble (GUE)]
+A random $D
+\times D$ GUE matrix $W$ is a random Hermitian (self-adjoint) matrix whose upper off-diagonal entries are iid $\CNNN(0,\frac1D)$ and whose diagonal entries are iid $\NNN(0,\frac1D)$ (also independent from the off-diagonal entries). $W_{ij}\sim \CNNN(0,\frac1D)$ means that $\Repart\left(W_{ij}\right) \sim ~\NNN(0,\frac1D)$, $\Impart\left(W_{ij}\right) \sim ~\NNN(0,\frac1D)$, and that both are independent.
+\end{definition}
+
+The goal of this subsection is to show that, for large-dimensional GUEs, there is Wick's formula whose non-negligible terms only involve non-crossing partitions.
+
+\begin{lemma}[Wick's formula for GUEs (cf. Lemma~\ref{lemma:Wicksformula})]\label{lemma:WicksformulaGUE}
+Let $W_1,\dots,W_n$ be iid $D\times D$ GUE matrices and let $u:[2p]\to[n]$ then
+\[
+\frac1D\EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] = \sum_{\nu\in \NC_2[2p]} 1_{u \sim \nu} + \mathcal{O}\left(\frac1{D^2}\right).
+\]
+where $\NC_2[2p]$ denotes de set of non-crossing pair partitions, $u \sim \nu$ means the function $u$ is compatible with $\nu$, and the constant in $\mathcal{O}$ may depend on $n,p,$ and $u$ (see Definitions~\ref{def:pairpartition} and~\ref{partitions:crossing}).
+\end{lemma}
+
+We start by showing that non-crossing terms do not have cancellations.
+
+\begin{definition}
+ Let $\nu\in\PP[2p]$ (see Definition~\ref{def:pairpartition}). We define $u_{\nu}:[2p]\to[p]$ as first surjective assignment $u:[2p]\to[p]$, in the lexicographic order, that satisfies $u\sim \nu$.\footnote{For all our uses here, we could have picked any surjective assignment $u:[2p]\to[p]$, the one that is lexicographically first is an arbitrary choice.}
+\end{definition}
+
+\begin{proposition}\label{prop:GUENONcrossingpairings}
+Let $\nu\in\NC[2p]$, and let $W_1,\dots,W_{p}$ be iid $D\times D$ GUE matrices, then
+\begin{equation}\label{eq:GUENONcrossingpairings}
+    \EE\left[\tr W_{u_\nu(1)}\cdots W_{u_\nu(2p)}\right] = \tr(I)
+\end{equation}
+\end{proposition}
+\begin{proof}
+Since $\nu$ is non-crossing there must exist $i\in[2p-1]$ such that $u_\nu(i)=u_\nu(i+1)$. For such as $i$ we have that the LHS of~\eqref{eq:GUENONcrossingpairings} is equal to
+\[
+%\EE\left[\tr W_{u_\nu(1)}\cdots W_{u_\nu(2p)}\right] 
+\EE\left[\tr W_{u_\nu(1)}\cdots W_{u_{\nu(i-1)}} \left(\EE_{W_{u_\nu(i)}}  W_{u_\nu(i)}^2 \right) W_{u_\nu(i+2)}\cdots W_{u_\nu(2p)}\right],
+\]
+where the outside expectation is over the other random matrices. Furthermore, since $\left(\EE_{W_{u_\nu(i)}}  W_{u_\nu(i)}^2 \right)=I$, such pairs can be ``peeled-off'' one by one to finish the proof (formally, one can do induction by noting that $\nu\setminus\{i,i+1\}$ is also non-crossing).
+\end{proof}
+
+We are now ready to examine crossing partitions.
+
+\begin{proposition}\label{prop:GUEcrossingFormula}
+Let $B_1,B_2,B_3,B_4$ be $D\times D$ (complex) matrices and let $W,V$ be two independent $D\times D$ GUE matrices. We have
+\begin{equation}\label{eq:crossingformula}
+\EE\left[ \tr W B_1 V B_2 W B_3 V B_4 \right] = \frac{1}{D^2} \tr\left( B_3B_2B_1B_4 \right).
+\end{equation}
+\end{proposition}
+\begin{proof}
+This follows from a computation, and noting that for $W\sim\mathrm{GUE}$ we have $
+\EE W_{i_1j_1}W_{i_2j_2} = \frac1{D}\delta_{i_1j_2}\delta_{i_2j_1}$ (where $\delta_{ij}$ is the indicator of $i=j$).\footnote{An analogous  calculation can be done for real value Wigner matrices (Example~\ref{example:WignerMatrix}), also called GOE, but there are more choices of $i_1,j_1,i_2,j_2$ that yield non-zero moments, making the calculation less transparent).} Indeed, expanding the LHS of~\eqref{eq:crossingformula} we see it is equal to
+\begin{eqnarray*}
+\mathrm{LHS}\text{ of }\eqref{eq:crossingformula} & = & \sum_{i_1,\dots,i_8=1}^D \EE\left[W_{i_1i_2} (B_1)_{i_2i_3} V_{i_3i_4} (B_2)_{i_4i_5} W_{i_5i_6} (B_3)_{i_6i_7} V_{i_7i_8} (B_4)_{i_8i_1} \right] \\ 
+& = & \sum_{i_1,\dots,i_8=1}^D \frac1{D^2}\delta_{i_1i_6}\delta_{i_2i_5}\delta_{i_3i_8}\delta_{i_4i_7}  (B_1)_{i_2i_3}  (B_2)_{i_4i_5}  (B_3)_{i_6i_7}  (B_4)_{i_8i_1} \\
+& = & \frac1{D^2}\sum_{i_1,\dots,i_4=1}^D  (B_1)_{i_2i_3}  (B_2)_{i_4i_2}  (B_3)_{i_1i_4}  (B_4)_{i_3i_1} \\
+& = & \frac1{D^2}\tr\left[ B_3 B_2 B_1 B_4\right].
+\end{eqnarray*}
+\end{proof}
+
+
+\begin{proposition}\label{prop:GUEcrossingpairings}
+ Let $\nu\in\PP[2p]\setminus\NC[2p]$ be a crossing partition, and let $W_1,\dots,W_{p}$ be iid $D\times D$ GUE matrices, then
+\begin{equation}
+    0\leq \EE\left[\tr W_{u_\nu(1)}\cdots W_{u_\nu(2p)}\right] \leq \frac1{D^2}\tr(I)
+\end{equation}
+\end{proposition}
+\begin{proof}
+This follows by taking a crossing $\{i,j,i',j'\}$ such that $i<j<i'<j'$,  $u_\nu(i)=u_\nu(i')$, and $u_\nu(j)=u_\nu(j')$, applying Proposition~\ref{prop:GUEcrossingFormula} on $W_{u_\nu(i)}$ and $W_{u_\nu(j)}$ and using induction on $p$.
+\end{proof}
+
+\begin{proof}[of Lemma~\ref{lemma:WicksformulaGUE}]
+
+With all the ingredients collected, this follows directly from the useful equality
+\begin{equation}\label{eq:WicksMixedFormula?}
+    \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] = \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} \EE\left[\tr W_{u_{\nu}(1)}\cdots W_{u_{\nu}(2p)}\right],
+\end{equation}
+and Propositions~\ref{prop:GUEcrossingpairings} and~\ref{prop:GUENONcrossingpairings}. 
+
+The equality~\eqref{eq:WicksMixedFormula?} is a consequence of Lemma~\ref{lemma:Wicksformula}, a formal proof follows by noting that $W_{\ell}$ are Gaussian matrices and thus we can write $W_{\ell} = \sum_{j=1}^m g_{\ell;j} A_j$ for some $A_j$ (complex valued). This means we have
+\begin{eqnarray*}
+    \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] 
+    %= \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right]
+    &=& \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \EE\left[ g_{u(1);j_1}%g_{u(2);j_2}
+    \cdots g_{u(2p);j_{2p}} \right]\\
+    &=&  \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} 1_{j \sim \nu} \\
+    &=& \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} \left( \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right)   1_{j \sim \nu} \right),
+\end{eqnarray*}
+and on the other hand,
+\begin{eqnarray*}
+    \EE\left[\tr W_{u_{\nu}(1)}\cdots W_{u_{\nu}(2p)}\right] 
+    %= \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right]
+    &=& \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \EE\left[ g_{u_{\nu}(1);j_1}%g_{u(2);j_2}
+    \cdots g_{u_{\nu}(2p);j_{2p}} \right]\\
+    &=&  \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) 1_{j \sim \nu},
+\end{eqnarray*}
+where the second equality uses the fact that $\nu$ is the only pairing compatible with $u_\nu$.
+\end{proof}
+
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+
+\begin{definition}[Gaussian Wigner matrix]
+    Let $W$ be a $d \times d$ matrix, which is a gaussian series by taking $W = \sum_{1 \leq k \leq l \leq d}g_{kl}A_{kl}$, where
+    \begin{equation*}
+        A_{kl} = \begin{cases}
+            e_ke_l^\top + e_le_k^\top &\text{for }k<l,\\
+            \sqrt{2} e_ke_k^\top &\text{for }k=l.
+        \end{cases}
+    \end{equation*}
+\end{definition}
+
+
+\begin{myexercise}[\level\sep Constructing Wigner]\label{prob:constructing_wigner}
+    Let $Z$ be a $d \times d$ random matrix whose entries are all independent standard gaussians (in total $d^2$
+of them). Show that $\frac{1}{\sqrt{2}}\brap{Z + Z^\top}$ is a Gaussian Wigner matrix.
+\end{myexercise}
+
+
+\begin{definition}[Diagonal matrix with Gaussian entries]
+    Let $D$ be a $d \times d$ diagonal matrix, which is a gaussian series by taking $D = \sum_{1 \leq k \leq d}g_{k}A_{k}$, where
+    \begin{equation*}
+        A_{k} = e_ke_k^\top.
+    \end{equation*}
+\end{definition}
+
+
+\begin{myexercise}[\level\sep Computing the $\sigma$ parameter]\label{prob:computing_sigma}
+    Let $W$ be a $d \times d$ Gaussian Wigner matrix and let $D$ be a $d \times d$ diagonal matrix with independent standard gaussians on the diagonal. Show that $\norm{\mathbb{E}W^2}^{\frac12} = \sigma(W) = \sqrt{d+1}$ and $\norm{\mathbb{E}D^2}^{\frac12} = \sigma(D) = 1$, and upper bound $\E\norm{W}$ and $\E\norm{D}$ using the Non-commutative Khintchine inequality.
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Intrinsically free Non-commutative Khintchine Inequality]\label{prob:strong_NCK}
+    In fact, a stronger version of the Non-commutative Khintchine inequality is known. Let $A_1, \ldots, A_n \in \R^{d \times d}$ by symmetric matrices and $g_1, \ldots, g_n \in \NN(0,1)$ i.i.d. The gaussian series $X = \sum_{t=1}^n g_t A_t$ satisfies
+    \begin{equation*}
+        \E\norm{X} \leq 2 \sigma + C\,v\,(\log d)^{\frac{3}{2}},
+    \end{equation*}
+    where $C > 0$ is an absolute constant, $\sigma^2 = \norm{ \sum_{i=1}^n A_i^2}$, and $v$ is given by
+    \begin{equation*}
+        v^2 = \norm{\Cov(X)}.
+    \end{equation*}
+    Here, matrix covariance $\Cov(X)$ is a $d^2 \times d^2$ matrix, whose row and column coordinates are indexed by pairs of indices, and entries are given by
+    \begin{equation*}
+        \Cov(X)_{ij,kl} = \E\bras{X_{ij}X_{kl}} \quad\text{for }i,j,k,l\in[d].
+    \end{equation*}
+    Compute $\Cov(W)$ and $\Cov(D)$, where $W$ and $D$ are as in Problem~\ref{prob:computing_sigma}, and deduce using the intrinsically free Non-commutative Khintchine Inequality that there is an absolute constant $C' > 0$, such that
+    \begin{equation*}
+        \E\norm{W} \leq C'\,\sqrt{d}.
+    \end{equation*}
+\end{myexercise}
+\begin{hint}
+    As a start, show that $\Cov(X)_{ij,kl} = \sum_{t=1}^n \bras{A_t}_{ij} \bras{A_t}_{kl}$.
+\end{hint}
+
+\begin{myexercise}[\level\sep Hermitian dilation]\label{prob:hermitian_dilation}
+    In order to extend the matrix Bernstein inequality from symmetric to general rectangular matrices, we will use Hermitian dilation. For a matrix $S \in \R^{d_1 \times d_2}$, the Hermitian dilation $\mathcal{H}(S)$ is defined as
+    \begin{equation*}
+        \mathcal{H}(S) \coloneqq \begin{pmatrix}
+            0_{d_1 \times d_1} & S \\
+            S^\top & 0_{d_2 \times d_2}
+        \end{pmatrix}\in\R^{(d_1 + d_2)\times (d_1 + d_2)}.
+    \end{equation*}
+    In Problem~\ref{prob:symmetrization}(c) we showed that $\mathcal{H}(S)$ is symmetric and that $\norm{\mathcal{H}(S)} = \norm{S}$.
+    
+    Let $S_1, \dots, S_n \in \R^{d_1 \times d_2}$ be random rectangular matrices satisfying $\E\bras{S_i} = 0$ for every $i \in [n]$. Show that 
+    \begin{equation*}
+        \E \norm{ \sum_{i=1}^n S_i } \le \sqrt{C(d)}\, \sigma + C(d)\, L,
+    \end{equation*}
+    where $d = d_1 + d_2$, $C(d)  = 4 + 8 \ceil{\log d}$ and
+    \begin{equation*}
+        \sigma^2 = \max \brac{\norm{ \sum_{i=1}^n \E\bras{S_i S_i^\top}},  \norm{ \sum_{i=1}^n \E\bras{S_i^\top S_i}}},\qquad L^2 = \E \max_i \norm{S_i}^2.
+    \end{equation*}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\level\sep Bernstein's inequality - expectation bound]\label{prob:bernstein_expectation_bound}
+    Let $\brac{X_k}_{k=1}^n$ be a sequence of independent random symmetric $d \times d$ matrices. Assume that each $X_k$ satisfies:
+    \begin{equation*}
+        \E X_k=0 \text { and } \|X_k\|\leq R \text { almost surely. }
+    \end{equation*}
+    In this exercise, the goal is to show that
+    \begin{equation}\label{eq:bernstein_expectation}
+        \E \norm{\sum_{k=1}^n X_k} \le C \brap{ \sigma \sqrt{\log{(d+1)}} + R\log(d+1)}.
+    \end{equation}
+    To get a bound on expectation from the tail bound in Theorem~\ref{thm:4:MatrixBernstein}, we will use an integral identity for the expectation (see Problem~\ref{prob:integral_identity}(a)).
+    \begin{enumerate}[(a)]
+        \item Show that for any $a, b > 0$
+        \begin{equation*}
+            \exp\brap{-\frac{2}{a+b}} \le \max\brac{\exp\brap{-\frac{1}{a}}, \exp\brap{-\frac{1}{b}}} \le \exp\brap{-\frac{1}{a}} + \exp\brap{-\frac{1}{b}}.
+        \end{equation*}
+        Apply it to the exponent in the right-hand side of matrix Bernstein's inequality so that you get integrals that are easier to compute. 
+        \item For very small $t$, the tail bound is loose since the exponent is close to $1$. Think how we can isolate the case of $t$ close to $0$.
+        \item Once you split the integral, it remains only to compute the individual parts and choose the right constants in your argument. To find it, you can closely examine the final bound \eqref{eq:bernstein_expectation}.  
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Randomized matrix multiplication]\label{prob:randomized_matrix_mult}
+    Let $A \in \R^{n\times m}$ be a real-valued matrix with unit spectral norm $\norm{A} = 1$. The cost of computing $AA^\top$, using the standard matrix multiplication method, is of the order of $n^2 m$, which can be prohibitive when $n$ and $m$ are very large. In some cases, it is sufficient to obtain only an approximate solution which allows us to reduce the costs significantly. In this problem you will show that by using randomness we can get an approximation of the product more efficiently.
+    
+    
+    Denote $a_1, \dots, a_m \in \R^n$ columns of matrix $A$. Define a random matrix $X$ such that $\P\brap{X = m \cdot a_k a_k^\top} = \frac{1}{m}$. 
+    \begin{enumerate}[(a)]
+        \item Suppose we draw $s$ independent copies of $X$, denoted by $X_1, \dots, X_s$, and then average them $\hat{X}_s = \frac{1}{s} \sum_{k=1}^s X_k$. Prove that $\hat{X}_s$ in an unbiased estimator of $A A^\top$, meaning that $\E \hat{X}_s = A A^\top$.
+        
+        \item Define the coherence statistic as $\mu(A) = m \cdot \displaystyle{\max_{k = 1, \dots, m} \|a_k\|^2} $. Show that:
+        \begin{equation*}
+            \max_{k = 1, \dots, s} \norm{\E \bras{(X_k - \E X_k)^2}}  \le 2 \mu(A)
+        \end{equation*}
+        and 
+        \begin{equation*}
+            \max_{k = 1, \dots, s} \|X_k - \E X_k \| \le 2\mu(A), \text{ almost surely}.
+        \end{equation*}
+        
+        \item Use Problem~\ref{prob:bernstein_expectation_bound} (proof not needed) to show that, for an absolute constant $C$, if the number of samples $s$ satisfies
+        \begin{equation*}
+            s \ge C \max \brac{\frac{1}{\eps}, \frac{1}{\eps^2} } \mu \log n
+        \end{equation*}
+        then the procedure achieves $\eps$-accuracy, i.e., $\E\norm{\hat{X}_s - AA^\top} \le \eps$.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Commuting vs. simultaneously diagonalizable]\label{prob:commuting_vs_sim_diag}
+    Let $A, B \in \R^{d\times d}$ be two symmetric matrices.
+    \begin{enumerate}[(a)]
+        \item If $A$ and $B$ are simultaneously diagonalizable, show that they commute.
+        
+        \item If $A$ and $B$ commute, and $B$ has all eigenvalues distinct, show that they are simultaneously diagonalizable.
+
+        \item Generalize (a) and (b) for $n$ symmetric matrices $A_1,\ldots, A_n \in \R^{d\times d}$.
+    \end{enumerate}
+\end{myexercise}
+\begin{hint}
+    For (b) show that if $B v = \lambda v$ for some $v \in \R^n$ and $\lambda \in \R$ then $B (A v) = \lambda (A v)$.
+\end{hint}
+
+\begin{myexercise}[\level\level\sep NCK for commuting matrices]\label{prob:NCK_commuting}
+    In the book we discussed the role of commutativity of the matrices for the upper bound of the expected value of the spectral norm of a random matrix. Recall that for $X \coloneqq \sum_{i=1}^n g_i A_i$, where $A_1, \dots, A_n \in \R^{d\times d}$ are symmetric matrices and $g_1, \dots, g_n \overset{\text{iid}}{\sim} \NN(0,1)$, it holds
+    \begin{equation*}
+        \sigma \lesssim \E \norm{X} \lesssim  \sigma \sqrt{\log d},
+    \end{equation*}
+    where $\sigma^2 \coloneqq \norm{ \sum_{i=1}^n A_i^2}$.
+    
+    \begin{enumerate}[(a)]
+        \item Suppose that $A_1, \dots, A_n \in \R^{d\times d}$ are symmetric commuting matrices. This means that they are simultaneously diagonalizable (well known fact, no proof needed), so there is an orthogonal matrix $Q \in \R^{d \times d}$ so that $D_i \coloneqq Q A_i Q^{-1}$ is a diagonal matrix for any $i \in [n]$. Let $\lambda^{(i)}_{1}, \dots, \lambda^{(i)}_{d}$ be the entries that appear, in that order, on the diagonal of $D_i$. Show that
+        \begin{equation*}
+            \E\norm{ X } = \E \max_{k = 1, \ldots, d} \abs{\sum_{i=1}^n g_i \lambda^{(i)}_{k}}.
+        \end{equation*}
+        
+        \item Deduce using Problem~\ref{prob:maximum_gaussians}(a) that  
+        \begin{equation*}
+            \E \norm{X} \lesssim \sigma \sqrt{\log d}.
+        \end{equation*}
+        
+        \item Find an example of commuting matrices $A_1, \dots, A_n$ such that Problem~\ref{prob:maximum_gaussians}(b) implies
+        \begin{equation*}
+            \E \norm{X} \gtrsim \sigma \sqrt{\log d}.
+        \end{equation*}
+    \end{enumerate}
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level\level\sep Trace Commutativity Inequality]\label{prob:trace_commutativity_ineq}
+    The goal of this exercise is to show the following key inequality that proves why commuting matrices perform worse than non-commuting matrices in trace moment estimations. One can actually follow a slightly different approach than the one shown in the book if one follows the hint in (b).
+    \\
+    Let $X,A \in \R^{d \times d}$ be symmetric matrices and let $k,l$ be nonnegative integers with $k+l$ being even, then 
+    $$ \tr( AX^{k}AX^{l}) \leq \tr(A^2X^{k+l}).$$
+    \begin{enumerate}[(a)]
+        \item Let $X = \sum_{i=1}^d \lambda_i u_i u_i^\top$ be the the eigenvalue decomposition of $X$, prove
+        $$ \tr( AX^{k}AX^{l}) \leq \sum_{i,j=1}^d \abs{\lambda_i}^k \abs{\lambda_j}^l (u_i^\top A u_j)^2.$$
+        \item Finish the proof by showing
+        $$ \sum_{i,j=1}^d \abs{\lambda_i}^k \abs{\lambda_j}^l (u_i^\top A u_j)^2 \leq \tr(A^2X^{k+l}). $$
+        \begin{hint}
+        Use Young's Inequality on the product of eigenvalues.
+        \end{hint}
+    \end{enumerate}
+\end{myexercise}
+

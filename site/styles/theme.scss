@@ -1,0 +1,120 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+$font-family-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+$body-color: #202624;
+$body-bg: #fbfcfa;
+$primary: #176b52;
+$link-color: #176b52;
+$headings-font-family: $font-family-serif;
+$headings-color: #17231f;
+$border-color: #dce3df;
+$border-radius: 0.25rem;
+$code-bg: #eef2ef;
+$toc-color: #52615b;
+
+/*-- scss:rules --*/
+:root {
+  --mds-accent: #176b52;
+  --mds-ink: #17231f;
+  --mds-muted: #64716c;
+  --mds-rule: #dce3df;
+  --mds-paper: #fbfcfa;
+}
+
+body {
+  letter-spacing: 0;
+  line-height: 1.78;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: 0;
+  font-weight: 650;
+}
+
+.navbar {
+  border-bottom: 1px solid var(--mds-rule);
+  background: rgba(251, 252, 250, 0.96);
+}
+
+.sidebar {
+  border-right: 1px solid var(--mds-rule);
+}
+
+.sidebar-title {
+  font-family: $font-family-serif;
+  font-weight: 700;
+}
+
+.quarto-title-banner {
+  min-height: clamp(18rem, 50vh, 32rem);
+  display: flex;
+  align-items: flex-end;
+  background-position: center 35%;
+  background-size: cover;
+  color: #fff;
+  position: relative;
+}
+
+.quarto-title-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(10, 20, 16, 0.84), rgba(10, 20, 16, 0.08) 70%);
+}
+
+.quarto-title-banner .quarto-title {
+  position: relative;
+  max-width: 54rem;
+}
+
+.quarto-title-banner h1 {
+  color: #fff;
+  font-size: clamp(2.25rem, 5vw, 4.8rem);
+  line-height: 1.08;
+}
+
+.home-intro {
+  max-width: 52rem;
+  margin: 2.5rem auto 3rem;
+  font-family: $font-family-serif;
+  font-size: 1.18rem;
+}
+
+.home-intro .btn {
+  margin: 0.75rem 0.5rem 0 0;
+  font-family: $font-family-sans-serif;
+}
+
+.chapter-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  padding: 1.5rem 0 2.5rem;
+  border-block: 1px solid var(--mds-rule);
+}
+
+.chapter-map h3 {
+  font-size: 1.15rem;
+}
+
+.callout {
+  border-radius: 0.25rem;
+}
+
+.math.display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .chapter-map {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .quarto-title-banner {
+    min-height: 22rem;
+  }
+}
+

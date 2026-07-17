@@ -1,0 +1,26 @@
+---
+title: "分类"
+description: "线性分类、逻辑回归、SVM 与泛化界"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `classification.tex`，尚待翻译。
+:::
+
+## 二元分类与线性分类器
+
+## 逻辑回归
+
+## 分类器评估、混淆矩阵与 ROC
+
+## 支持向量机
+
+## 多分类问题
+
+## Rademacher 复杂度与泛化界
+
+## 其他分类方法
+
+## 习题 {.unnumbered}
+

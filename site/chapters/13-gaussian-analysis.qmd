@@ -1,0 +1,20 @@
+---
+title: "测度集中与高斯分析"
+description: "高斯分部积分、插值、比较原理与 Gordon 定理"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `probability-gaussiananalysis.tex`，尚待翻译。
+:::
+
+## 高斯分部积分与 Wick 公式
+
+## 高斯插值、Poincaré 不等式与集中性
+
+## 高斯比较原理
+
+## Gordon 定理
+
+## 习题 {.unnumbered}
+

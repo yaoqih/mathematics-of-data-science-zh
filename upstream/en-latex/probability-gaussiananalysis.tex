@@ -1,0 +1,854 @@
+\chapter{Concentration of Measure and Gaussian Analysis}
+\label{c:probability-gaussiananalysis}
+
+
+In this chapter we significantly expand on the concepts presented in Chapter~\ref{c:surprises}, showcasing several other instances of the \emph{Concentration of Measure} phenomena, and focusing on Gaussian Analysis to develop a toolkit that is used throughout the book, including the celebrated Gordon's Escape through a Mesh Theorem. Our treatment draws inspiration from the excellent texts~\cite{vanHandel_LectureNotesProb_14,Ramon-StFlour-2022}.
+
+\emph{Notation}: In this chapter, we try to reserve $g$ for an isotropic Gaussian vector and use $X$ and $Y$ to denote Gaussian vectors with other covariances.
+
+
+
+\section{Gaussian integration by parts and Wick's formula}
+
+We start by covering some basics in Gaussian analysis, starting with a very useful fact about Gaussian random variables: Gaussian integration by parts.
+
+\begin{lemma}[Gaussian integration by parts]\label{lemma:GIbP}
+Let $g$ be an $n$ dimensional vector of iid $\NNN(0,1)$ random variables ($g\sim\NNN(0,I_{n\times n})$). Let $\psi:\RR^n\to\RR$ be any differentiable function with at most exponential growth,\footnote{We will not make an effort to describe the minimal regularity assumptions as to not deviate from the main goal of this book. When we say differentiable with at most exponential growth we mean that the derivatives also are of at most exponential growth. The interested reader will realize that this is tightly connected to Sobolev spaces on the Gaussian measure.} then for any $i\in[n]$,
+\[
+\EE[g_i \psi(g)] = \EE\left[ \frac{\partial \psi}{\partial x_i}(g) \right].
+\]
+\end{lemma}
+
+\begin{proof}
+For $\phi$ a univariate function, integration by parts gives
+\begin{eqnarray*}
+\EE [ g_i \phi(g_i) ] & = & \int_{-\infty}^\infty x\phi(x) \frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}}dx \\
+& = & - \int_{-\infty}^\infty \phi(x) \frac{d}{dx}\left(\frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}}\right)dx  \\
+& = & \int_{-\infty}^\infty \frac{d}{dx} \phi(x) \frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}} dx = \EE \left[  \phi'(g_i) \right],
+\end{eqnarray*}
+as long as $\phi$ is differential and has at most exponential growth. The proof follows by taking $\phi(x)=F(g_1,\dots,g_{i-1},x,g_{i+1},\dots,g_n)$ and conditioning on $g_1,\dots,g_{i-1},g_{i+1},\dots,g_n$.
+%$\lim_{x\to\pm\infty} \phi(x)\exp\left(\frac{x^2}{2}\right) = 0$
+\end{proof}
+
+It is straightforward to extend this formula to non-isotropic Gaussian vectors, and we record this here as a corollary.
+\begin{corollary}\label{cor:GIbP}
+Let $X$ be a centered $n$-dimensional Gaussian vector with covariance $\Sigma$, i.e. $X\sim\NNN(0,\Sigma)$. Let $\varphi\in\RR^n\to\RR$ be any differentiable function with at most exponential growth,
+then for any $j\in[n]$,
+\[
+\EE[X_j \varphi(X)] = \sum_{k=1}^n  \Sigma_{jk}  \EE\left[\frac{\partial \varphi}{\partial x_k}(X)\right].
+\]
+\end{corollary}
+\begin{proof}
+We can write $X=\Sigma^{\frac12}g$ where $g$ has iid $\NNN(0,1)$ entries (note that $\Sigma \succeq 0$% and so $\Sigma^{\frac12}$ exists
+). Defining $\psi(g) = \varphi(\Sigma^{\frac12}g) %= h(Y)
+$ and using Lemma~\ref{lemma:GIbP} yields
+\begin{eqnarray*}
+\EE[X_j \varphi(X)] & = & \EE\left[\left(\Sigma^{\frac12}g\right)_{j} \varphi(\Sigma^{\frac12}g)\right] = \EE\left[\left(\Sigma^{\frac12}g\right)_{j} \psi(g)\right] \\
+& = & \EE\left[ \left(\sum_{i=1}^n \Sigma^{\frac12}_{ji}g_i \right) \psi(g) \right]
+=
+ \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[ g_i   \psi(g) \right] \\
+ & = & 
+ \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[   \frac{\partial \psi}{\partial x_i}(g) \right] = \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[ \sum_{k=1}^n \frac{\partial \varphi}{\partial x_k}(X) \Sigma^{\frac12}_{ki} \right] \\
+ & = & \sum_{k=1}^n \left( \sum_{i=1}^n \Sigma^{\frac12}_{ji} \Sigma^{\frac12}_{ki} \right) \EE\left[\frac{\partial \varphi}{\partial x_k}(X) \right] = \sum_{k=1}^n  \Sigma_{jk}  \EE\left[\frac{\partial \varphi}{\partial x_k}(X) \right],
+\end{eqnarray*}
+where in the first equality in the third line we used Lemma~\ref{lemma:GIbP}. The last equality follows from matrix multiplication and the fact that $\Sigma^{\frac12}$ is a symmetric matrix.
+\end{proof}
+
+
+\begin{lemma}[Gaussian moments]\label{lemma:gaussianmoments}
+Let $g$ be a standard univariate Gaussian. We have
+\[
+\EE g^{2p} = (2p-1)!!,
+\]
+where $(2p-1)!! = (2p-1)(2p-3)\cdots3\cdot1$.
+Also, 
+\[
+\left[\EE g^{2p}\right]^{\frac1{2p}} \leq \sqrt{2p}.
+\]
+\end{lemma}
+
+\begin{proof} This is a straightforward application of Gaussian integration by parts (Lemma~\ref{lemma:GIbP}). Let $\phi(g)=g^{2p-1}$ then $\EE[g\cdot g^{2p-1}] = \EE[(2p-1) g^{2p-2}]$. Iterating and using $\EE g^2=1$ gives $\EE g^{2p} = (2p-1)!!$. While it is easy to see that $(2p-1)!!\leq (2p)^{p}$, which proves the intended inequality, it is instructive to see a different, direct, proof:
+
+Since $\EE[g^{2p}] = \EE[(2p-1) g^{2p-2}]$ and, by Jensen, $\EE[g^{2p-2}]\leq \left(\EE[g^{2p}]\right)^{\frac{2p-2}{2p}}$, we have 
+\[
+\EE[g^{2p}] \leq (2p-1) \left(\EE[g^{2p}]\right)^{\frac{2p-2}{2p}},
+\]
+which can be rewritten as $\left(\EE[g^{2p}]\right)^{\frac{1}{p}}\leq (2p-1)$.
+\end{proof}
+
+We will be interested in computing trace moments of Gaussian matrices, which will involve computing expected values of polynomials of Gaussians. It is clear that the expected value of any polynomial of i.i.d.\ standard Gaussians can be computed using Gaussian integration by parts for each monomial (just as in Lemma~\ref{lemma:gaussianmoments}). Wick's formula\footnote{Wick's formula is also known as Isserlis' Theorem~\cite{isserlis1918formula} in statistics and probability and dates back to 1918. It was rediscovered in the context of quantum field theory by Wick in 1950~\cite{wick1950evaluation}.} is a very useful way of organizing this calculation. Before stating Wick's formula, we need to define the notion of pair partition.
+
+\begin{definition}[Pair Partition]\label{def:pairpartition}
+Given $k$ a positive integer, we define $\PP_2[k]$ as the set of partitions of $[k]$ into subsets of size 2 each. If $k$ is odd then $\PP_2[k]$ is empty. Given a function $u$ on $[k]$ and a pair partition $\nu\in\PP_2[k]$ we say that $u$ is compatible with $\nu$, and write $u\sim\nu$ if for all sets $\{i,j\}\in\nu$ we have $u(i)=u(j)$.
+\end{definition}
+
+
+\begin{lemma}[Wick's formula]\label{lemma:Wicksformula}
+Let $g_1,\dots,g_n$ be iid standard Gaussian random variables and let $u:[p]\to[n]$ then
+\[
+\EE[g_{u(1)}\cdots g_{u(p)}] = \sum_{\nu\in \PP_2[p]} 1_{u \sim \nu},
+\]
+where $\PP_2[p]$ denotes a set of pair partitions and $u \sim \nu$ means that the function $u$ is compatible with $\nu$ (see Definition~\ref{def:pairpartition})
+\end{lemma}
+
+\begin{proof}
+Since both sides are zero when $p$ is odd we can focus on the case when $p$ is even. We can then prove the identity by induction. It is trivially true for $p=2$, let $p\geq 4$ an even number. Using Gaussian integration by parts
+\begin{eqnarray*}
+\EE[g_{u(1)}\cdot g_{u(2)} \cdots g_{u(p)}] & = & \EE\left[\frac{\partial}{\partial g_{u(1)}} g_{u(2)} \cdots g_{u(p)}\right] \\
+&=& \EE\left[\sum_{i=2}^p g_{u(2)} \cdots g_{u(i-1)} 1_{u(1)=u(i)} g_{u(i+1)}\cdots g_{u(p)}\right] \\
+&=&\sum_{i=2}^p 1_{u(1)=u(i)} \EE\left[ g_{u(2)} \cdots g_{u(i-1)} g_{u(i+1)}\cdots g_{u(p)}\right]. \\
+\end{eqnarray*}
+Using the induction hypothesis for $\EE\left[ g_{u(2)} \cdots g_{u(i-1)} g_{u(i+1)}\cdots g_{u(p)}\right]$ (which is a product of $p-2$ factors) we get
+\begin{eqnarray*}
+\EE[g_{u(1)}\cdot g_{u(2)} \cdots g_{u(p)}]  & = & \sum_{i=2}^p 1_{u(1)=u(i)} \sum_{\nu'\in\PP_2([p]\setminus\{1,i\})} 1_{u_{|[p]\setminus\{1,i\}}\sim\nu'} \\
+& = & \sum_{i=2}^p \sum_{\nu'\in\PP_2([p]\setminus\{1,i\} )} 1_{u\sim(\nu'\cup\{1,i\}) } = \sum_{\nu\in \PP_2[p]} 1_{u \sim \nu},
+\end{eqnarray*}
+where $u_{|[p]\setminus\{1,i\} }$ denotes the restriction of $u$ to the set $[p]\setminus\{1,i\}$.
+\end{proof}
+
+
+\section{Gaussian interpolation, Poincar\'{e}, and concentration}
+
+In this section, we start with a classical tool in Gaussian analysis that we will use several times, namely the idea of Gaussian Interpolation.
+
+\begin{lemma}[Gaussian Interpolation]\label{lemma:gaussianinterpolation}
+Let $X$ and $Y$ be two centered independent $n$ dimensional Gaussian vectors with covariances, respectively $\Sigma^X$ and $\Sigma^Y$. Define, for $t\in[0,1]$,
+\begin{equation}\label{eq:interpolationGI}
+Z_t = \sqrt{t}X + \sqrt{1-t}Y,
+\end{equation}
+with $X$ and $Y$ independent from each other, and let $f:\RR^n\to\RR$ be a twice differentiable function with at most exponential growth. Then 
+\begin{equation}
+\frac{d}{dt} \EE \left[ f(Z_t) \right] = \frac12 \sum_{i,j=1}^n \left( \Sigma^X_{ij} - \Sigma^Y_{ij} \right) \EE \left[ \frac{\partial^2 f}{\partial x_i\partial x_j}(Z_t)\right].
+\end{equation}
+\end{lemma}
+
+Before proving this lemma, we note that the parameterization of the path, although perhaps peculiar at first, is the one that in the case that $X$ and $Y$ are identically distributed, renders $Z_t$ identically distributed to them for any $t$; it is also the parameterization for which $\Cov(Z_t) = t\Cov(X)+(1-t)\Cov(Y)$, where $\Cov(X)=\EE XX^T$ (since $\EE X=0$).
+
+\begin{proof} The idea will be to use Gaussian integration by parts (Corollary~\ref{cor:GIbP}). By the chain rule (and swapping the order of differentiating and taking the expectation) 
+\begin{eqnarray}
+\frac{d}{dt} \EE \left[ f(Z_t) \right]& = &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac{d}{dt}(Z_t)_i\right] \nonumber \\ &= &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\left(\frac1{2\sqrt{t}}X_i-\frac1{2\sqrt{1-t}}Y_i\right)\right]  \\ &= &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{t}}X_i\right]-\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{1-t}}Y_i\right]. 
+\end{eqnarray}
+
+
+
+For the first term, conditioning on $Y$ and using Corollary~\ref{cor:GIbP} on the random variable $\sqrt{t}X$ gives
+\begin{eqnarray*}
+\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{t}}X_i\right] & = & \frac1{2t}\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(\sqrt{t}X + \sqrt{1-t}Y)\sqrt{t}X_i\right] \\ & = & \frac1{2t} \sum_{j=1}^n \left( t\Sigma^{X}\right)_{ij} \EE \left[ \sum_{i=1}^n\frac{\partial^2 f}{\partial x_j \partial x_i }(\sqrt{t}X + \sqrt{1-t}Y)\right]\\ & = & \frac1{2} \sum_{i,j=1}^n \Sigma^{X}_{ij} \EE \left[ \frac{\partial^2 f}{\partial x_j \partial x_i }(Z_t)\right].
+\end{eqnarray*}
+An analogous calculation for the second terms completes the proof.
+\end{proof}
+
+Gaussian interpolation will play (at least) two important roles in the following: (i)~together with the fundamental theorem of calculus it will allows us to compare $\EE f(X)$ with $\EE f(Y)$ for various functions $f$ and Gaussian random variables $X$ and $Y$, this is the key tool behind the comparison inequalities of Section~\ref{sec:gaussiancomparisonineqs}; (ii)~another important role of Gaussian interpolation is to provide concentration inequalities, roughly speaking by interpolating between $(X,X)$ containing two exact copies of a random variable and $(X,X')$ containing two independent copies, allows to quantitatively say how much two independent copies of a random variable behave similarly, resulting in concentration of measure. The first instance of this idea is in the so-called Gaussian covariance identity, but we will see it again in the Gaussian Poincar\'{e} inequality and in Gaussian concentration.
+
+\begin{lemma}[Gaussian covariance identity]\label{lemma:gaussiancovarianceidentity}
+Let $\phi$ and $\psi$ be two differentiable functions (from $\RR^n$ to $\RR$) of at most exponential growth. Let $g$ and $g'$ be two iid $n$ dimensional $\NNN(0,I)$ vectors. Define
+\begin{equation}\label{eq:interpolationCI}
+g_{(t)} = tg + \sqrt{1-t^2}g'.
+\end{equation}
+We have
+\[
+\cov(\phi(g),\psi(g)) = \int_{0}^1 \EE \langle \nabla\phi(g),\nabla\psi(g_{(t)}) \rangle dt.
+\]
+\end{lemma}
+Before proving this lemma, let us remark on how the interpolation in~\eqref{eq:interpolationCI} is related to the one in~\eqref{eq:interpolationGI}. The interpolation used in~\eqref{eq:interpolationGI} is an interpolation between two distributions of random variables linearly parameterized on the covariance of these random variables. The interpolation in the covariance identity~\eqref{eq:interpolationCI} creates a path between a random variable and an i.i.d. copy of it, linearly parameterized by the covariance between $g$ and $g_{(t)}$. As we will see in the proof below, we can study~\eqref{eq:interpolationCI} by taking $Z_t = \sqrt{t}X+\sqrt{1-t}Y$ where $X$ and $Y$ are two $2n$-dimensional Gaussian random variables with covariances
+\begin{equation}\label{eq:2diffinterpolations}
+X \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & 0_{n\times n} \\  0_{n\times n} & I_{n\times n} \end{array}\right]\right) \text{ and } Y \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & I_{n\times n} \\  I_{n\times n} & I_{n\times n} \end{array}\right]\right),
+\end{equation}
+since, for each $t\in[0,1]$, $Z_t \sim \left[\begin{array}{c} g \\ g_{(t)}\end{array}\right]$ (in the since of having the same probability law).
+
+\begin{proof}
+Let us start by defining $\ell(t) = \EE \left[\phi(g)\psi(g_{(t)})\right]$. One has
+\[
+\ell(0) = \left(\EE \phi(g)\right)\left(\EE \psi(g)\right) \text{ and } \ell(1) = \EE \left[\phi(g)\psi(g)\right],
+\]
+thus
+\[
+\cov(\phi(g),\psi(g)) = \ell(1)-\ell(0) = \int_0^1 %\frac{d}{dt} \EE \phi(g),\psi(g_{(t)})
+\ell'(t)dt.
+\]
+The idea now is to compute $\ell'(t)$ using Lemma~\ref{lemma:gaussianinterpolation}. We leverage the construction above and consider $Z_t=\sqrt{t}X+\sqrt{1-t}Y$ where $X$ and $Y$ are independent Gaussian vectors distributed accordingly to~\eqref{eq:2diffinterpolations}. Since, for each $t\in[0,1]$, $Z_t$ has the same law as $\left[\begin{array}{c} g \\ g_{(t)}\end{array}\right]$ we have that $f(Z_t)$ has the same law as $\phi(g)\psi(g_{(t)})$ for $f:\RR^{2n}\to\RR$ given by $f\left(\left[\begin{array}{c} y \\ z\end{array}\right]\right) = \phi(y)\psi(z)$ for $y,z\in\RR^n$, and so $\ell(t) = \EE \left[ f(Z_t) \right]$
+
+The rest of the proof is a straightforward computation using Lemma~\ref{lemma:gaussianinterpolation}:
+\begin{eqnarray*}
+\ell'(t) & = &  \frac{d}{dt}\EE \left[ f(Z_t) \right] =  \frac12 \sum_{a,b=1}^{2n} \left( \Sigma^{Z_1}_{ab} - \Sigma^{Z_0}_{ab} \right) \EE \left[ \frac{\partial^2 f}{\partial x_a\partial x_b}(Z_t)\right] \\
+& = &\frac12 \left(2\sum_{i=1}^n \EE \frac{\partial}{\partial x_i}\phi(g) \frac{\partial}{\partial x_i}\psi(g_{(t)}) \right) \\
+& = & \EE \langle \nabla\phi(g),\nabla\psi(g_{(t)}) \rangle.
+\end{eqnarray*}
+\end{proof}
+
+An elegant consequence of this lemma is the celebrated Gaussian Poincar\'{e} inequality, which bounds the variance of a function of a Gaussian vector by its gradient yielding a form concentration of measure: ``If a function $f$ has small gradient, $f(X)$ has small variance''.
+
+\begin{proposition}[Gaussian Poincar\'{e} Inequality]\label{prop:GaussianPoincare}
+Let $f:\RR^n\to\RR$ be a differentiable function with at most exponential growth. Let $g\sim\NNN\left(0,I_{n\times n}\right)$. Then
+\[
+\Var\left( f(g) \right) \leq \EE \| \nabla f(g)\|^2.
+\]
+\end{proposition}
+We note that this inequality (as the others in this chapter) can be effortlessly extended to Lipchitz functions by a standard approximation argument.
+
+\begin{proof}
+By the Gaussian covariance identity (Lemma~\ref{lemma:gaussiancovarianceidentity}) we have
+\begin{eqnarray*}
+\Var\left( f(g) \right) = \cov(f(g),f(g)) &=& \int_{0}^1 \EE \langle \nabla f(g),\nabla f(g_{(t)}) \rangle dt \\
+& \leq  & \int_{0}^1 \left(\EE\|\nabla f(g)\|^2\right)^{\frac12}\left(\EE\|\nabla f(g_{(t)})\|^2\right)^{\frac12}  dt \\
+& = & \int_{0}^1 \EE\|\nabla f(g)\|^2dt = \EE\|\nabla f(g)\|^2, 
+\end{eqnarray*}
+where the inequality follows from Cauchy-Schwarz on both the inner-product and the expectation and the penultimate equality follows from the fact that $g\sim g_{(t)}$.
+\end{proof}
+
+We will now prove one of the most important results in concentration of measure, Gaussian concentration. Although being a concentration result specific for normally distributed random variables, it will be very useful throughout this book. Much like Poincar\'{e}'s inequality above, it intuitively it says that if $F:\RR^n\to\RR$ is a function that is stable in terms of its input then $F(X)$ is well concentrated around its mean, where $X\in\NNN(0,I)$. Unlike Pointcar\'{e}'s inequality above, Gaussian concentration provides Gaussian tail bounds. More precisely:
+
+\begin{theorem}[Gaussian Concentration]\label{theorem:4:gaussianconcentration}
+ Let $g\sim\NNN(0,I_{n\times n})$ be a vector with i.i.d.\ standard Gaussian entries and $f:\RR^n\to\RR$ a $\sigma$-Lipchitz function (i.e.: $|f(x)-f(y)|\leq \sigma \|x-y\|$, for all $x,y\in\RR^n$). Then, for every $t\geq 0$
+ \[
+  \Prob\left\{ \left| f(g) - \EE f(g)\right| \geq t   \right\} \leq 2 \exp\left( -\frac{t^2}{2\sigma^2} \right).
+ \]
+\end{theorem}
+
+
+
+\begin{proof}
+We will assume that the function $f$ is smooth as a limiting argument can generalize the result from smooth functions to general Lipschitz functions. The existence of the integrals we use follows from the constraints that the Lipschitz property forces on growth of $f$. We also assume $\EE f(g)=0$ for ease of notation, as we can simply consider $\phi(g)=f(g)-\EE f(g)$.
+
+We consider the moment generating function (as in~\eqref{eq:MomentGeneratingFunction})
+\[
+M_f(\lambda) = \EE\left[ \exp\left( \lambda f(g) \right)  \right],
+\]
+and note that
+\[
+M_f'(\lambda) = \EE\left[ f(g)\exp\left( \lambda f(g) \right) \right] = \cov\left(f(g),\exp\left( \lambda f(g) \right) \right),
+\]
+since $\EE f(g)=0$.
+
+The Gaussian covariance identity (Lemma~\ref{lemma:gaussiancovarianceidentity}) then gives
+\begin{eqnarray*}
+M_f'(\lambda) &=& \int_{0}^{1}\EE \langle \nabla f(g),\nabla \exp\left( \lambda f(g_{(t)}) \right) \rangle dt \\ &=& \int_{0}^{1}\EE \left[ \langle \nabla f(g),\nabla f(g_{(t)}) \rangle \lambda   \exp\left( \lambda f(g_{(t)}) \right) \right] dt.
+\end{eqnarray*}
+The Lipchitz condition implies that $|\langle \nabla f(g),\nabla f(g_{(t)}) \rangle|\leq \sigma^2$ which together with the fact that $M_f(\lambda)\geq 0$ gives
+\[
+\left|M_f'(\lambda)\right| \leq \int_{0}^{1}\sigma^2\EE \left| \lambda   \exp\left( \lambda f(g_{(t)}) \right) \right|  dt = \sigma^2|\lambda| M_f(\lambda).
+\]
+Since $M_f(0)=1$ this implies (one can see this, e.g., by noting that $\log M_f(0)=0$ and $\left|\frac{d}{d\lambda}\log M_f(\lambda) \right| \leq |\lambda| \sigma^2$) that
+\[
+M_f(\lambda)\leq \exp\left(\frac{\lambda^2 \sigma^2}{2}\right).
+\]
+The rest of the proof follows from the standard Chernoff trick and Markov Inequality (the same we did in Proposition~\ref{prop:gaussian}), Formally, we showed that $f(g)$ is a sub-Gaussian random variable (in the sense of Definition~\ref{def:subgaussian}) and the proof can be finished by using Proposition~\ref{prop:subgaussian}.
+
+\end{proof}
+
+There is a direct argument for a weaker version of this inequality that does not require the covariance identity. We refer the interested reader to  Theorem~2.1.12 in~\cite{Tao_topicsRMT} (the original argument is due to Maurey and Pisier).
+
+
+
+\subsection{Talagrand's concentration inequality}
+
+A remarkable result by Talagrand~\cite{Talagrand_concentration_1995}, Talagrand's concentration inequality, provides an analogue of Gaussian concentration for bounded random variables.
+
+\begin{theorem}[Talagrand concentration, Thm.~2.1.13~\cite{Tao_topicsRMT}]
+Let $K>0$, and let $X_1,\dots,X_n$ be independent bounded random variables with $|X_i|\leq K$ for all $1\leq i \leq n$. Let $F:\RR^n \to \RR$ be a $\sigma$-Lipschitz and convex function. Then, for any $t\geq 0$,
+\[
+ \Prob\left\{ \left|F(X) - \EE\left[F(X)\right] \right| \geq t K\right\} \leq c_1 \exp\left( -c_2 \frac{t^2}{\sigma^2} \right), 
+\]
+for positive constants $c_1$, and $c_2$.
+\end{theorem}
+
+Other useful similar inequalities (with explicit constants) are available in~\cite{Massart_constants}.
+
+
+
+
+
+
+ 
+
+
+
+
+\section{Gaussian comparison principles}\label{sec:gaussiancomparisonineqs}
+
+We will start this section with the celebrated Slepian's Comparison Lemma, also known as the Sudakov-Fernique inequality,\footnote{They are essentially the same statement, on being a slight generalization of the other, we state here the more general form: Theorem~\ref{thm:Slepian_SF_ineq}.} are crucial tools to compare Gaussian processes. A Gaussian process is a family of Gaussian random variables indexed by some set $T$, $\left\{X_t\right\}_{t\in T}$ (if $T$ is finite this is simply a Gaussian vector). Given a Gaussian process $X_t$, a particular quantity of interest is $\EE\left[\sup_{t\in T}X_t\right]$.
+
+We will focus on Gaussian Processes that are whose maximum is well approximated by maximum on finite sets, meaning Gaussian Processes for which
+    \begin{equation}\label{eq:separablegaussianprocess}
+    \EE\left[\sup_{t\in T}X_t\right] = \sup_{\substack{T' \subseteq T \\ |T'| < \infty}} \EE\left[\max_{t\in T'}X_t\right].
+    \end{equation}
+
+
+To not significantly deviate from the main message of this process we won't discuss regularity and measurability issue of Gaussian processes in detail, but note that the standard class of Gaussian processes that satisfy~\eqref{eq:separablegaussianprocess} are so-called \emph{separable Gaussian processes} (you can see a definition in Definition~5.22 of~\cite{vanHandel_LectureNotesProb_14}, it essentially requires that there exists a countable subset $T_0$ of the domain for which, for any $t\in T$, $X_t$ lies in the limit points of $X_s$ for $s\in T_0$ and $s\to t$). In any case, the Gaussian processes we will consider are either finite, which case they are trivially separable (and~\eqref{eq:separablegaussianprocess} holds), or they are defined over a separable set $T$ and have path continuity on the process metric $d(t,u) = \sqrt{\EE(X_t-X_u)^2}$ which also ensures~\eqref{eq:separablegaussianprocess}. In most cases, in fact, one can simply think of the approximating subsets as $\epsilon$-nets of $T$.
+
+We will be particularly interested in comparing two different Gaussian processes, usually one of interest with one that is simpler to understand. 
+Intuitively, if we have two Gaussian processes $X_t$ and $Y_t$ with mean zero $\EE\left[X_t\right] = \EE\left[Y_t\right] = 0$, for all $t\in T$, and the same variance, then the process that has the ``least correlations'' should have a larger maximum (think the maximum entry of vector with i.i.d. Gaussian entries versus one always with the same Gaussian entry). Theorem~\ref{thm:Slepian_SF_ineq} makes this intuition precise and extends it to processes with different variances.\footnote{Although intuitive in some sense, this turns out to be a delicate statement about Gaussian random variables, as it does not hold in general for other distributions.}
+
+
+
+\begin{theorem}[Slepian/Sudakov-Fernique inequality]\label{thm:Slepian_SF_ineq}
+
+Let $\left\{X_u\right\}_{u\in U}$ and $\left\{Y_u\right\}_{u\in U}$ be two (almost surely bounded) separable centered Gaussian processes indexed by the same (compact) set $U$ (
+%see Definition~\ref{def:separableprocess}
+satisfying~\eqref{eq:separablegaussianprocess}
+). If, for every $u,v\in U$:
+\begin{equation}
+\EE\left[X_{u}-X_{v}\right]^2 \leq  \EE\left[Y_{u}-Y_{v}\right]^2,
+\end{equation}
+then
+\[
+ \EE\left[\max_{u\in U}X_u\right] \leq \EE\left[\max_{u\in U}Y_u\right].
+\]
+\end{theorem}
+
+\begin{proof}
+Since $X$ and $Y$ are separable processes, we can reduce to the case in which $U$ is finite, by showing the inequality for all finite subsets of the indexing set (see~\eqref{eq:separablegaussianprocess}).
+
+The idea is to use Gaussian Interpolation (Lemma~\ref{lemma:gaussianinterpolation}) on a soft-max. We take
+\[
+Z(t) = \sqrt{t}X + \sqrt{1-t^2}Y.
+\]
+For $\beta>0$ we define
+\[
+F_\beta(Z(t)) = \frac{1}{\beta} \log\left(\sum_{u\in U} e^{\beta Z_u(t)} \right). 
+\]
+Gaussian Interpolation (Lemma~\ref{lemma:gaussianinterpolation}) implies that
+\begin{eqnarray*}
+\frac{d}{dt}\EE F_\beta(Z(t)) &=&  \frac12 \sum_{u,v\in U}^n \left( \Sigma^X_{uv} - \Sigma^Y_{uv} \right) \EE \left[ \frac{\partial^2 F}{\partial x_u\partial x_v}(Z(t))\right].
+\end{eqnarray*}
+Setting $p_u(Z) = e^{\beta Z_u(t)} / \sum_{v\in U} e^{\beta Z_v(t)}$ (we dropped the $t$ from $p_u(Z(t))$ to ease notation), we have
+\begin{eqnarray*}
+\frac{\partial F}{\partial x_u}(Z(t)) & = & \frac{1}{\beta}  \frac{\beta e^{\beta Z_u(t)} }{\sum_{v\in U} e^{\beta Z_v(t)}} = p_u(Z), \\ \frac{\partial^2 F}{\partial x_u\partial x_v}(Z(t)) & = & \delta_{uv} \frac{\beta e^{\beta Z_u(t)} }{\sum_{w\in U} e^{\beta Z_w(t)}} - e^{\beta Z_u(t)}\frac{\beta e^{\beta Z_v(t)}  }{\left(\sum_{w\in U} e^{\beta Z_w(t)}\right)^2} \\ & = & \beta\left( \delta_{uv}p_u(Z) - p_u(Z)p_v(Z)  \right).
+\end{eqnarray*}
+
+Our goal is to show that $\frac{d}{dt}\EE F_\beta(Z(t))$ is non-positive, implying that $\EE F_\beta(X) \leq \EE F_\beta(Y)$ which by taking $\beta\to\infty$, and recalling that $$\max_{u\in U}Z_u(t) \leq F_\beta(Z(t)) \leq \frac{\log n}{\beta} + \max_{u\in U}Z_u(t),$$ finishes the proof.
+
+Showing that $\frac{d}{dt}\EE F_\beta(Z(t))$ is non-positive is mechanical computation (using $\sum_{u\in U}p_u(Z)=1$ and $\EE\left[X_{u}-X_{v}\right]^2 = \Sigma^X_{uu}-2\Sigma^X_{uv}+\Sigma^X_{vv}$). Indeed,
+\begin{eqnarray}
+\frac{d}{dt}\EE F_\beta(Z(t)) &=& \frac{\beta}{2}\sum_{u\in U} \left( \Sigma^X_{uu} - \Sigma^Y_{uu} \right)\left( p_u(Z) - p_u(Z)p_u(Z)  \right)
+ \\ & &  - \frac{\beta}{2}\sum_{u\neq v\in U} \left( \Sigma^X_{uv} - \Sigma^Y_{uv} \right) p_u(Z)p_v(Z),
+\end{eqnarray}
+
+and
+\begin{eqnarray*}
+0 & \geq & \frac12 \sum_{u\neq v\in U} \left( \EE\left[X_{u}-X_{v}\right]^2 - \EE\left[Y_{u}-Y_{v}\right]^2 \right) p_u(Z)p_v(Z) \\
+ & = & \frac12 \sum_{u\neq v\in U} \left( \Sigma^X_{uu} - 2\Sigma^X_{uv} + \Sigma^X_{vv} - \Sigma^Y_{uu} + 2\Sigma^Y_{uv} -\Sigma^Y_{vv} \right) p_u(Z)p_v(Z)  \\
+ & = &  \sum_{u\neq v\in U} \left( \Sigma^X_{uu} -  \Sigma^Y_{uu}\right) p_u(Z)p_v(Z) -   \sum_{u\neq v\in U} \left( \Sigma^X_{uv} -  \Sigma^Y_{uv}\right) p_u(Z)p_v(Z) \\ 
+ & = &  \sum_{u\in U} \left( \Sigma^X_{uu} -  \Sigma^Y_{uu}\right) p_u(Z)\left(\sum_{v\in U\setminus \{u\}}p_v(Z)\right) -   \sum_{u\neq v\in U} \left( \Sigma^X_{uv} -  \Sigma^Y_{uv}\right) p_u(Z)p_v(Z) \\
+ & = & \frac2{\beta}\frac{d}{dt}\EE F_\beta(Z(t)),
+\end{eqnarray*}
+where the last equality follows from $\sum_{v\in U\setminus \{u\}}p_v(Z) = 1-p_u(Z)$.
+\end{proof}
+
+We will also use in the following an extension due to Gordon~\cite{Gordon_comparison_85,Gordon_EscapeMesh}. While we omit the proof here, we note that it can be shown by a similar argument as above, by taking a soft min-max, see, e.g.,~\cite{Gordon_EscapeMesh} or Problem 6.2. in~\cite{vanHandel_LectureNotesProb_14}).
+
+\begin{theorem}\label{Thm:SlepiansIneq_extension_Gordon}[Theorem A in~\cite{Gordon_EscapeMesh}]
+Let $\left\{X_{t,u}\right\}_{(t,u)\in T\times U}$ and $\left\{Y_{t,u}\right\}_{(t,u)\in T\times U}$ be two (almost surely bounded) separable centered Gaussian processes\footnote{Here we need the min-max to be well approximated by finite subsets of $T$ and $U$ in the sense of~\eqref{eq:separablegaussianprocess}, as before the processes on which we use this result will be well approximated by $\epsilon$-nets.} indexed by the same (compact) sets $T$ and $U$.
+
+If, for every $t_1,t_2\in T$ and $u_1,u_2 \in U$:
+\begin{equation}
+\EE\left[X_{t_1,u_1}-X_{t_1,u_2}\right]^2 \leq  \EE\left[Y_{t_1,u_1}-Y_{t_1,u_2}\right]^2,
+\end{equation}
+and, for $t_1\neq t_2$,
+\begin{equation}
+\EE\left[X_{t_1,u_1}-X_{t_2,u_2}\right]^2 \geq  \EE\left[Y_{t_1,u_1}-Y_{t_2,u_2}\right]^2,
+\end{equation}
+then
+\[
+ \EE\left[\min_{t\in T}\max_{u\in U}X_{t,u}\right] \leq \EE\left[\min_{t\in T}\max_{u\in U}Y_{t,u}\right].
+\]
+\end{theorem}
+
+Note that Theorem~\ref{thm:Slepian_SF_ineq} easily follows by setting $|T|=1$.
+
+
+
+
+
+
+
+
+\subsection{Spectral norm of a Wigner Matrix}
+
+Before proceeding with Gordon's Escape Through a Mesh Theorem we take a brief detour to showcase the usefulness of what we already developed in this chapter.
+
+Let $W\in\RR^{n\times n}$ be a standard Gaussian Wigner matrix, a symmetric matrix with (otherwise) independent Gaussian entries, the off-diagonal entries have unit variance and the diagonal entries have variance $2$ (recall~\eqref{eq:WignerSC}). $\lambda_{\max}(W)$ depends on $\frac{n(n+1)}2$ independent (standard) Gaussian random variables and it is easy to see that it is a $\sqrt{2}$-Lipschitz function of these variables, since
+\[
+\left|\lambda_{\max}(W^{(1)}) - \lambda_{\max}(W^{(2)})  \right| \leq \lambda_{\max}\left( W^{(1)} - W^{(2)} \right) \leq \left\| W^{(1)} - W^{(2)} \right\|_F.
+\]
+The symmetry of the matrix and the variance $2$ of the diagonal entries are responsible for an extra factor of $\sqrt{2}$.
+
+Using Gaussian Concentration (Theorem~\ref{theorem:4:gaussianconcentration}) we immediately get
+\[
+\Prob\left\{ \lambda_{\max}(W) \geq \EE \lambda_{\max}(W) + t  \right\} \leq 2\exp\left( -\frac{t^2}{4} \right).
+\]
+
+On the other hand, one can prove $\EE \lambda_{\max}(W) \leq 2\sqrt{n}$ using Slepian's inequality (Theorem~\ref{thm:Slepian_SF_ineq}) by comparing the Gaussian process $X_u = u^Wu$ with the Gaussian process $Y_u = \sqrt{2}g^Tu$ for $g\in\NNN\left(0,I_{n\times n}\right)$, this is an excellent exercises that we leave to the reader. Combining these we get the following.
+
+\begin{proposition}\label{proposition:4:WignerSpectralNormTail}
+Let $W\in\RR^{n\times n}$ be a standard Gaussian Wigner matrix, a symmetric matrix with (otherwise) independent Gaussian entries, the off-diagonal entries have unit variance and the diagonal entries have variance $2$. Then,
+\[
+\Prob\left\{ \lambda_{\max}(W) \geq 2\sqrt{n} + t  \right\} \leq 2\exp\left( -\frac{t^2}{4} \right).
+\]
+\end{proposition}
+
+Note that this gives a rather precise control of the fluctuations of $\lambda_{\max}(W)$.\footnote{It turns out that the fluctuations of $\lambda_{\max}(W)$ are even smaller, corresponding to the so-called Tracy-Widom distribution~\cite{Anderson_Guionnet_Zeitouni_IntroRandomMatrices}}
+In fact, for $t = 2\sqrt{\log n}$ this gives
+\[
+\Prob\left\{ \lambda_{\max}(W) \geq 2\sqrt{n} + 2\sqrt{\log n}  \right\} \leq 2\exp\left( -\frac{4\log n}{4} \right) = \frac2n.
+\]
+This illustrated the level of concentration we can expect from the spectral norm, or largest eigenvalues, of random matrices. As we will see in Chapter~\ref{c:probability-matrixconcentration} the main challenge in many cases is in controlling the expected value of the spectral norm, or largest eigenvalue.
+
+
+
+\section{Gordon's Theorem}\label{s:gordon}
+
+In Section~\ref{s:jl} we showed that in order to approximately preserve the distances (up to $1\pm \eps$) between $n$ points, it suffices to randomly project them to $\Theta\left(\epsilon^{-2} \log n \right)$ dimensions. The key argument was that a random projection approximately preserves the norm of every point in a set $S$, in this case the set of differences between pairs of $n$ points. What we showed is that in order to approximately preserve the norm of every point in $S$, it is enough to project to $\Theta\left(\epsilon^{-2} \log |S| \right)$ dimensions. The question this section is meant to answer is: can this be improved if $S$ has a special structure? Given a set $S$, what is the measure of complexity of $S$ that explains how many dimensions one needs to project on to still approximately preserve the norms of points in $S$. We shall see below that this will be captured---via Gordon's Theorem---by the so called {\em Gaussian width} of $S$.
+
+\begin{definition}[Gaussian width]\label{def:gaussianwidth}
+Given a closed set $S\subset \RR^{p}$, its \emph{Gaussian width} $\omega(S)$ is defined as:
+\[
+\omega(S) = \EE \max_{x\in S} \left[ g_p^Tx  \right],
+\]
+where $g_p\sim \NNN\left(0,I_{p\times p}\right)$.  
+\end{definition}
+
+Similarly to the proof of Theorem~\ref{JL_random_0} we will restrict our attention to sets $S$ of unit norm vectors, meaning that $S\subseteq \SSS^{p-1}$ (which in particular implies it is compact).
+
+Also, we will focus our attention not in random projections but in the similar model of random linear maps $G:\RR^{p}\to\RR^{d}$ that are given by matrices with i.i.d.\ Gaussian entries. For this reason the following proposition will be useful:
+
+\begin{proposition}
+Let $g_d\sim  \NNN\left(0,I_{d\times d}\right)$, and define
+\[
+a_d\defeq \EE\|g_d\|.
+\]
+Then $\sqrt{d-1}\leq\sqrt{\frac{d}{d+1}}\sqrt{d}\leq a_d\leq \sqrt{d}$.
+\end{proposition}
+We will prove here the weaker lower bound $\sqrt{d-1}\leq a_d\leq \sqrt{d}$ which is sufficient for our purposes and has a very elegant proof.\footnote{There is a very nice discussion of this lower bound in this blog post~\cite{Epperly_blog_gaussiannorm}.} 
+\begin{proof}
+The upper bound is a straightforward consequence of Jensen's inequality $$a_d^2=\left(\EE\|g_d\|\right)^2 \leq \EE\|g_d\|^2 =d.$$
+The lower bound $\sqrt{d-1}\leq a_d$ follows from the Gaussian Poincar\'e Inequality (Proposition~\ref{prop:GaussianPoincare}):
+let $f(g_d)=\|g_d\|$ (and recall that since $f$ is Lipschitz it has a gradient a.e. and we can apply Proposition~\ref{prop:GaussianPoincare}. Thus $\Var(f(g_d)) \leq \EE \| \nabla f(g_d) \|^2$ which gives: $$d - \left(\EE\|g\|\right)^2 =  \EE\|g\|^2 - \left(\EE\|g\|\right)^2 = \Var(f(g)) \leq \EE \| \nabla f(g) \|^2 = \EE \| g/\|g\| \|^2 = 1$$
+\end{proof}
+
+
+We are now ready to present Gordon's Theorem.
+
+\begin{theorem}[Gordon's Escape Through a Mesh~\cite{Gordon_EscapeMesh}]\label{GordonsTheorem}
+Let $G\in\RR^{d\times p}$ be a random matrix with independent $\NNN(0,1)$ entries and $S\subset \SSS^{p-1}$ be a closed subset of the unit sphere in $p$ dimensions. Then
+\begin{equation}\label{eq:gordon1}   
+\EE \max_{x\in S} \left\|\frac1{a_d}Gx\right\| \leq 1 + \frac{\omega(S)}{a_d},  
+\end{equation}
+
+and
+\begin{equation}   \label{eq:gordon2}  
+\EE \min_{x\in S} \left\|\frac1{a_d}Gx\right\| \geq 1 - \frac{\omega(S)}{a_d},
+\end{equation}
+
+where $a_d = \EE\|g_d\|$ and $\omega(S)$ is the Gaussian width of $S$. Recall that $\sqrt{\frac{d}{d+1}}\sqrt{d}\leq a_d\leq \sqrt{d}$.
+\end{theorem}
+
+Before proving Gordon's Theorem we will note some of its direct implications. The theorem suggests that $\frac1{a_d}G$ preserves the norm of the points in $S$ up to $1\pm \frac{\omega(S)}{a_d}$, indeed we can make this precise with Gaussian concentration (Theorem~\ref{theorem:4:gaussianconcentration}).
+
+Note that the function $F(G) = \max_{x\in S} \left\|Gx\right\|$ is 1-Lipschitz. Indeed
+\begin{eqnarray*}
+\left| \max_{x_1\in S}\left\| G_1x_1\right\|  - \max_{x_2\in S}\left\| G_2x_2\right\| \right| & \leq & \max_{x\in S} \left| \left\| G_1x\right\|  - \left\| G_2x\right\| \right| \leq \max_{x\in S} \left\| \left( G_1 - G_2 \right)x\right\| \\
+& \leq & \left\|  G_1 - G_2\right\| \leq \left\|  G_1 - G_2\right\|_F.
+\end{eqnarray*}
+
+Similarly, one can show that $F(G) = \min_{x\in S} \left\| Gx\right\|$ is 1-Lipschitz.
+Thus, one can use Gaussian concentration to get
+\begin{equation}\label{eq:5:usingGaussianconcentration_1}
+\Prob\left\{ \max_{x\in S} \|Gx\| \geq a_d + \omega(S) + t  \right\} \leq \exp\left( -\frac{t^2}2 \right),
+\end{equation}
+and
+\begin{equation}\label{eq:5:usingGaussianconcentration_2}
+\Prob\left\{ \min_{x\in S} \|Gx\| \leq a_d - \omega(S) - t  \right\} \leq \exp\left( -\frac{t^2}2 \right).
+\end{equation}
+
+This gives us the following theorem.
+
+\begin{theorem}\label{thm:Gordon:afterGconcentration}
+ Let $G\in\RR^{d\times p}$ a random matrix with independent $\NNN(0,1)$ entries and $S\subset \SSS^{p-1}$ be a closed subset of the unit sphere in $p$ dimensions. Then, for $\eps>\frac{\omega(S)}{a_d}$, with probability $\geq 1-2\exp\left[ -\frac{a_d^2}{2}\left( \eps - \frac{\omega(S)}{a_d}  \right)^2\right]$:
+\[
+ (1-\eps)\|x\| \leq \left\| \frac1{a_d} Gx  \right\| \leq (1+\eps)\|x\|,
+\]
+for all $x\in S$.
+
+Recall that $d\frac{d}{d+1} \leq a_d^2 \leq d$.
+ \end{theorem}
+
+\begin{proof}
+This is readily obtained by taking $\eps = \frac{\omega(S)+t}{a_d}$, using~\eqref{eq:5:usingGaussianconcentration_1} and~\eqref{eq:5:usingGaussianconcentration_2}.
+\end{proof}
+
+
+
+\begin{remark}
+ Note that a simple use of a union bound\footnote{This follows from the fact that the maximum of $n$ standard Gaussian random variables is $\lesssim \sqrt{2\log n}$.} shows that $\omega(S)\lesssim \sqrt{2\log|S|}$, which means that taking $d$ to be of the order of $\log|S|$ suffices to ensure that $\frac1{a_d} G$ to have the Johnson Lindenstrauss property. This observation shows that Theorem~\ref{thm:Gordon:afterGconcentration} essentially directly implies Theorem~\ref{JL_random_0} (although not exactly, since $\frac1{a_d} G$ is not a projection).
+\end{remark}
+
+
+\subsection{Gordon's Escape Through a Mesh Theorem}
+Theorem~\ref{thm:Gordon:afterGconcentration} suggests that, if $\omega(S)\leq a_d$, a uniformly chosen random subspace of $\RR^n$ of dimension $(n-d)$ (which can be seen as the nullspace of $G$) avoids a set $S$ with high probability. This is indeed the case and is known as Gordon's Escape Through a Mesh Theorem (Corollary 3.4. in Gordon's original paper~\cite{Gordon_EscapeMesh}). See also~\cite{Dustin_blog_gordon} for a description of the proof. We include the Theorem below for the sake of completeness.
+
+\begin{theorem}[Corollary 3.4. in~\cite{Gordon_EscapeMesh}]\label{thm:GordonEscapeMesh}
+ Let $S\subset \SSS^{p-1}$ be a closed subset of the unit sphere in $p$ dimensions. If $\omega(S)<a_d$, then for a $(p-d)$-dimensional subspace $\Lambda$ drawn uniformly from the Grassmanian manifold we have
+\[
+\Prob\left\{ \Lambda \cap S \neq \emptyset   \right\}  \leq \frac72 \exp \left( -\frac1{18} \left( a_d - \omega(S) \right)^2 \right),
+\]
+where $\omega(S)$ is the Gaussian width of $S$ and $a_d = \EE\|g_d\|$ where $g_d\sim \NNN(0,I_{d\times d})$.
+\end{theorem}
+
+
+
+
+
+
+
+\subsection{Proof of Gordon's Theorem}
+
+We are now ready to prove Gordon's Theorem.
+
+\begin{proof}[of Theorem~\ref{GordonsTheorem}]
+
+Let $G\in\RR^{d\times p}$ with i.i.d. $\NNN(0,1)$ entries. We define two Gaussian processes: For $v\in S\subset \SSS^{p-1}$ and $u\in \SSS^{d-1}$ let $g\sim\NNN\left(0,I_{d\times d}\right)$ and $h\sim\NNN\left(0,I_{p\times p}\right)$ and define the following processes:
+\[
+ A_{u,v} = g^Tu + h^Tv, 
+\]
+and
+\[
+ B_{u,v} = u^T Gv. 
+\]
+
+For all $v,v'\in S \subset \SSS^{p-1}$ and $u,u'\in \SSS^{d-1}$,
+\begin{gather*}
+ \EE \left| A_{v,u} - A_{v',u'} \right|^2 - \EE \left| B_{v,u} - B_{v',u'} \right|^2  =  4 - 2\left(u^Tu' + v^Tv' \right) - \sum_{ij}\left( v_iu_j - v_i'u_j' \right)^2 \\
+  =  4 - 2\left(u^Tu' + v^Tv' \right) - \left[2-  2\left(v^Tv'\right) \left(u^Tu'\right)  \right] \\
+  =  2 - 2\left( u^Tu' + v^Tv' - u^Tu'v^Tv' \right) \\
+  =  2\left(1-u^Tu'\right)\left(1-v^Tv'\right).
+\end{gather*}
+This means that $\EE \left| A_{v,u} - A_{v',u'} \right|^2 - \EE \left| B_{v,u} - B_{v',u'} \right|^2\geq 0$ and $\EE \left| A_{v,u} - A_{v',u'} \right|^2 - \EE \left| B_{v,u} - B_{v',u'} \right|^2 = 0$ if $v=v'$.
+This implies that we can use Theorem~\ref{Thm:SlepiansIneq_extension_Gordon} with $X=A$ and $Y=B$ (these processes are well approximated by $\epsilon$-nets and separable, see~\eqref{eq:separablegaussianprocess}), to get
+\[
+ \EE \min_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \leq \EE \min_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}.
+\]
+Noting that
+\[
+\EE \min_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u} = \EE\min_{v\in S}\max_{u\in \SSS^{d-1}}u^TGv =  \EE\min_{v\in S}\left\|Gv\right\|,
+\]
+and
+\begin{align*}
+\EE \left[\min_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \right] & = \EE\max_{u\in \SSS^{d-1}}g^Tu +  \EE\min_{v\in S}h^Tv \\
+& =   \EE\max_{u\in \SSS^{d-1}}g^Tu -\EE\max_{v\in S}(-h^Tv) = a_d - \omega(S),
+\end{align*}
+gives the second part of the theorem.
+
+On the other hand, since $\EE \left| A_{v,u} - A_{v',u'} \right|^2 - \EE \left| B_{v,u} - B_{v',u'} \right|^2\geq 0$ then we can similarly use Theorem~\ref{thm:Slepian_SF_ineq} with $X = B$ and $Y = A$, to get
+\[
+\EE \max_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \geq \EE \max_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}.
+\]
+Noting that
+\[
+\EE \max_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u} = \EE\max_{v\in S}\max_{u\in \SSS^{d-1}}u^TGv =  \EE\max_{v\in S}\left\|Gv\right\|,
+\]
+and
+\[
+\EE \left[\max_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \right] = \EE\max_{u\in \SSS^{d-1}}g^Tu +  \EE\max_{v\in S}h^Tv = a_d + \omega(S),
+\]
+concludes the proof of the theorem.
+
+\end{proof}
+
+
+
+
+A remarkable application of Gordon's Theorem is that one can use it for abstract sets $S$ such as the set of all \emph{natural images} or the set of all plausible \emph{user-product} ranking matrices. In these cases Gordon's Theorem suggests that a measurements corresponding just to a random projection may be enough to keep geometric properties of the data set in question, in particular, it may allow for reconstruction of the data point from just the projection. These phenomenon and the sensing savings that arises from it is at the heart of compressive sensing and several recommendation system algorithms, among many other data processing techniques. Motivated by these two applications we will focus in this section on understanding which projections are expected to preserve the norm of sparse vectors and low-rank matrices. 
+Both compressed sensing and low-rank matrix modeling will be discussed in length in Chapters~\ref{c:cs} and~\ref{c:lowrank}, respectively.
+
+\begin{remark}[Ornstein-Uhlenbeck process]\label{remark:Ornstein-Uhlenbeck}
+There is an important side of Gaussian Analysis that we do not cover, related to the theory of Markov semigroups, and in particular, the Ornstein-Uhlenbeck process. In fact, this approach is arguably the most natural way of proving Poincar\'{e}'s inequality (this is intimately connected to the material in Section~\ref{sec:MarkovChains}), and also yields Log-Sobolev and hypercontractivity inequalities. We point the reader to Chapter 2 of~\cite{vanHandel_LectureNotesProb_14} for an excellent pedagogical introduction to these ideas. 
+\end{remark}
+
+\begin{remark}[Hermite Polynomials]\label{remark:HermitePolynomials}
+Another central set of ideas in Gaussian analysis that we do not cover in this book is the theory of Hermite polynomials, which are a basis of orthogonal polynomials in the Gaussian measure, forming an analogue of Fourier analysis in the Gaussian setting. Writing a function $f\in L^2(\NNN(0,1))$, or in $L^2(\NNN(0,I))$, in its Hermite polynomial expansion is a classical idea, often known as a Wiener Chaos expansion. Due to Gaussian integration by parts (Lemma~\ref{lemma:GIbP}) taking the gradient of such a function yields simple transformations on the expansion coefficients. In fact, this yields a very simple proof of Poincar\'{e}'s inequality (try it!).\footnote{Hermite polynomials also play a crucial role on the development of low degree method for computational hardness of hypothesis testing (see, e.g., Appendix B of~\cite{KuniskyWeinBandeira2022LowDegreeSurvey}).} The Hermite polynomials are the eigenfunctions of the Ornstein-Uhlenbeck Operator (mentioned in Remark~\ref{remark:Ornstein-Uhlenbeck}). We point the reader to the classical reference~\cite{Szego1975OrthogonalPolynomials} for more on Hermite polynomials and an introduction to the beautiful theory of orthogonal polynomials.
+\end{remark}
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+
+\begin{myexercise}[\level\sep Moments of Gaussians]
+    \label{prob:gaussian_moments}
+    Let $Z$ be a standard gaussian random variable. Recall that Gaussian integration by parts states the following:
+    given any differentiable function $f \colon \R \to \R$ whose derivative is absolutely integrable with respect to the standard normal measure, we have
+    \begin{equation*}
+        \E\bras{Zf(Z)} = \E\bras{f'(Z)}.
+    \end{equation*}
+    Let $p \geq 1$ be an integer and $Z$ be a standard gaussian random variable. Show that
+    \begin{equation*}
+        \E\bras{Z^p} = \begin{cases}
+            (p-1)!! &\text{if } p \text{ is even};\\
+            0 &\text{if } p \text{ is odd}.
+        \end{cases}
+    \end{equation*}
+    Here, $!!$ denotes the double factorial, defined as $n!! = n \cdot (n-2) \cdots 3 \cdot 1$ for an odd natural number $n$.
+    (There are $(p-1)!!$ possible pairings of $p$ elements (when $p$ even), and this is not a coincidence!)
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Maximum of Gaussians]
+    \label{prob:maximum_gaussians}
+     Let $g_1, \ldots, g_d$ be a collection of (not necessarily independent) Gaussian random variables with zero mean and variance $\sigma^2$.
+    \begin{enumerate}[(a)]
+        \item Prove that the following bound holds
+        \begin{equation*}
+            \mathbb{E}\max_{i=1,\ldots,d}g_i \le \sigma \sqrt{2\log d}.
+        \end{equation*}
+        \emph{(If you do not manage to prove the inequality with sharp constant 2 in the square root, you can replace it by an absolute constant $C>0$.)}
+        
+        \item Prove that the bound in the previous item is sharp up to an absolute constant if we assume that all the Gaussian random variables are independent, i.e. there exists a universal constant $c > 0$ such that
+        \begin{equation*}
+            \mathbb{E}\max_{i=1,\ldots,d}g_i \geq c\, \sigma \sqrt{\log d}.
+        \end{equation*}
+        
+        \item Show that the conclusion of (b) is false if we drop the assumption that $g_1, \ldots, g_d$ are independent.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\level\sep Application of Slepian's lemma]
+    \label{prob:slepian_lemma}
+    Let $W$ be a $d \times d$ Gaussian Wigner matrix.
+    \begin{enumerate}[(a)]
+        \item Prove that
+        \begin{equation*}
+            \mathbb{E}\sup_{v\in S^{d-1}}\langle g,v\rangle = \mathbb{E}\|g\|_2 \le \sqrt{d},
+        \end{equation*}
+        where $g \in \mathbb{R}^d$ is a standard Gaussian random vector.
+        
+        \item Apply Slepian's lemma to prove that
+        \begin{equation*}
+            \mathbb{E}\lambda_{\max}(W) \le 2\sqrt{d}.
+        \end{equation*}
+        
+        \item Show that the upper bound above is tight up to an absolute constant.
+    \end{enumerate}
+\end{myexercise}
+\begin{hint}
+   For (b), consider the stochastic process $Y_{v}:=2\langle g,v\rangle$. For (c), first show $\E\norm{g}_2 \leq c\sqrt{d}$ by integration.
+\end{hint}
+
+
+\begin{lemma}[Gamma Function Bound]
+    Let $x \geq \frac12$, we have 
+    $$ \Gamma(x) = \int_0^\infty t^{x-1}e^{-t} \, dt \leq 3x^x.$$
+\end{lemma}
+
+\begin{myexercise}[\level\sep Moments of Subgaussian Variables]
+    \label{prob:subgaussian_moments}
+    Let $Y$ be a $\sigma^2$-subgaussian random variable, so for all $t \geq 0$ it holds
+    $$ \Prob(\abs{Y} \geq \sigma t) \leq 2e^{-\frac{t^2}{2}}.$$
+    Prove that for all $p\geq 1$ we have
+    $$ \E[\abs{Y}^p]^{\frac1p} \leq C\sigma\sqrt{p},$$
+    where $C>0$ is a universal constant.
+    \begin{hint}
+        Use Problem~\ref{prob:integral_identity}(a) and bounds on the gamma function.
+    \end{hint}
+\end{myexercise}
+
+
+
+
+
+
+
+
+
+\begin{theorem}[Gaussian Lipschitz concentration]
+    Let $g_1, \ldots, g_n$ be i.i.d standard Gaussian random variables. Let $f:\mathbb{R}^n\rightarrow \mathbb{R}$ be a $L$-Lipschitz function with respect to the Euclidean norm. Then, for all $t>0$,
+    \begin{equation}\label{conc_gauss}
+    \mathbb{P}(|f(g_1,\ldots,g_n)-\mathbb{E}f(g_1,\ldots,g_n)|\ge L t)\le 2e^{-t^2/2}.
+    \end{equation}
+\end{theorem}
+
+
+
+
+
+\begin{myexercise}[\level \level \sep Variance of a Gaussian Process]
+    \label{prob:gaussprocessvariance}
+    Let $g \in \R^d$ be a standard random gaussian vector and let $v_1, \ldots, v_n \in \R^d$ be fixed vectors. Define $f(g) = \sup_{1 \leq i\leq n} \langle v_i,g \rangle$. We aim to show that the variance of $f$ is (up to a constant factor) at most the maximal variance of the variables we take the supremum over.
+    \begin{enumerate}[(a)]
+    \item Let $x,y \in \R^d$ be arbitrary. Prove $\abs{f(x)-f(y)}\leq \sup_{1\leq i \leq n} \norm{v_i}_2 \norm{x-y}_2$.
+    \item Use tail integration and gaussian concentration to prove that $\Var(f(g)) \leq 4 \sup_{1\leq i \leq n} \norm{v_i}_2^2$
+\end{enumerate}
+    
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level \level \sep Sudakov's Inequality]
+    \label{prob:sudakovinequality}
+    Let $g \in \R^d$ be a standard random gaussian vector and let $ I=  \{v_1, \ldots, v_n\} \subseteq \R^d$ be a finite set of fixed vectors. Define $f(g) = \sup_{v \in I } \langle v,g \rangle$. The goal of this problem is to show the link between packing numbers and gaussian processes. We say a set $S$ is $\eps$-separated, if for all $v,w \in S$ with $v \neq w$ we have $\norm{v-w}_2 > \eps$.
+    \begin{enumerate}[(a)]
+    \item Let $ \eps >0$ and suppose $I$ has an $\eps$-separated subset $S$. Combine part (b) of Problem~\ref{prob:maximum_gaussians} with Slepian's Lemma to prove
+    $$ \E[f(g)] \geq c \eps \sqrt{\log(\abs{S})}$$
+    for some universal constant $c>0$.
+    \item Let $\mathcal{D}(\eps)$ be the maximal cardinality of an $\eps$-separated subset of $I$. Conclude
+    $$ \E[f(g)] \geq c \sup_{\eps >0} \eps \sqrt{\log(\mathcal{D}(\eps))}.$$
+\end{enumerate}
+    
+\end{myexercise}
+
+
+\begin{myexercise}[\level  \sep Absolute Values Only Make Small Differences]
+    \label{prob:absvaluessmalldifference}
+    Let $X$ be a real scalar random variable. In many scenarios we would like to estimate its expected absolute value with an optimal leading constant. For technical reasons this is however less tractable than just estimating its expectation in many cases, but when the variance of $X$ is small, the quantities bound each other reasonably well. This also turns out to be the case when we look at maxima of random variables under certain assumptions.
+    \begin{enumerate}[(a)]
+        \item Prove $ \abs{\E[X]} \leq \E [\abs{X}] \leq \abs{\E[X]} + \sqrt{\Var[X]}$.
+        \item Let $ Y_1, \ldots, Y_n$ be a collection of scalar random variables (not necessarily i.i.d.), such that for all $i$ both $Y_i$ and $-Y_i$ are identically distributed and consider $Z = \max_{1 \leq i \leq n} Y_i$. Prove using a union bound and Chebyshev's inequality that
+        $$ \P \left( \max_{1 \leq i \leq n} |Y_i| \geq \E[Z] + t \right) \leq \frac{2\Var[Z]}{t^2}.$$
+        \item Use tail integration to conclude 
+        $$ \E \left[ \max_{1 \leq i \leq n} |Y_i|  \right]  \leq \E[Z] + (1+ \sqrt{2})\sqrt{\Var[Z]}.$$
+        
+    \end{enumerate}
+    
+
+    
+\end{myexercise}
+
+
+
+\begin{theorem}[Lipschitz Concentration on the Sphere]
+    Assume that $f:\sqrt{n}S^{n-1} \rightarrow \mathbb{R}$ is a $L$-Lipschitz function and let $X$ be a random vector uniformly distributed on the sphere $\sqrt{n}S^{n-1}$. Then, for all $t>0$,
+    \begin{equation}\label{conc_sphere}
+        \mathbb{P}(|f(X) - \mathbb{E}f(X)| \ge L t)\le 2e^{-ct^2}.
+    \end{equation}
+    Here $c>0$ is an absolute constant.
+\end{theorem}
+
+
+
+
+
+
+
+
+
+
+\begin{myexercise}[\level\level\sep Lipschitz Concentration around $L_p$ norms]
+    \label{prob:lipschitz_concentration}
+
+
+    In this problem we will extend the Lipschitz concentration on the sphere to concentration around $L_p$ norms for $p \ge 1$, i.e., we will prove that under the same assumptions as in~\eqref{conc_sphere} and additionally assuming that $f$ is non-negative,
+    \begin{equation}\label{eq:lpsphereconc}
+    \mathbb{P}(|f(X) - \|f(X)\|_{L_p}| \ge L t)\le 2e^{-c_pt^2},
+    \end{equation}
+where $c_p>0$ is a constant only depending on $p$ and $\| Z \|_{L_p} := (\E |Z|^p)^{1/p}$ for a random variable $Z$ such that its $p$-th absolute moment is well-defined. 
+
+We will split the proof into several steps. 
+\begin{enumerate}[(a)]
+    \item Let $Y$ be an $L^2$-subgaussian random variable in the sense of Problem~\ref{prob:subgaussian_moments}. Prove that for any $A \geq 0$ there exists a constant $c_A$ only depending on $A$, such that
+    $$ \Prob(\abs{Y-LA} \geq Lt ) \leq 2e^{-c_At^2}$$
+    holds for some constant $c_A >0$ only depending on $A$.
+    \item Show that for any non-negative random variable $Z$,
+    $$
+    | \E Z - (\E Z^p)^{1/p}| \le (\E \abs{Z - \E Z}^p)^{1/p}.
+    $$
+    You can assume that all the moments are well-defined. Use Problem~\ref{prob:subgaussian_moments} and~\eqref{conc_sphere} to conclude
+    $$ | \E[f(X)] - \E [f(X)^p]^{1/p}|  \leq CL \sqrt{p}$$
+    for some universal constant $C>0$.
+    \item Now we have all the ingredients to prove the theorem. Using (a), (b), and~\eqref{conc_sphere}, complete the proof of inequality~\eqref{eq:lpsphereconc}.
+\end{enumerate}
+
+
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level\level\level \sep MGF bounds via the Poincaré inequality]
+    \label{prob:poincaremgf}
+    Suppose we have a random vector $X \in \R^d$ satisfies the following Poincaré inequality: For any bounded differentiable function $f$ on $\R^d$ we have 
+    $$ \Var(f(X)) \leq C_P \E[\norm{\nabla f(X)}_2^2].$$
+    The goal of this exercise is to show that the moment generating functions with small gradient can in this case be bounded well.
+    \begin{enumerate}[(a)]
+        \item Prove for any differentiable bounded function $g$ on $\R^d$ that $\nabla(e^{g(x)}) = e^{g(x)} \nabla g(x)$ and combine this with the Poincaré inequality to conclude that if $\norm{\nabla g(X)}_2^2 \leq 1$ holds almost surely, then 
+        $$ \E[e^{\lambda g(x)}]- \E[e^{\lambda g(x)/2}]^2 \leq \frac{C_p\lambda^2}{4} \E[e^{\lambda g(x)}]$$
+        holds for all $\lambda \geq 0 $
+        \item Assume further that $\frac{C_p\lambda^2}{4} <(1/2)$ and that $\E[e^{\lambda g(x)/n}]^n$ converges to some number $\alpha$ as $n$ goes to infinity. Use (a) recursively to show
+        $$ \E[e^{\lambda g(x)}] \leq e^{K}\alpha$$
+        for some universal constant $K>0$. You can use without proof that $\frac{1}{1-x}\leq e^{2x}$ holds for $0\leq x \leq 1/2$.
+        \item Prove that for bounded functions $g$ and any $\lambda$ we have 
+        $$ \lim_{n \to \infty } \E[e^{\lambda g(x)/n}]^n = \alpha = e^{\lambda \E[g(x)]}. $$
+    \end{enumerate}
+\end{myexercise}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{myexercise}[\level\level\level\sep Duality and Covering Numbers]
+    \label{prob:duality_covering_numbers}
+    We will present the principle of duality in a completely different context. Suppose you have a set $T \subseteq \R^n$ and some number $\eps>0$. We call a subset $S \subseteq T$ an $\eps$-covering of $T$, if for every $t \in T$ there exists an $s \in S$, such that $\norm{s-t}_2 \leq \eps$. We call a subset $S \subseteq T$ an $\eps$-separated set, if for every $s \neq s' \in S$ we have $\norm{s-t}_2 > \eps$. We define the following optimal values:
+    $$ \mathcal{N}(T, \eps) \coloneqq \hspace{-3mm} \min_{\substack{S \subseteq T \\ S \, \eps-\mbox{covering of} \, T}} \hspace{-8mm} \abs{S}  \qquad \qquad \mathcal{D}(T, \eps) \coloneqq \hspace{-3mm} \max_{\substack{S \subseteq T \\ S \, \eps-\mbox{separated}}} \hspace{-5mm} \abs{S} $$
+    \begin{enumerate}[(a)]
+        \item Show that these two optimization problems are duals in the following sense:
+        $$ \mathcal{N}(T, \eps) \leq \mathcal{D}(T, \eps)  \leq \mathcal{N}(T, \eps/2)  $$
+        \item Use part (a) to show that for the euclidean ball in $d$-dimensions one has the following covering number estimates for every $0< \eps < 1$:
+        $$ \left( \frac{1}{\eps} \right)^d  \leq  \mathcal{N}(\mathbb{B}_2^d, \eps) \leq \left( \frac{3}{\eps} \right)^d$$
+    \end{enumerate}
+\end{myexercise}
+
+
+
+
+\begin{myexercise}[\level\sep Norm of a Gaussian Vector]
+    \label{prob:norm_gaussian_vector}
+    
+    Given a standard Gaussian vector $g \in \mathbb{R}^d$, it is an easy consequence of Jensen's inequality that $\mathbb{E}\|g\|_2 \le \sqrt{d}$. The goal of this exercise is to give a simple proof that this is sharp using the Gaussian Poincaré inequality. 
+\begin{enumerate}[(a)]
+    \item Prove that the variance of $\|g\|_2$ is at most an absolute constant.
+    \item Show that $\mathbb{E}\|g\|_2/\sqrt{d}$ converges to one as $d$ goes to infinity.
+\end{enumerate}
+
+\end{myexercise}
+
+
+
+
+
+\begin{myexercise}[\level\sep Gaussian Width of the Simplex]
+    \label{prob:gaussian_width_simplex}
+    The gaussian width of a set $S \subseteq \R^d$ is defined as
+    $$ \omega(S) \coloneqq \E \left[ \sup_{s \in S} \, \langle s, g  \rangle \right],$$
+    where $g \in \R^d$ is a standard gaussian vector, so all coordinates of $g$ are independent and $\mathcal{N}(0,1)$-distributed. Consider the $d-1$-dimensional simplex
+    $$ S_d \coloneqq \left \{ x \in \R^d \, \vert \, 0\leq x_i \leq 1, \, \sum_{i=1}^d x_i = 1 \right \}$$
+    Our goal is to show that there exist universal constants $c,C >0$, such that
+    $$ c \sqrt{\log(d)} \leq \omega(S_d) \leq C \sqrt{\log(d)}.$$
+    \begin{enumerate}
+        \item[(a)] For any subset $T \subseteq \R^d$ we define its convex hull $\operatorname{conv}(T)$ as follows: 
+        $$ \operatorname{conv}(T) = \left \{ \sum_{i=1}^k x_i t_i \, \vert \, k\in \mathbb{N}_{>0}, \, x_i \in S_k, \, t_i \in T \right \}$$
+        Prove the equality
+        $$ \omega(\operatorname{conv}(T)) = \omega(T).$$
+        \item[(b)] Find a finite set $T \subseteq \R^d$, such that $S_d = \operatorname{conv}(T)$. Use the result of another problem in this section to deduce the desired inequalities.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}
+Consider the following quantity:\\
+\textbf{Definition: (Gaussian Complexity)} {\em The Gaussian complexity of a subset $T \in \R^n$ is defined as
+$$
+\gamma(T) := \E \left[ \max_{x\in T} \big|\langle g, x\rangle \big|\right],
+$$
+where $g \in {\mathcal N}(0, I_n)$.}
+
+What can you say about the relationship between Gaussian complexity and Gaussian width of a set $T$? Under what circumstances on $T$ does equality hold? Using this, what can you say
+about the set $T-T$? Give an example where these quantities are certainly different.  
+\end{myexercise}
+
+

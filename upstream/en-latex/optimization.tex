@@ -1,0 +1,2305 @@
+
+\chapter{Optimization for Data Science}
+\label{c:optimization}
+
+\newcommand{\dom}{{\mathcal D}}
+\newcommand{\feas}{{\mathcal F}}
+\newcommand{\finf}{{f_{\inf}}}
+\newcommand{\loss}{{\mathcal C}}
+\newcommand{\cost}{{\mathcal C}}
+\newcommand{\PL}{{Polyak-\L ojasiewicz}}
+\newcommand{\PLC}{{Polyak-\L ojasiewicz\ condition}}
+
+Optimization lies at the heart of modern data science. Whether fitting a linear regression model, clustering data, finding a sparse solution to an underdetermined system of equations, or training a deep neural network, the underlying task is almost always the same: {\em find the parameters that minimize (or maximize) a well-defined objective function}. 
+
+This chapter provides a brief, rigorous and practical introduction to optimization from a data science perspective. We begin by formalizing what an optimization problem is: a function to be minimized, variables to be chosen, and constraints that restrict which solutions are allowed. From there, we discuss convexity,   
+introduce the necessary tools for analyzing optimality, including gradients, Hessians, the Karush–Kuhn–Tucker conditions, duality, and rate of convergence. Finally, we study gradient descent and popular variants, which play a central role in large-scale machine learning. For a comprehensive study of optimization we recommend the sources~\cite{LVanderberghe_SBoyd_book,calafiore2014optimization,nesterov2013introductory,nocedal2006numerical}.
+
+
+
+A mathematical optimization problem can be expressed as\footnote{The setup~\eqref{eq:optim} also includes the case of maximizing an objective $f(x)$ by simply considering the minimization of $-f(x)$.}
+\begin{align}\label{eq:optim}
+\begin{split}
+\underset{x \in \mathcal{D}}{\operatorname{minimize}} & \qquad   f(x)  \\
+ \text{subject to} & \qquad g_i(x) \le b_i, \quad \, i = 1, \dots, m, \\
+ & \qquad h_j(x) = c_j, \quad j=1,\dots,r.
+\end{split}
+\end{align}
+Here, the vector $x \in \dom$ is the {\em optimization variable} of the problem and $\dom$ is the search space or domain of $x$; often we set $\dom = \R^n$. The
+function $f: \dom \to \R$ is the {\em objective function}; in data science and machine learning $f$ is commonly referred to as the {\em cost function} or {\em loss function} when minimization is sought, and the {\em utility function}  when maximization is sought.
+The functions
+$g_i: \dom \to \R, i=1,\dots,m$,  $h_j: \dom \to \R, j=1,\dots,r$ are the equality and inequality constraint functions, and the constants $b_i, c_j$
+are the limits, or bounds, for the constraints, respectively.\footnote{The attentive reader might notice that it would have been equivalent to simply embedded the constraints on the search space $\dom$, however there are many benefits to keeping $\dom$ as a ``canonical set'' such as $\RR^n$ or $\{\pm1\}^n$ and separating the instance specific constraints; this will be more apparent when we discuss constraints optimization below.} If there are no constraints in~\eqref{eq:optim}, the problem is called {\em unconstrained}, otherwise it falls in the realm of {\em constrained optimization}. 
+
+A vector $x^*$ is called {\em optimal}, or a
+{\em solution} of the problem~\eqref{eq:optim}, if it has the smallest objective value among all vectors that satisfy the constraints; that is, for any $z\in\dom$ with $g_i(z) \le b_i, i=1,\dots,m$, $h_j(z) = c_j, j=1,\dots,r$, we have $f(z) \ge f(x^*)$. 
+The set of all points satisfying the constraints is known as the {\em feasible region}, which we denote by $\feas$.
+
+
+
+Many foundational data science models naturally fit into this structure.
+For example, linear regression minimizes the mean squared error over all parameter vectors, usually without constraints. Logistic regression minimizes cross-entropy loss, again as an unconstrained problem unless we explicitly add regularization or parameter bounds. Data clustering and community detection can be expressed in the form~\eqref{eq:optim} where the constraints are of discrete type (cf.~Chapter~\ref{c:graphs} and Chapter~\ref{c:community}, respectively).
+Understanding this basic formulation gives the language and framework needed for all the optimization techniques that follow.
+
+
+
+
+
+
+
+
+
+The structure of an optimization problem determines both the difficulty of finding a solution and the type of algorithms we can use. We have already seen several optimization problems in the preceding chapter, and will see many more in chapters that follow. For example, the PCA objective~\eqref{eq:PCA:goodnessoffit0} is an optimization problem on continuous variables, the $k$-means objective~\eqref{eq:3:kmeans_obj} was an optimization problem with both discrete variables (the assignments to clusters) and continuous variables (the cluster centers), and the Minimimum bisection problem~\eqref{eq:minbis-andspectrum} is an optimization problem on discrete variables. Below we will focus on continuous optimization. Indeed, while this book covers several combinatorial optimization problems the approach we take (as in Chapter~\ref{c:graphs}) is often to relax to a suitable continuous optimization problems. We point the reader to~\cite{wolsey1999integer,schrijver2003combinatorial} for more on combinatorial optimization.
+
+We have already seen (and will see more) optimization problems for which there are efficient algorithms (such as the PCA example) and optimization problems for which no such algorithm is believed to exist (such as minimum bisection). While the reader might be tempted to conjecture that discrete optimization problems are harder than continuous ones, the situation is more subtle: it is true that combinatorial optimization problems are often formulated over exponential sized sets (such as $\{\pm1\}^n$) but that on itself does not make them computationally hard (just take $\min_{x\in\{\pm1\}^n} \1^Tx$ as an easy example). Also, note that while the Max-Cut problem~\eqref{MAXCUTproblem} is an NP-hard combinatorial problem, it can be equivalently formulated as a continuous one by replacing $x\in\{\pm1\}^n$ by $-1\leq x_i\leq 1$ (see Exercise~\ref{ex:maxcutcontinuousoptimizationproblem}).
+
+
+
+
+
+
+
+\section{Convexity in Optimization}
+
+
+
+
+Convexity is one of the most mathematically important concepts in continuous optimization as it tends to directly impact the complexity and solvability of the problem.
+
+\begin{definition}\label{convexfun}
+A function $f : \mathbb{R}^d \to \mathbb{R}$ is {\em convex} if for all $x,y \in \mathbb{R}^d$ and all $\lambda \in [0,1]$,
+\begin{equation}
+ \label{def:convex}
+f(\lambda x + (1-\lambda)y) \le \lambda f(x) + (1-\lambda) f(y).
+\end{equation}
+\end{definition}
+Geometrically, this means that the line segment connecting any two points on the graph of the function lies entirely on or above the graph\footnote{A good intuitive way to think about convexity it is that if an algorithm sits at a point $y$ and there is a point $x$ with a lower objective, the line between $y$ and $x$ must have lower objective than $y$, meaning that there is no barrier for local optimization algorithms (this will be made precise below).}.
+We call $f$ {\em strictly convex} if the inequality in~\eqref{def:convex} becomes a strict inequality.
+
+
+If in addition $f$ is continuously differentiable, convexity is equivalent to the {\em first-order condition} (we leave the proof of this equivalence as an exercise):
+\begin{equation}
+ \label{def:geomconvex}
+f(y) \ge f(x) +  \langle \nabla f(x), y - x\rangle, \quad \forall x,y \in \mathbb{R}^d.
+\end{equation}
+This means that the function $f$ is above its tangent at $x$, as illustrated in Figure~\ref{fig:plotconvex}.
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[width=.7\textwidth]{figures/Chapter7-plotconvex}
+    \caption{A convex function lies above its tangent at every point $x$.}
+    \label{fig:plotconvex}
+\end{center}
+\end{figure}
+
+Strengthening convexity by requiring  an additional
+positive quadratic term on the right-hand side of~\eqref{def:geomconvex} leads to {\em strong convexity}.
+
+
+
+\begin{definition}
+    A differentiable function $f : \mathbb{R}^d \to \mathbb{R}$ is $\mu$-strongly convex ($\mu > 0$) if
+\begin{equation}
+ \label{def:stronglyconvex}
+f(y) \ge f(x) + \langle \nabla f(x),  y - x \rangle + \frac{\mu}{2}\|y - x\|^2, \quad \forall x,y \in \mathbb{R}^d.
+\end{equation}
+\end{definition}
+This assumption will later allow us to establish exponential convergence rates.
+
+\begin{lemma}\label{le:minima}
+(i)~Let $f: \R^d \to \R$ be a convex function. Then the set of minimizers of $f$ is convex and has cardinality $0, 1$, or $\infty$. (ii)~If in addition $f$ is (differentiable) $\mu$-strongly convex, then $f$
+has exactly one minimizer.
+\end{lemma}
+
+\begin{proof}
+Let $f$ be convex, and assume that $x^{*}$ and $x^{**}$ are two minimizers of $f$. By~\eqref{def:convex}, every convex combination is also a minimizer, which establishes the first part of the lemma. Now, assume that $f$ is $\mu$-strongly convex. Then~\eqref{def:stronglyconvex} implies $f$ that is lower bounded by a (strictly) convex
+quadratic function. Hence there exists at least one minimizer $x^*$, which means $\nabla f(x^*)=0$.  It follows from~\eqref{def:stronglyconvex} that $f(x) > f(x^*)$ for every $x \neq x^*$. 
+\end{proof}
+
+
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[width=.7\textwidth]{figures/Chapter7-plotstrongconvex}
+    \caption{A $\mu$-strongly convex function}
+    \label{fig:plotstronglyconvex}
+\end{center}
+\end{figure}
+
+\subsection{Convex Optimization Problems}
+
+Recall that a set $\mathcal{F}$ is a convex set if, for any two points $x, y \in \feas$ and any scalar $\lambda \in [0, 1]$, the convex combination $\lambda x + (1-\lambda) y$ also belongs to $\feas$.
+
+
+\begin{definition}[Convex Optimization Problem]
+A problem is a {\em convex optimization problem} if it satisfies two conditions:
+\begin{enumerate}
+\item[(i)] The feasible region $\feas$ is a convex set.
+\item[(ii)] The objective function $f(x)$ must be convex\footnote{As stated in~\eqref{eq:optim}, throughout this chapter, we always consider the minimization of a function unless stated otherwise. If the problem is a maximization problem, the objective function $f(x)$ must be concave in order for the optimization problem to be convex (in Chapter~\ref{c:community} the problems will be written as maximization problems).}.
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[Fundamental Theorem of Convex Optimization.]\label{th:convopt}
+Let $f : \mathbb{R}^n \to \R$ be a convex function on a convex set $C \subseteq \R^n$.
+If $x^* \in C$ is a local minimum of $f$ over $C$, then $x^*$ is also a global minimum.
+If $f$ is furthermore strictly convex%and if $x^*$ is a global minimum
+, the global minimum is unique.
+\end{theorem}
+
+\begin{proof}
+Assume $x^*$ is {\em not} a global minimum
+Then there exists a point $y \in C$ such that
+$$
+f(y) < f(x^*).
+$$
+Since $C$ is convex, for any $\lambda \in [0,1]$, the point
+$x_\lambda := (1-\lambda)x^* + \lambda y
+$ belongs to $C$.
+By convexity of $f$,
+$$
+f(x_\lambda)
+\le
+(1-\lambda)f(x^*) + \lambda f(y).
+$$
+Since $f(y) < f(x^*)$, we have
+$$
+(1-\lambda)f(x^*) + \lambda f(y)
+<
+(1-\lambda)f(x^*) + \lambda f(x^*) = 
+f(x^*).
+$$
+Thus,
+$$
+f(x_\lambda) < f(x^*).
+$$
+As $\lambda \to 0^+$,
+$$
+x_\lambda \to x^*.
+$$
+Hence, for sufficiently small $\lambda > 0$, the point $x_\lambda$ lies inside any neighborhood $B_\varepsilon(x^*)$.
+But we have shown
+$$
+f(x_\lambda) < f(x^*),
+$$
+which contradicts the assumption that $x^*$ is a local minimum.
+The assumption that $x^*$ is not a global minimum must be false. Therefore,
+$$
+f(x^*) \le f(x) \quad \forall x \in C.
+$$
+Hence, $x^*$ is a global minimum.
+
+The proof of the claim of uniqueness is left as an exercise (see Exercise~\ref{eq:ex_uniqueness}).
+
+
+
+\end{proof}
+
+
+Theorem~\ref{th:convopt} is quite useful, since it guarantees that any optimization algorithm that converges to a stationary point\footnote{The function $f$ has a stationary point at $x$ if the gradient of $f$ has norm zero at $x$.} is guaranteed to have found the best possible solution.
+
+
+
+
+Convex problems are highly desirable: every local minimum is a global minimum, and efficient algorithms exist with strong guarantees.\footnote{It is worth mentioning that an optimization problem being convex is not sufficient to guarantee that it is efficient to solve: sometimes it is hard to check if a candidate solution is in the feasibility set $C$, e.g. imagine a convex feasibility set $C$ that is defined with exponentially many constraints.}
+Many classical models in data science and machine learning  such as linear regression, compressive sensing, logistic regression, and support vector machines are convex optimization problems.
+
+\subsection{Some important classes of convex optimization problems}
+
+We briefly discuss several noteworthy special cases of convex optimization problems, which play an important role in practice and which we will encounter later in this book.
+
+A convex optimization problem is often stated in the form
+\begin{align}\label{eq:convexproblem}
+\begin{split}
+ \underset{x\in\R^n}{\text{minimize}} & \qquad  f(x)  \\
+ \text{subject to} & \qquad g_i(x) \le 0, \quad \, i = 1, \dots, m, \\
+ & \qquad Ax = b,
+\end{split}
+\end{align}
+where the functions $f$, $g_i, i=1,\dots, m$ are convex.
+
+The optimization problem~\eqref{eq:convexproblem} is called a {\em linear program} if the objective and constraint functions  are linear (affine).
+A linear program is thus typically written in the form
+\begin{align}\label{eq:linprog}
+\begin{split}
+ \underset{x\in\R^n}{\text{minimize}} & \qquad   \langle c,x\rangle  \\
+ \text{subject to} & \qquad \langle g_i, x\rangle  \le c_i, \quad \, i = 1, \dots, m, \\
+ & \qquad Ax = b, 
+\end{split}
+\end{align}
+where $A \in \R^{r \times n}$, $c = \{c_i\}_{i=1}^m \in\RR^m$,  $g_1,\dots,g_m\in\R^n$, $b \in \R^r$. 
+
+A {\em quadratic program} is also a special case of~\eqref{eq:convexproblem}, where the objective and the inequality
+constraints are quadratic functions, i.e., they are polynomials in the $x$
+variable of degree at most two. Linear programs and quadratic programs appear in Chapter~\ref{c:cs} (note that not all quadratics are convex, and so quadratic programs can also be non-convex).
+
+In a {\em semidefinite program} (SDP) we minimize a linear function subject to the constraint that an affine combination of symmetric matrices is positive semidefinite. Such a constraint is nonlinear but convex, so semidefinite programs are convex optimization problems. Furthermore, efficient algorithms exist for SDPs~\cite{LVanderberghe_SBoyd_1996}. 
+Denote by $\symS_n$  the space of all $n \times n$ real symmetric matrices.
+The space is equipped with the Hilbert-Schmidt inner product 
+$\langle A,B \rangle = \trace(A^T B)$.
+An SDP can be stated in standard form as
+\begin{align}\label{eq:sdp}
+\begin{split}
+ \underset{X\in\symS_n}{\text{minimize}} & \qquad   \langle C,X\rangle  \\
+ \text{subject to} & \qquad \langle A_i, X\rangle = b_i, \quad \, i = 1, \dots, m, \\
+ & \qquad X \succeq 0, 
+\end{split}
+\end{align}
+where $C, A_1,\dots,A_m \in \symS_n$. 
+Semidefinite programs will feature prominently in Chapter~\ref{c:community}. It is worth mentioning that~\eqref{eq:sdp} is not naturally written in form~\eqref{eq:convexproblem} but rather as an optimization problem over a convex cone $K$, in this case the cone of positive semidefinite matrices (a cone in $\RR^n$ is a set that is closed under non-negative scaling). While  Section~\ref{s:duality} will focus on problems of the form~\eqref{eq:convexproblem}, the arguments and derivations can be adapted to the setting of optimization over convex cones (such as the PSD cone). For example, dual optimization problems tend to involve the dual cone $K^\ast = \{y\in\RR^n: \langle y,x\rangle \geq 0, \forall x\in K\}$. Note that both the PSD cone (of PSD symmetric matrices), and the cone of non-negative vectors in $\RR^n$, are self-dual cones. In Chapter~\ref{c:community} we derive the dual optimization problem for a Semidefinite Program.
+
+
+
+
+\subsection{Non-convex optimization}
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[width=.7\textwidth]{figures/Chapter7-plotnonconvex}
+    \caption{A nonconvex function. Nonconvex functions can have many local minima, even in one dimension.}
+    \label{fig:plotnonconvex}
+\end{center}
+\end{figure}
+
+An optimization problem is non-convex if either the objective function $f(x)$ is not convex, or the feasible region $\mathcal{F}$ is not convex (or both). Non-convex problems, common in data science and deep learning, may contain many local minima and saddle points, see Figure~\ref{fig:plotnonconvex} for an illustration.
+These problems often require heuristic or iterative methods and seldom offer guarantees of global optimality. See also the convergence results for gradient descent in Section~\ref{s:gd:nonconvex}.
+
+
+
+
+\begin{remark}[Smooth vs.\ non-smooth optimization]
+
+A smooth optimization problem is characterized by having a differentiable objective function (and constraints). Gradient-based algorithms, which will be discussed in detail in Section~\ref{s:grad}, are typically effective for such problems.
+Non-smooth problems involve objectives or constraints that are not differentiable everywhere. Examples include the $\ell_1$-penalty used in compressive sensing (see Chapter~\ref{c:cs}) or hinge loss in support vector machines (see Chapter~\ref{c:classification}). These require specialized methods such as subgradient algorithms or proximal techniques. 
+
+\end{remark}
+
+
+
+
+
+
+\section{Optimality conditions in unconstrained optimization}\label{s:optimality}
+ 
+Optimality conditions provide mathematical criteria for determining whether a candidate solution of an optimization problem is locally or globally optimal. These conditions form the theoretical foundation for most optimization algorithms, as they describe the necessary (and sometimes sufficient) properties that optimal solutions must satisfy.
+
+We start with unconstrained optimization problems.
+
+
+\subsection{First-order necessary conditions (unconstrained)}
+
+As the name suggests, first-order conditions rely on gradient information of the optimization function $f$.
+The gradient of $f$ with respect to $x$ is a vector of partial derivatives
+\begin{equation}
+\nabla_x f(x) = \left( \frac{\partial f(x)}{\partial x_1}, \frac{\partial f(x)}{\partial x_2}, \dots, \frac{\partial f(x)}{\partial x_d} \right).
+\label{gradient}
+\end{equation}
+If it is clear from the context we simply write $\nabla f(x)$ instead of $\nabla_x f(x)$.
+
+\begin{theorem}
+ \label{th:firstorder}
+Let $f:\R^n\to\R$ be continuously differentiable. If $x^\star$ is a  local minimum of $f$, then
+$$
+\nabla f(x^\star)=0.
+$$
+\end{theorem}
+
+\begin{proof}
+Let $d\in\R^n$ be any direction and define
+$$
+\varphi(t)=f(x^\star+td).
+$$
+Since $x^\star$ is a local minimum, $t=0$ is a local minimizer of $\varphi$, hence
+$$
+\varphi'(0)=0.
+$$
+By the chain rule,
+$$
+\varphi'(0) = \nabla f(x^\star)^T d.
+$$
+
+Since this must hold for {\em all directions} $d$, the only vector satisfying
+$$
+\nabla f(x^\star)^T d =0 \quad \forall d
+$$
+is
+$$
+\nabla f(x^\star)=0.
+$$
+\end{proof}
+
+The first-condition in Theorem~\ref{th:firstorder} provides a necessary, but not a sufficient criterion to characterize whether a function has a minimum at a specific point. If $\nabla f(x)=0$ we may or may not have a local extremum at $x$. We therefore call any point $x$ for which $\nabla f(x)=0$ a {\em critical point}.
+
+
+\subsection{Second-order conditions (unconstrained)}
+
+To find out whether a critical point is indeed a local extremum, we will utilize second-order conditions. 
+
+\begin{definition}
+ \label{def:saddle}   
+Let $f\in C^2$. A point $x^\star$ is a {\em saddle point} of $f$ if
+$\nabla f(x^\star)=0$ but the Hessian $\nabla^2 f(x^\star)$ is indefinite.
+\end{definition}
+Thus, a saddle point is a critical point, but it is not a local extremum of the function, see also Figure~\ref{fig:saddle}. 
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.5\textwidth]{figures/Chapter7-saddle}
+    \caption{A saddle point (shown in red) on the graph of the function $f(x,y)=x^2-y^2$'}
+    \label{fig:saddle}
+\end{center}
+\end{figure}
+
+\begin{theorem}\label{th:secondorder}
+If $f\in C^2$ and $x^\star$ is a local minimum, then
+ $\nabla^2 f(x^\star)\succeq 0$ (i.e., the Hessian is positive semidefinite).
+\end{theorem}
+
+\begin{proof}
+Consider the Taylor expansion
+$$
+f(x^\star + d) = f(x^\star) + \nabla f(x^\star)^T d +
+ \frac{1}{2} d^T \nabla^2 f(x^\star) d + o(\|d\|^2).
+$$
+At a local minimum, for sufficiently small $d$,
+$$
+f(x^\star+d)-f(x^\star) \ge 0.
+$$
+Using $\nabla f(x^\star)=0$, we obtain
+$$
+\tfrac12 d^T \nabla^2 f(x^\star) d + o(\|d\|^2) \ge 0.
+$$
+Dividing by $\|d\|^2$ and letting $d\to 0$ yields
+$$
+d^T \nabla^2 f(x^\star) d \ge 0
+$$
+for all $d$. Thus the Hessian is positive semidefinite.
+
+\end{proof}
+
+A straightforward variation of Theorem~\ref{th:secondorder} is that if $x^*$ is a local maximum, then $\nabla^2 f(x^\star)\preceq 0$, i.e., the Hessian is negative semidefinite.
+
+
+\begin{theorem}\label{th:hessian}
+Let $f\in C^2$. If $\nabla f(x^\star)=0$ and $\nabla^2 f(x^\star)\succ 0$, then $x^\star$ is a {\em strict local minimum}.
+\end{theorem}
+
+\begin{proof}
+Positive definiteness implies
+$$
+d^T \nabla^2 f(x^\star) d \ge c\|d\|^2
+$$
+for some $c>0$. Using the Taylor expansion again:
+$$
+f(x^\star+d)-f(x^\star)
+= \frac{1}{2} d^T \nabla^2 f(x^\star) d + o(\|d\|^2)
+\ge \frac{c}{2}\|d\|^2 + o(\|d\|^2).
+$$
+For sufficiently small $d$, the right-hand side is strictly positive. Thus $x^\star$ is a strict local minimizer. 
+\end{proof}
+
+
+Notice that if  $f\in C^2$ and the Hessian $\nabla^2 f$ is positive definite, then $f$ is strictly convex, but the converse is not necessarily true. Consider for example the function $f(x)=x^4$. Then it is easy to check that $f$ is strictly convex, but at $x=0$ we have $f''(x) =0$, which implies that the (in this case scalar-valued) Hessian is not positive definite.
+
+\medskip
+\noindent
+\textbf{Example: Least squares.} In Chapter~\ref{c:linreg_ls} we analyzed the least squares problem from a statistical perspective. Now we will investigate it through an optimization lens and put the aforementioned optimality conditions to the test. We consider the least squares problem
+\begin{equation}\label{optim:lsq}
+    \min_x \frac{1}{2} \|Ax - b\|^2,
+\end{equation}
+where $A \in \R^{m \times n}$ with $m \ge n$.
+A standard way to compute its solution
+is via orthogonal projections, as is usually done in numerical linear algebra. Here, we follow instead the path of optimization by setting the gradient of $f(x)=\frac{1}{2} \|Ax - b\|^2$ to zero, as suggested by Theorem~\ref{th:firstorder}. 
+
+To that end we first expand~\eqref{optim:lsq} into
+$$  f(x) =  \frac{1}{2}\Big( x^T A^T A x - x^T A^T b - b^T Ax + b^T b\Big).$$
+Next we compute the gradient of $f$ with respect to $x$. Standard vector calculus yields
+$$\nabla f = A^T A x - A^T b,$$
+Setting the gradient to zero gives
+\begin{equation}\label{lsqnormal}
+A^T A x - A^T b = 0 \quad \Longleftrightarrow \quad  A^T A x = A^T b.
+\end{equation}
+The equations on the right hand side of~\eqref{lsqnormal} are known as the {\em normal equations}. Let the residual be $r(x) = b - Ax$. The normal equations are equivalent to the orthogonality condition
+$$
+A^T r(x)=0 \quad\Longleftrightarrow\quad r(x)\perp \operatorname{col}(A).
+$$
+Thus, the columns of $A$ span a subspace $\operatorname{col}(A)\subset\R^n$, and the least-squares minimizer $x^*$ makes $A x^{*}$ the orthogonal projection of $b$ onto $\operatorname{col}(A)$, as illustrated in Figure~\ref{fig:lsqproj}
+\begin{figure}[h!]
+\begin{center}
+    \includegraphics[width=.65\textwidth]{figures/least_squares_orthogonality}
+    \caption{The vector $b$ is decomposed into its orthogonal projection $Ax^*$ onto $\operatorname{col}(A)$ (the column space of $A$), and the residual $r = b - Ax^*$ which is perpendicular to $\operatorname{col}(A)$. The least-squares solution $x^*$ minimizes $\|r\|$ and satisfies the normal equations $A^\top r = 0$.}
+    \label{fig:lsqproj}
+\end{center}
+\end{figure}
+
+
+
+Equivalently,
+$$
+Ax^\star = P_{\operatorname{col}(A)} b,
+$$
+and the projection matrix (when $A$ has full column rank) is
+$$
+P_{\operatorname{col}(A)} = A(A^T A)^{-1}A^T.
+$$
+The matrix $A^T A$ is symmetric and if $A$ has full rank $n$, then $A^T A$
+is  positive definite, and thus invertible. In this case
+the solution to~\eqref{optim:lsq} is given by
+\begin{equation}\label{sollsq}
+    x^* = (A^T A)^{-1} A^T b.
+\end{equation}
+This $x^*$ minimizes $f$ because the Hessian $\nabla^2 f = A^T A$ is positive definite, so $f$ is strictly convex. Thus in this case, by Theorem~\ref{th:convopt}, $x^*$ is a {\em unique} global minimum.
+
+\smallskip
+\noindent
+\textbf{Least squares least norm solutions:}
+If $A$ does not have full column rank ($\rank(A) < n$), then 
+$A^T A$ is symmetric positive {\em semidefinite} and singular. The normal equations $A^T Ax = A^T b$
+may have many solutions (note that there must exists at least one solution since the column space of $A^T b$ is always contained in the column space of $A^T A$, which means that the system $A^\top Ax=A^\top b$ is always consistent).
+
+However, for the least-squares problem there is always at least one canonical minimizer: The set of all solutions of the normal equations (i.e. all minimizers) is
+\begin{equation}\label{eq:normal_kernel}
+\{x_0 + z \,:\,z\in\ker(A)\},
+\end{equation}
+where $x_0$ is any particular solution satisfying $A^T A x_0 = A^T b$. Among all solutions of the form~\eqref{eq:normal_kernel} there is a unique solution of particular interest, namely the solution that has minimal 2-norm. This unique solution can be computed via  the Moore–Penrose pseudoinverse $A^\dagger$ which we already encountered in Section~\ref{ss:pinv} (recall that  $A^\dagger = (A^T A)^{-1}A^T$ when $\rank A = n$). More precisely,
+$$
+x^\dagger: = A^\dagger b
+$$
+is the solution of the optimization problem
+\begin{align}\label{eq:optimpinv}
+\begin{split}
+ \text{minimize} & \qquad   \|x\|  \\
+ \text{subject to} & \qquad A^T A x = A^T b.
+\end{split}
+\end{align}
+If the system is consistent, the constraint $A^T A x = A^T b$ reduces to $Ax = b$.
+
+The minimal 2-norm solution $x^\dagger$ satisfies
+$$ x^\dagger \perp {\mathcal N}(A).$$
+Thus, it avoids extra nullspace components that do not affect the output.
+
+The minimum-2-norm solution corresponds to the least energy solution in physics, and to the
+maximum likelihood estimate when the solution is assumed to have i.i.d.\ Gaussian priors. 
+
+
+
+\section{Constrained Optimization: Duality and KKT conditions} %Karush–Kuhn–Tucker conditions}
+\label{s:duality}
+
+
+
+
+We consider the optimization problem~\eqref{eq:optim}, which we restate here without loss of generality and with a slight abuse of notation in a  more convenient form regarding the constraints:
+\begin{align}\label{eq:optim4}
+\begin{split}
+ \text{minimize} & \qquad   f(x)  \\
+ \text{subject to} & \qquad g_i(x) \le 0, \quad \, i = 1, \dots, m, \\
+ & \qquad h_j(x) = 0, \quad j=1,\dots,r. 
+\end{split}
+\end{align}
+Its optimal value is denoted by $p^*$, and
+we do not (yet) assume that the problem is convex.
+
+
+\subsection{The Lagrangian and the Lagrangian dual}
+
+
+The key idea in Lagrangian duality is to incorporate the constraints in~\eqref{eq:optim4} into the objective function by augmenting it with a weighted sum of the constraint functions.
+
+To that end, we introduce the {\em Lagrangian} ${\mathcal L}: \R^n \times \R^m\times \R^r \to \R$ associated with~\eqref{eq:optim} as
+$$
+\mathcal{L}(x,\lambda,\nu)
+= f(x) + \sum_{i=1}^m \lambda_i g_i(x)
++ \sum_{j=1}^r \nu_j h_j(x),
+$$
+where $\lambda = \{\lambda_i\}_{i=1}^m$ and $\nu = \{\nu_j\}_{j=1}^r$.
+We refer to $\lambda_i\ge 0$, as {\em Lagrange multiplier} associated with the inequality constraint $g_i(x)\le 0$, and to $\nu_j$ as the Lagrange
+multiplier associated with the  equality constraint $h_j(x)=0$. With a slight abuse of notation we write 
+$\lambda \ge 0$ when this inequality holds entrywise, i.e., when $\lambda_i \ge 0, \forall i=1,\dots,m$.
+
+
+We define the {\em Lagrange dual function} as
+$$
+\theta(\lambda,\nu) = \inf_{x\in \dom} \mathcal{L}(x,\lambda,\nu).
+$$
+The vectors $\lambda$ and $\nu$ are also
+called the {\em dual variables} associated with the problem~\eqref{eq:optim}.
+When the Lagrangian is unbounded below in $x$, the dual function takes on the
+value $-\infty$, otherwise, $\theta(\lambda,\nu)$ is a
+finite value. 
+
+The following properties of the dual function will be very useful.
+
+\begin{lemma}\label{le:duallowerbound}
+The dual function $\theta(\lambda,\nu)$is jointly concave in $(\lambda,\nu)$. Moreover, for any $\lambda \ge 0$  and any $\nu$ we have
+\begin{equation}\label{eq:duallowerbound}
+    \theta(\lambda,\nu) \le p^*.
+\end{equation}
+\end{lemma}
+\begin{proof} 
+Note that for each fixed $x$, the function $\mathcal{L}(x,\lambda,\nu)$ is affine in $(\lambda,\nu)$, hence it is also concave in $(\lambda,\nu)$, because linear and affine functions are both convex and concave.
+Since the dual function $\theta(\lambda,\nu)$ is the pointwise infimum of a family of affine
+functions of $(\lambda,\nu)$, it is concave. Note that this conclusion holds even when the problem~\eqref{eq:optim} is not convex.
+
+To prove the claim  about the lower bound, let $\lambda \ge 0$ and
+assume that $\bar{x}$ is a feasible point for~\eqref{eq:optim4}, i.e., $g_i(\bar{x})  \le 0$, and $h_j(\bar{x})  = 0$. 
+
+Now consider the Lagrangian for this feasible $\bar{x}$, assuming $\lambda \ge 0$:
+$${\mathcal L}(\bar{x}, \lambda, \nu) = f(\bar{x}) + \sum_{i=1}^m \underbrace{ \lambda_i g_i(\bar{x})}_{\le 0} \, +  \, \sum_{j=1}^r \underbrace{ \nu_j h_j(\bar{x})}_{= 0},$$
+where each term $\lambda_i g_i(\bar{x})$ is non-positive since $\lambda_i \ge 0$ and $g_i(\bar{x}) \le 0$.
+Because the summation terms are either zero or non-positive, we have
+\begin{equation}\label{eq:dual5}
+{\mathcal L}(\bar{x}, \lambda, \nu) \le f(\bar{x}).
+\end{equation}
+
+
+The dual function is defined as the infimum of the Lagrangian over all $x \in \mathcal{D}$, which includes the subset of feasible points:
+$$\theta(\lambda, \nu) = \inf_{x' \in \mathcal{D}} {\mathcal L}(x', \lambda, \nu) \le {\mathcal L}(x, \lambda, \nu).$$
+Combining this with inequality~\eqref{eq:dual5} gives
+$$\theta(\lambda, \nu) \le f(x).$$
+Since $\theta(\lambda, \nu) \le f(x)$ holds for every feasible $x$, it must also be less than or equal to the minimum value attainable by $f(x)$ on the feasible set:
+$$\theta(\lambda, \nu) \le \inf \{ f(x) \mid x \text{ is feasible} \} = p^*$$
+Therefore, $\theta(\lambda, \nu) \le p^*$ for all $\lambda \ge 0$ and any $\nu$.
+
+
+
+
+
+\end{proof}
+
+Let us consider some examples for which we will derive the Lagrange dual function analytically.
+
+\noindent
+\textbf{Example: Underdetermined linear equations.}
+We consider the problem~\eqref{eq:optimpinv} for consistent systems, i.e.,
+\begin{align}\label{eq:optimpinv2}
+\begin{split}
+ \text{minimize} & \qquad   x^T x  \\
+ \text{subject to} & \qquad Ax = b,
+\end{split}
+\end{align}
+where $A \in \R^{r \times n}$. This problem has $r$ equality constraints (and no inequality constraints).
+The Lagrangian is 
+$$ \mathcal{L}(x,\nu) = x^T x + \nu^T (Ax-b),$$ 
+and the dual function is given by $\theta(\nu) = \inf_{x \in \dom} \mathcal{L}(x,\nu)$. $\mathcal{L}$ is strictly convex as the reader may readily convince herself. Hence, we can find the unique minimizer via the first-order optimality condition 
+$$\nabla_x \mathcal{L}(x,\nu) = 2x + A^T \nu = 0,$$
+which gives $x = - \frac{1}{2} A^T \nu$.  The associated dual function is 
+\begin{eqnarray*}\theta(\nu) =  \mathcal{L}\big(- \frac{1}{2} A^T \nu,\nu\big) &=& 
+ \frac{1}{4} \nu^T A A^T \nu  + \nu^T ( -\frac{1}{2}A  A^T\nu - b)\\
+&=&
+-\frac{1}{4} \nu^T A A^T \nu  - \nu^T b.
+\end{eqnarray*}
+Lemma~\ref{le:duallowerbound} implies that for any $\nu \in \R^r$ we have the lower bound
+$$ -\frac{1}{4} \nu^T A A^T \nu  - \nu^T b \le 
+\inf_x \big\{\|x\|^2: Ax = b\big\}.$$
+
+
+\medskip
+\noindent
+\textbf{Example: Dual of a linear program.}
+Consider the linear program in standard form
+\begin{align}\label{LPstandard}
+\begin{split}
+\text{minimize} \quad & c^T x \\
+\text{subject to} \quad & Ax = b, \\
+& x \ge 0,
+\end{split}
+\end{align}
+where $x \in \mathbb{R}^n$, $A \in \mathbb{R}^{m \times n}$,
+$b \in \mathbb{R}^m$, and $c \in \mathbb{R}^n$.
+To compute the Lagrangian we introduce dual variables $\nu \in \mathbb{R}^m$ for the equality constraint $Ax=b$ (which we can rewrite as $Ax-b=0$), and
+dual variables $\lambda \in \mathbb{R}^n$ for the inequality constraint $x \ge 0$ (which we can rewrite as $-x \le 0$).
+
+The Lagrangian is
+$$
+\Lag(x,\nu,\lambda)
+= c^T x + \nu^T (Ax - b) - \lambda^T x 
+= (c + A^T \nu - \lambda)^T x - b^T \nu.
+$$
+Here, $\lambda \ge 0$ is required by dual feasibility.
+
+
+The Lagrange dual function is defined as
+$$
+\theta(\lambda, \nu,)
+= \inf_{x \in \mathbb{R}^n} \Lag(x,\lambda,\nu).
+$$
+We now compute this infimum.
+
+Since the Lagrangian is affine in $x$, we distinguish two cases:
+
+\noindent
+Case 1: $c + A^T \nu - \lambda = 0$:
+Then $L(x,\nu,\lambda) = - b^T \nu$ for all $x$, thus
+$\theta(\lambda,\nu) = -b^T \nu$.
+
+\noindent
+Case 2: $c + A^T \nu - \lambda \neq 0$:
+Then the affine function $(c + A^T \nu - \lambda)^T x - b^T \nu$ is unbounded below as a function of $x$, and therefore
+$\theta(\lambda,\nu) = -\infty$.
+
+Combining the two cases gives
+\begin{equation}\label{LPdualfunction}
+    \theta(\lambda,\nu)
+=
+\begin{cases}
+-b^T \nu, & \text{if } c + A^T \nu - \lambda = 0, \\
+-\infty, & \text{otherwise}.
+\end{cases}
+\end{equation}
+The lower bound property~\eqref{eq:duallowerbound} is nontrivial only when $\lambda$ and $\nu$ satisfy $\lambda \ge 0$ and
+$c + A^T \nu - \lambda = 0$. When this happens, then 
+$-b^T \nu$ is a lower bound on the optimal
+value of the linear program~\eqref{LPstandard}.
+
+
+
+
+\subsection{The Lagrangian dual problem}
+
+Lemma~\ref{le:duallowerbound} tells us that for each pair $(\lambda,\nu)$ the Lagrange dual function gives us a lower bound on the optimal value $p^*$
+of the optimization problem~\eqref{eq:optim}. This raises the question, what the best lower bound is that we can derive  from the Lagrange dual function.
+
+In other words, we are concerned with the so-called {\em Lagrange dual problem} associated with problem~\eqref{eq:optim} 
+\begin{align}\label{eq:dualproblem}
+\begin{split}
+ \text{maximize} & \qquad   \theta(\lambda,\nu)  \\
+ \text{subject to} & \qquad \lambda \ge 0,
+\end{split}
+\end{align}
+where the mazimization is sought with respect to the variables $\lambda$ and $\nu$.
+The problem~\eqref{eq:optim} is also referred to as the {\em primal problem}.
+We refer to the pair $(\lambda^*,\nu^*)$ as {\em dual optimal} or {\em optimal Lagrange multipliers}
+if they are the maximizer of~\eqref{eq:dualproblem}.
+
+An important point is that the Lagrange dual problem~\eqref{eq:dualproblem} is {\em convex}, since the objective to be maximized is concave and the constraint is convex, and this is true
+whether or not the primal problem~\eqref{eq:optim} is convex.
+
+\medskip
+To put this concept to test, let us compute the Lagrange dual problem for a linear program. We already computed the Lagrangian dual function for a linear program, resulting in~\eqref{LPdualfunction}. The Lagrange dual problem of the linear program~\eqref{LPstandard} is to maximize this dual function $\theta$ subject to $\lambda \ge 0$. That means we need to solve
+\begin{align}\label{eq:dualproblem1}
+\begin{split}
+ \text{maximize} & \quad \theta(\lambda,\nu) = 
+ \begin{cases}
+-b^T \nu, & \text{if } A^T \nu - \lambda +c = 0, \\
+-\infty, & \text{otherwise},
+\end{cases}\\
+ \text{subject to} & \quad \lambda \ge 0.
+\end{split}
+\end{align}
+Since $\theta$ is finite only when $A^T \nu - \lambda +c = 0$, we can make the equality constraints explicit via the following {\em equivalent} problem
+\begin{align}\label{LPdual2}
+\begin{split}
+\text{maximize} \quad & -b^T \nu \\
+\text{subject to} \quad & A^T \nu -\lambda + c = 0, \\
+& \lambda \ge 0,
+\end{split}
+\end{align}
+which in turn can be written as the following linear program in inequality form:
+\begin{align}\label{LPdual3}
+\begin{split}
+\text{maximize} \quad & -b^T \nu \\
+\text{subject to} \quad & A^T \nu + c \ge 0. 
+\end{split}
+\end{align}
+%Strictly speaking, only~\eqref{eq:dualproblem1} is the Lagrange dual problem of~\eqref{LPstandard}, but it is common to also refer to the equivalent problems~\eqref{LPdual2} and~\eqref{LPdual3} as the Lagrange dual of~\eqref{LPstandard}.
+
+\begin{remark}[Duality in Semidefinite Programming]
+    One can construct the dual of a semidefinite program with a similar construction. The main point to note is that the variables $\lambda$ in~\eqref{LPdual2}, dual variables to the constraints $x\geq 0$ can be viewed as being in a dual cone: Let $Q_+$ denote the cone of non-negative vectors in $\RR^n$, then the constraint $x\geq 0$ corresponds to $x\in Q_+$; the dual variables are then in the dual cone $Q_+^\ast$ (in this case $Q_+^\ast=Q_+$). In a semidefinite program a matrix variable $X$ is in $K$ the cone of symmetric PSD matrices. It is also self-dual so this variable will have a dual variable $Q\in K$. See Chapter~\ref{c:community} for an actual derivation of the dual of an SDP.
+\end{remark}
+
+
+\subsubsection{Weak duality and strong duality}\label{ss:weakstrong}
+We denote the optimal value of the Lagrange dual problem by $d^*$. By definition, $d^*$ is the best lower bound for $p^*$ that we can compute from the Lagrange dual
+function. Moreover, we have the straightforward inequality
+\begin{equation}
+ \label{weakduality}   
+\text{(dual optimum) } d^* \le p^* \text{ (primal optimum)}.
+\end{equation}
+And by virtue of Lemma~\ref{le:duallowerbound} this bound 
+holds even if the original problem is not convex. This property is also called {\em weak duality}.
+
+The weak duality inequality~\eqref{weakduality} also holds when $p^*$ and $d^*$ are infinite: if the primal problem is unbounded below, i.e., $p^* = -\infty$, this implies $d^* = -\infty$, which means  the Lagrange dual problem is infeasible;  if the
+dual problem is unbounded above, i.e., $d^* = \infty$, this implies $p^* = \infty$, which in turn says that the
+primal problem is infeasible.
+
+\begin{definition}\label{dualitygap}
+The difference $p^* - d^*$ is called the 
+{\em optimal duality gap} of the original
+problem.
+\end{definition}
+Thus, the optimal duality gap (often with a slight abuse of terminology simply called duality gap), which is always non-negative, gives the gap between the optimal value of the primal problem
+and the best lower bound on it that can be obtained from the
+Lagrange dual function.
+
+We say that {\em strong duality} holds if the duality gap is zero, that is if we have the equality
+\begin{equation}
+ \label{strongduality}   
+d^* = p^*.
+\end{equation}
+
+Unlike weak duality, strong duality does not hold in general.  Consider for example the problem
+\begin{align*}
+\text{minimize}  & \quad  x \\
+\text{subject to} & \quad x^2 \ge 1.
+\end{align*}
+The constraint implies
+$
+x \in (-\infty,-1] \cup [1,\infty)$.
+The objective is minimized at
+$x^* = -1$ with optimal value $p^* = -1$.
+
+To compute the Lagrangian dual, we rewrite the constraint as
+$$
+g(x) = 1 - x^2 \le 0.
+$$
+
+The Lagrangian is
+$$
+\mathcal{L}(x,\lambda) = x + \lambda(1 - x^2),
+\qquad \lambda \ge 0.
+$$
+
+The dual function is
+$$
+\theta(\lambda) = \inf_x \big[ x + \lambda(1 - x^2) \big].
+$$
+
+If $\lambda > 0$, the term $-\lambda x^2$ dominates and
+  $\theta(\lambda) = -\infty$.
+If $\lambda = 0$. then $\theta(0) = \inf_{x} x = -\infty$.
+Thus, $\theta(\lambda) = -\infty$ for all $\lambda \ge 0$.
+The dual problem is
+$$
+d^* = \sup_{\lambda \ge 0} \theta(\lambda) = -\infty.
+$$
+Hence, the primal optimal value is $p^* = -1$, while
+the dual optimal value is $d^* = -\infty$,
+so there is a  strict (and rather large) duality gap.
+
+\medskip
+
+
+Sometimes the dual problem can be easier to solve compared with the primal problem and the primal solution can be constructed from the dual solution.
+Thus, we are interested in understanding which conditions can guarantee that 
+strong duality holds. A significant body of work in the optimization literature has been devoted to exploring 
+different possibilities for these conditions. Among the most prominent conditions are {\em Slater's Condition} and the 
+{\em Karush–Kuhn–Tucker Conditions}, which we will explore in the following sections.
+
+\subsubsection{Max-min characterization of weak and strong duality}\label{ss:minmax}
+
+In essence, at the core of duality is the question of whether minimizing after maximizing gives the same result as maximizing after minimizing. We will make this slogan now more precise.
+
+For convenience we consider the primal problem without equality constraints (it is straightforward to extend our derivations to include equality constraints):
+\begin{align}\label{eq:primalnoequality}
+  p^* = \min_{x \in \dom} \quad & f(x) \notag \\
+  \text{subject to} \quad & g_i(x) \leq 0, \quad i = 1, \dots, m.
+\end{align}
+Notice that for any $x \in \dom$ the Lagrangian $\Lag(x,\lambda)$ satisfies
+$$
+  \sup_{\lambda \geq 0} \Lag(x, \lambda)
+  = \sup_{\lambda \geq 0} \left[ f(x) + \sum_{i=1}^{m} \lambda_i g_i(x) \right]
+  =
+  \begin{cases}
+    f(x)   & \text{if } g_i(x) \leq 0 \text{ for all } i, \\
+    +\infty & \text{otherwise.}
+  \end{cases}
+$$
+Indeed, if any $g_i(x) > 0$ we may send $\lambda_i \to +\infty$ to make the expression
+unbounded; if $x$ is feasible all terms $\lambda_i g_i(x) \leq 0$, and the supremum
+is achieved at $\lambda = 0$.
+
+Therefore the primal problem can be reformulated as
+\begin{equation}\label{eq:primal_minmax}
+ p^* = \min_{x \in \dom} \sup_{\lambda \geq 0} \Lag(x, \lambda).
+\end{equation}
+By definition of the dual function and dual optimal value we have that
+\begin{equation}\label{eq:dual_maxmin}
+  d^* = \sup_{\lambda \geq 0} \inf_{x \in \dom} \Lag(x, \lambda).
+\end{equation}
+Hence, we can express weak duality as
+\begin{equation}\label{eq:weakminmax}   
+\sup_{\lambda \geq 0} \inf_{x \in \dom} L(x, \lambda)\le \inf_{x \in \dom} \sup_{\lambda \geq 0}  L(x, \lambda),
+\end{equation}
+and strong duality as the equality
+$$
+\sup_{\lambda \geq 0} \inf_{x \in \dom} L(x, \lambda) = \inf_{x \in \dom} \sup_{\lambda \geq 0}  L(x, \lambda).
+$$
+
+Weak duality $d^* \leq p^*$ is actually an immediate consequence of the following universal
+inequality, which requires \emph{no assumptions} on $\Lag$ or the sets involved.
+
+\begin{theorem}[Max-Min Inequality]
+  For any function $\phi : {\mathcal X} \times {\mathcal Y} \to \R$ and any sets ${\mathcal X}, {\mathcal Y}$:
+  $$
+    \sup_{y \in {\mathcal Y}} \inf_{x \in {\mathcal X}} \phi(x, y)
+    \leq
+    \inf_{x \in {\mathcal X}} \sup_{y \in {\mathcal Y}} \phi(x, y).
+  $$
+\end{theorem}
+
+\begin{proof}
+  Fix any $x_0 \in {\mathcal X}$ and $y_0 \in {\mathcal Y}$. Then
+  $$
+    \inf_{x \in {\mathcal X}} \phi(x, y_0) \leq \phi(x_0, y_0) \leq \sup_{y \in {\mathcal Y}} \phi(x_0, y).
+  $$
+  Taking the supremum over $y_0$ on the left-hand side and the infimum over $x_0$
+  on the right-hand side gives the result.
+\end{proof}
+
+Strong duality, in turn, is equivalent to the existence of a \emph{saddle point}.
+
+\begin{theorem}\label{th:saddleploint}
+  The following are equivalent:
+  \begin{enumerate}
+    \item Strong duality holds and both the primal and dual optima are attained.
+    \item There exists a saddle point $(x^*, \lambda^*)$ of $\Lag$, i.e.,
+    $$
+      \Lag(x^*, \lambda) \leq \Lag(x^*, \lambda^*) \leq \Lag(x, \lambda^*)
+      \quad \forall\, x \in \dom,\; \lambda \geq 0.
+    $$
+  \end{enumerate}
+  Moreover, at any saddle point, $\Lag(x^*, \lambda^*) = p^* = d^*$.
+\end{theorem}
+
+We leave the proof of this theorem as an exercise. The saddle point characterization of strong duality shows that the solution to the optimization problem is an equilibrium point where the ``force'' of the constraints (the dual variables) perfectly balances the ``pull'' of the objective function.
+
+
+
+
+
+
+\subsubsection{Strong duality and Slater's condition}
+
+In convex optimization, strong duality is not guaranteed by default, though it holds for the vast majority of problems satisfying basic regularity conditions. The conditions (beyond convexity), under
+which strong duality holds are called constraint qualifications. One such constraint qualification is  introduced in the next
+theorem~\cite{rockafellar2015convex,LVanderberghe_SBoyd_book}.
+
+
+\begin{theorem}[Slater's Theorem]\label{th:slater}
+Consider the convex optimization problem
+\begin{align} \label{eq:slaterproblem}
+\underset{x \in \mathcal{D}}{\operatorname{minimize}} \quad & f(x) \notag \\ \text{subject to} 
+    \quad & g_i(x) \leq 0, \quad i = 1, \dots, m \\ & Ax = b, \quad A \in \R^{p \times n,}
+\end{align}
+where the minimization is over $x \in \dom$.
+Assume the problem is convex.
+If there exists a point $\tilde{x} \in  \operatorname {relint} (\dom)$, the relative interior\footnote{The relative interior of a set $\dom$ (usually denoted by $\operatorname {relint} (\dom)$) is defined as its interior within the affine hull of $\dom$. For example, if $\dom$ is a  line segment in a two-dimensional ambient space, then $\operatorname {int} (\dom)$ is empty, but $\operatorname {relint} (\dom)$  is the line segment without its endpoints.} of $\mathcal{D}$, such that
+\begin{equation}\label{Slaterscondition}
+    g_i(\tilde{x}) < 0, \quad i = 1, \dots, m \quad \text{and} \quad A\tilde{x} = b,
+\end{equation}
+then strong duality holds ($p^* = d^*$). Furthermore, if $p^* > -\infty$, there exists a dual optimal point $(\lambda^*, \nu^*)$ that attains the dual supremum.
+\end{theorem}
+
+The conditions~\eqref{Slaterscondition} are known as {\em Slater's condition}. 
+Geometrically, Slater's condition means that
+the feasible set has nonempty interior relative to its affine hull. This ``thickness'' is exactly what allows separating hyperplanes to exist at the boundary without degeneracy, as the proof will establish rigorously, see also Figure~\ref{fig:slater}.
+
+
+\begin{proof}
+Define the set
+$$
+\mathcal{C}
+:= \left\{ (u,t) \in \mathbb{R}^m \times \mathbb{R}\,\, \middle| 
+\,\,\exists x \in \dom \text{ s.t. }\,\,
+\begin{aligned}
+& g_i(x) \le u_i,\ i=1,\dots,m, \\
+& Ax=b, \\
+& f(x) \le t
+\end{aligned}
+\right\}.
+$$
+Since $f$ and $g_i, i=1,\dots,m$ are convex, $\mathcal{C}$ is a convex set.
+We emphasize that every point $(u,t) \in \mathcal{C}$
+arises from an $x$ that satisfies all equality constraints exactly. Hence, we are working in an affine subspace determined by $Ax=b$.
+
+Note that
+$p^* = \inf \{ t: (0,t) \in \mathcal{C} \}$ and that
+the point $(0,p^*)$ is not in the {\em interior} of $\mathcal C$. Indeed, for any $\epsilon > 0$, the point $(0, p^* - \epsilon)$ is not in $\mathcal{C}$ by definition of the infimum.
+Now define the set
+$$
+\mathcal{A} := \{ (0,t) \mid t < p^* \}.
+$$
+Then $\mathcal{A}$ is a convex set, $\mathcal{A} \cap \mathcal{C} = \emptyset$ (a feasible point achieving $t < p^*$ while satisfying all constraints does not exist), and $\mathcal{C}$ has nonempty relative interior due to Slater’s condition.
+Indeed, since $\tilde{x} \in \operatorname{relint} \dom$ and satisfies strict inequalities $g_i(\tilde{x}) < 0$, it follows that
+$$
+(g_1(\tilde{x}),\dots,g_m(\tilde{x}),f(\tilde{x})) \in \operatorname{relint} \mathcal{C}.
+$$
+
+By the Separating Hyperplane Theorem~(see e.g.~\cite[Chapter 2]{LVanderberghe_SBoyd_book}), there exists nonzero vector $(\lambda,\mu) \in \mathbb{R}^m \times \mathbb{R}$,
+$\lambda \ge 0, \mu > 0$,
+and a scalar $\alpha$ such that
+\begin{align}    
+\lambda^T u + \mu t \ge \alpha
+\quad & \text{for all } (u,t) \in \mathcal{C},  \label{slatereq1}
+\\
+\lambda^T u + \mu t \le \alpha
+\quad & \text{for all } (u,t) \in \mathcal{A}.\label{slatereq2}
+\end{align}
+Since $u = 0$ for all $(u,t) \in \mathcal{A}$,
+ condition~\eqref{slatereq2} reduces to
+\begin{equation}
+\label{slartereq3}
+\mu t \le \alpha \quad \forall t < p^*.
+\end{equation}
+
+We now use Slater’s condition  to prove that the hyperplane cannot be ``vertical'' (i.e., we must have $\mu \neq 0$).
+If $\mu < 0$, then letting $t\to -\infty$ in~\eqref{slartereq3} implies $\mu t \to +\infty$, contradicting finiteness of $\alpha$. Hence $\mu \ge 0$. To show that $\mu >0$ we assume for
+ contradiction that $\mu=0$. Then~\eqref{slartereq3} gives $\alpha \ge 0$, and~\eqref{slatereq1} becomes
+$$
+\lambda^T u \ge \alpha \ge 0
+\quad \forall (u,t)\in\mathcal C.
+$$
+By Slater’s condition, there exists $\tilde{x}$ with
+$$
+u_i = g_i(\tilde x) < 0,\quad A\tilde x=b.
+$$
+Hence $(\tilde u,\tilde t)\in\mathcal C $ with $\tilde u \in \mathrm{int}(\mathbb{R}^m_-)$. Then $\lambda^T \tilde u \ge 0$,
+but since $\lambda \ge 0$ and $\tilde u < 0$, this implies
+$\lambda = 0$.
+Thus $(\lambda,\mu)=(0,0)$, contradicting nontrivial separation.
+Therefore, $\mu > 0$.
+
+Equation~\eqref{slartereq3} implies that $\alpha \ge \mu p^*$.
+By definition of $p^*$, there exists a sequence $t_k \downarrow p^*$ such that $(0,t_k)\in\mathcal C$.
+Applying~\eqref{slatereq1} yields $\mu t_k \ge \alpha$
+and taking limits gives $\mu p^* \ge \alpha$.
+Hence $\alpha = \mu p^*$.
+
+Now we construct a dual optimal point. For any feasible $x$ (i.e. $Ax=b$),
+$$
+\sum_{i=1}^m \lambda_i g_i(x) + \mu f(x) \ge \mu p^*.
+$$
+We divide by $\mu>0$ and define
+$$
+\lambda_i^* = \frac{\lambda_i}{\mu} \ge 0.
+$$
+Then
+$$
+f(x) + \sum_{i=1}^m \lambda_i^* g_i(x) \ge p^*
+\quad \forall x \text{ with } Ax=b.
+$$
+Adding $\nu^T (Ax-b)=0$, we obtain
+$$
+L(x,\lambda^*,\nu) \ge p^*
+\quad \forall x.
+$$
+Taking the infimum over $x$,
+$$
+\theta(\lambda^*,\nu) \ge p^*.
+$$
+But weak duality always gives
+$$
+\theta(\lambda,\nu) \le p^* \quad \forall (\lambda,\nu),
+$$
+so we conclude
+$$
+\theta(\lambda^*,\nu^*) = p^*.
+$$
+Thus
+$d^* = p^*$ (strong duality), and
+the dual optimum is attained at $(\lambda^*,\nu^*)$.
+
+
+
+\end{proof}
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=70mm]{figures/Chapter7-slater}
+\caption{The idea of the proof of Slaters' Theorem for a problem with one inequality constraint.  The two sets ${\mathcal C}$ and ${\mathcal A}$ are convex and non-intersecting, hence there exists a separating hyperplane. Slater's condition ensures
+that any separating hyperplane must be non-vertical, since it must pass
+to the left of the point $(\tilde{u},\tilde{t}) = (g_1(\tilde{x}),f(\tilde{x}))$, where $\tilde{x}$ is strictly feasible. If the hyperplane is not vertical, one can divide by its slope to get the Lagrange multipliers.}
+\label{fig:slater}
+\end{center}
+\end{figure}
+
+Slater's condition  plays a {\em dual role} in the proof: 
+{\em Structurally}, it guarantees $\operatorname{relint}(\mathcal{C}) \neq \emptyset$, making the supporting hyperplane theorem applicable. 
+{\em Analytically}, the Slater point $\tilde{x}$ is used a second time to rule out $\mu = 0$, forcing the separating hyperplane to be non-degenerate in the objective direction.
+
+Without Slater's condition, $\mathcal{C}$ might still have nonempty relative interior, but we would have no guarantee. And more critically, we would lose the second use of $\tilde{x}$ that forces $\mu > 0$. Both uses are essential, and both stem from the same strict feasibility assumption.
+
+
+
+
+
+\subsection{Karush–Kuhn–Tucker (KKT) Conditions}
+\label{ss:KKT}
+
+For unconstrained optimization, optimality is at least in part characterized by the first-order condition $\nabla f(x^*) = 0$.
+For constrained problems, the KKT conditions play an analogous role, since they describe when no feasible descent direction exists and they encode how constraints interact with the objective. In this sense, KKT is a natural extension of first-order optimality to constrained optimization\footnote{A useful example to keep in mind to build intuition is one where a point $x$ is a local optimum because the direction of steepest descent is perpendicular to the constraints; thus to improve one would need to leave the feasible set. The KKT conditions provide formal rigorous versions of this intuition.}.
+
+Before deriving the KKT conditions, we  introduce some helpful tools.
+
+\smallskip
+\noindent
+\textbf{Complementary slackness:}
+We say that an inequality constraint is {\em slack} when it is satisfied with strict inequality at the optimum, and the constraint is {\em tight}  when it is satisfied with equality at the optimum. If the constraint has ``slack,'' it cannot exert any ``force'' on the optimal solution\footnote{We will encounter this concept again in Section~\ref{s:svm} in the context of Support Vector Machines where the decision boundary used for classification is determined solely by the points known as support vectors. Data points that are far from this boundary have ``slack'' and do not affect the orientation of the hyperplane that defines the boundary.}.
+
+{\em Complementary slackness} is the condition that at optimality, for each inequality constraint $i$ we have 
+$$\lambda_i^* g_i(x^*) = 0.$$
+Since $\lambda_i^* \geq 0$ and $g_i(x^*) \leq 0$, this says that at least one of the two must be zero for every $i$. There are exactly two cases: \\
+Case 1: The constraint is active (tight): $g_i(x^*) = 0$. The constraint is binding at the optimum, and $\lambda_i^*$ is free to be positive -- the dual variable is ``switched on'' and is actively penalizing that constraint.\\
+Case 2: The constraint is inactive (slack): $g_i(x^*) < 0$. The constraint has room to spare, and so $\lambda_i^* = 0$ -- the dual variable is ``switched off'' and contributes nothing to the Lagrangian.
+
+
+\medskip
+
+
+
+
+Assume now that strong duality holds, i.e., the duality gap is zero. Let $x^*$ be a primal optimal and $(\lambda^*,\nu^*)$ be a dual optimal point. We compute
+\begin{align*}
+f(x^*) & = \theta(\lambda^*,\nu^*) \\
+& = \inf_x \Big( f(x) + \sum_{i=1}^m \lambda^{*}_i g_i(x)
++ \sum_{j=1}^r \nu^{*}_j h_j(x)\Big) \\
+& \le f(x^*) + \sum_{i=1}^m \lambda^{*}_i g_i(x^*)
++ \sum_{j=1}^r \nu^{*}_j h_j(x^*) \\
+& \le  f(x^*).  
+\end{align*}
+Here, the equality in the first line is due to the assumption that the duality gap is zero, the second line is just the definition of the Lagrange dual function, the third line follows from the fact the the infimum of the
+Lagrangian over $x$ is less than or equal to its value at $x = x^*$, and the fourth line follows from $\lambda^{*}_i \ge 0$, $g_i(x^*) \le 0, i = 1,\dots,m$, and $h_j(x^*) = 0, j=1,\dots,r$. Therefore, the two inequalities above must hold with equality.
+
+A take-away of the fact that the inequality in the third line is actually an equality is that $x^*$ minimizes $\mathcal{L}(x,\lambda,\nu)$ over $x$. Note that $\mathcal{L}(x,\lambda,\nu)$ could have other minimizers as well.
+
+The fact that the inequality in the fourth line is actually an equality means that $\sum_{i=1}^m \lambda^{*}_i g_i(x^*)=0$. Since each term in this sum is non-positive, we draw the conclusion that
+\begin{equation}\label{eq:slackness}
+    \lambda^{*}_i g_i(x^*) = 0, \quad i=1,\dots,m,
+\end{equation}
+i.e., we have complementary slackness.
+
+If we had a slack constraint with $\lambda_i > 0$ for some $i$, we could slightly improve the objective function by moving in the corresponding direction of $-\nabla f$ without violating that constraint. This would contradict the assumption that $x^*$ was already optimal. Whereas if $\lambda_i >0$, the constraint must be active (i.e., $g_i(x^*) = 0$). Consequently, examining the optimal dual variables allows us to identify which primal constraints are active at the solution.
+
+\medskip
+We assume that the functions $f$, $g_1,\dots,g_m$, $h_1, . . . , h_r$ are continuously differentiable, but not necessarily  convex (we will address the convex case later). Furthermore, let $x^*$ and $(\lambda^*, \nu^*)$ 
+be any primal and dual optimal points with zero duality gap. Since $x^*$ minimizes $\mathcal{L}(x,\lambda^*,\nu^*)$ over $x$, it follows that the gradient  $\nabla \mathcal{L}(x,\lambda^*,\nu^*)$ (with respect to $x$) vanishes at $x^*$:
+$$ \nabla f(x^*) + \sum_{i=1}^m \lambda^*_i \nabla g_i(x^*)
++ \sum_{j=1}^r \nu^*_j \nabla h_j(x^*) = 0.$$
+This provides us with the set of conditions
+\begin{align}\label{eq:kkt}
+\begin{split}
+g_i(x^*) & \le 0, \quad i=1,\dots,m  \\
+h_j(x^*) & = 0, \quad j=1,\dots,r  \\
+\lambda^{*}_i & \ge 0, \quad i=1,\dots,m \\
+\lambda^{*}_i g_i(x^*) & = 0, \quad i=1,\dots,m  \\
+\nabla f(x^*) + \sum_{i=1}^m \lambda^{*}_i \nabla g_i(x^*)  + \sum_{j=1}^r \nu^{*}_j \nabla h_j(x^*) & = 0, 
+\end{split}
+\end{align}
+called the {\em Karush-Kuhn-Tucker (KKT)} conditions.
+Here, the first two conditions ensure {\em primal feasibility} and the third condition {\em dual feasibility}. The fourth condition is the {\em complementary slackness} condition we just discussed and the fifth condition represents
+{\em Lagrangian stationarity}.
+
+
+
+
+We can summarize this insight provided by the KKT conditions in the following proposition.
+
+\begin{proposition}\label{prop:kkt1}
+For any optimization problem with continuously differentiable objective and constraint functions for which strong duality holds, any pair of primal and dual
+optimal points must satisfy the KKT conditions~\eqref{eq:kkt}.
+\end{proposition}
+
+
+
+
+We next show that when the primal problem is convex, the KKT conditions are also sufficient.
+
+\begin{theorem}\label{th:kkt2}
+Let the functions $f$, $\{g_i\}_{i=1}^m, \{h_j\}_{j=1}^r$ be continuously differentiable. If in addition $f$ and $\{g_i\}_{i=1}^m$ are convex and $\{h_j\}_{j=1}^r$ are
+affine, then the KKT conditions~\eqref{eq:kkt} are necessary and sufficient for the points $x^*, \lambda^*, \nu^*$ to be primal and dual optimal with zero optimality gap.
+\end{theorem}
+
+\begin{proof}
+The claim about necessity follows from Proposition~\ref{prop:kkt1}. Thus we only need to prove the claim about sufficiency.
+
+Note that the first three KKT
+conditions imply that $x^*$ is primal feasible, and $\lambda^*$ is dual feasible.
+Furthermore, since ${\mathcal L}(x,\lambda^*,\nu^*)$  is convex in $x$, the fifth KKT condition states
+that $x^*$ is a global minimizer of
+${\mathcal L}(x,\lambda^*,\nu^*)$, and therefore
+\begin{align*}
+ \theta(\lambda^*,\nu^*) & = \inf_{x\in \dom}  {\mathcal L}(x,\lambda^*,\nu^*)  = {\mathcal L}(x^*,\lambda^*,\nu^*) \\
+ & = f(x^*) + \sum_{i=1}^m \lambda^{*}_i g_i(x^*)
++ \sum_{j=1}^r \nu^{*}_j h_j(x^*) \\
+& = f(x^*),
+\end{align*}
+where the last equality follows from the fact that $h_i(x^*) = 0$ (from primal feasibility), and that $\lambda^{*}_i g_i(x^*)=0$ (from complementary slackness).
+This implies that the primal-dual feasible points $x^*,(\lambda^*,\nu^*)$
+are optimal, since the corresponding duality gap is zero.
+
+\end{proof}
+
+
+ 
+
+
+\subsection{The dual certificate}\label{ss:dualcertificate}
+
+In the context of Lagrangian duality and KKT conditions, the 
+concept of a {\em dual certificate}\footnote{The terminology ``certificate'' is borrowed from complexity theory and highlights an asymmetry in computational complexity: Finding the solution often requires an algorithm which may be computationally expensive; while certifying optimality of the solution usually involves simple matrix-vector multiplications or checking eigenvalues. In this context, the dual certificate is a {\em witness} of optimality.} turns out to be very useful.
+Given a convex optimization problem
+\begin{align*}
+\underset{x \in \mathcal{D}}{\operatorname{minimize}} & \qquad   f(x)  \\
+ \text{subject to} & \qquad g_i(x) \le b_i, \quad \, i = 1, \dots, m, \\
+ & \qquad h_j(x) = c_j, \quad j=1,\dots,r,
+\end{align*}
+a dual certificate for a candidate point $x^*$ is a set of dual variables $(\lambda^*, \nu^*)$ that satisfy the KKT conditions~\eqref{eq:kkt}. If the problem is convex and satisfies a constraint qualification (like Slater's condition), the existence of these variables is both necessary and sufficient for global optimality.
+
+The most critical part of the certificate is the stationarity condition
+$$\nabla f(x^*) + \sum_{i=1}^m \lambda_i^* \nabla g_i(x^*) + \sum_{j=1}^p \nu_j^* \nabla h_j(x^*) = 0$$
+Geometrically, this means the gradient of the objective function at $x^*$ must lie in the span of the gradients of the active constraints (with the additional constraint that $\lambda_i \ge 0 \enspace \forall i$). The dual variables $\lambda_i^*$ and $\nu_j^*$ act as the ``weights''  that prove the objective cannot be decreased further without violating a constraint.
+
+
+At a feasible point $x^*$, the KKT conditions can be understood
+geometrically through the normal cone of the feasible set $\mathcal{F}$ at $x^*$,
+defined as
+\begin{equation}
+    N_{\mathcal{F}}(x^*) = \left\{ d \in \mathbb{R}^n : d^\top (x - x^*) \leq 0 
+    \;\; \forall x \in \mathcal{F} \right\},
+\end{equation}
+that is, the set of all directions that make a non-positive inner product with every
+feasible direction from $x^*$. The stationarity condition requires that $-\nabla
+f(x^*) \in N_{\mathcal{F}}(x^*)$, meaning the negative gradient of the objective must
+point in a direction that is normal to the feasible set at $x^*$, so that no feasible
+descent direction exists. When $\mathcal{F}$ is described by smooth inequality
+constraints $g_i(x) \leq 0$ and equality constraints $h_j(x) = 0$, and an appropriate
+constraint qualification holds, the normal cone at $x^*$ admits an explicit
+representation,
+\begin{equation}\label{eq:normalcone}
+    N_{\mathcal{F}}(x^*) = \Big\{ \sum_{i \in \mathcal{A}} \lambda_i \nabla g_i(x^*) 
+    + \sum_j \mu_j \nabla h_j(x^*) \;:\; \lambda_i \geq 0 \Big\},
+\end{equation}
+where $\mathcal{A}$ denotes the set of active inequality constraints at $x^*$. The dual
+multipliers $\lambda_i^*$ and $\mu_j^*$ are then precisely the coefficients that
+witness membership of $-\nabla f(x^*)$ in this cone, and together they form the dual
+certificate that verifies optimality. For convex $f$ and convex $\mathcal{F}$, this
+condition is both necessary and sufficient for global optimality; in the non-convex
+setting it remains a necessary condition that any local minimum must satisfy.
+
+We illustrate the above observation via the following linear program, which for ease of visualization has no equality constraints:
+\begin{align}\label{eq:kkt_example}
+\begin{split}
+  \max_x & \quad 3x_1 + 2x_2 \\  
+  \text{s.t} & \quad g_1(x):=x_1 \le 4,\,\, g_2(x):=x_2 \le 4  \\
+  & \quad g_3(x):=x_1+x_2 \le 6 \\
+ % & \quad g_3(x):=x_2 \le 4 \\
+  & \quad g_4(x):=x_1 \ge 0, \,\, g_5(x):=x_2 \ge 0.
+\end{split}    
+\end{align}
+
+Figure~\ref{fig:kkt} is a geometric depiction of optimality for the LP in~\eqref{eq:kkt_example}. The optimal solution is  $x^* = (4,2)$, the tight
+constraints  are $g_1(x):= x_1 \le 4$ and $g_3(x):= x_1+x_2 \le 6$. 
+As the condition~\eqref{eq:normalcone} stipulates,
+$-\nabla f(x)$ is inside the cone formed by $\nabla g_1(x^*
+)$ and $\nabla g_3(x^*)$, as required for the solution $x^*$ to be optimal (in the figure the cone of tight
+constraints is depicted with its origin shifted to the point $x^*$).
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=80mm]{figures/kkt_cone_tight}
+\caption{KKT conditions and the normal cone. The tight
+constraints for $x$ are $g_1(x)= x_1 \le 4$ and $g_3(x)= x_1+x_2 \le 6$. In this example, $-\nabla f(x)$ is inside the cone formed by $\nabla g_1(x^*
+)$ and $\nabla g_3(x^*)$, thus the feasible solution $x^*=(4,2)$ is optimal in this case.}
+\label{fig:kkt}
+\end{center}
+\end{figure}
+
+
+
+\medskip
+
+
+
+\medskip
+
+Assume that the conditions of Theorem~\ref{th:kkt2} hold and that we have computed the dual solution $(\lambda^*,\nu^*)$. We can now find the solution $x^*$ to the primal problem using the stationarity condition (the fifth condition in~\eqref{eq:kkt}):
+$$\nabla_x \mathcal{L}(x^*,\lambda^*,\nu^*) = 0.$$
+Given the optimal dual variables $(\lambda^*,\nu^*)$, this is an equation in $x^*$. Solving it  gives the primal optimizer.
+The candidate $x^*$ obtained from stationarity must satisfy
+$$
+g_i(x^*) \le 0, \quad h_j(x^*)=0.
+$$
+If multiple solutions satisfy stationarity, feasibility selects the correct one.
+
+
+In some cases the KKT conditions can be solved analytically.
+Many algorithms for convex optimization are
+designed  (or can be interpreted as) as methods for solving the KKT conditions.
+
+
+
+\medskip
+
+\noindent
+\textbf{Example: Quadratically constrained quadratic program
+ (QCQP).} Consider
+\begin{align*}
+  & \text{minimize} \qquad f(x): = x^2+1 \\
+  & \, \text{subject to} \quad \,\, g(x): = (x-3)(x-4) \le 0.
+\end{align*}
+Note that the constraint means
+$$(x-3)(x-4) \le 0 \qquad \Longleftrightarrow \qquad x\in [3,4].
+$$
+%Thus, the primal feasible set is $x\in [3,4]$ and the 
+%primal optimum is at $x=3$ with value $f(3)=10$.
+
+We now compute the Lagrangian and the associated dual function:
+\begin{align*}
+\mathcal{L}(x,\lambda) & = x^2 +1 +\lambda(x^2-7x+12), \\
+\theta(\lambda) & = \inf _x \mathcal{L}(x,\lambda) = \inf_x \, \big((\lambda+1)x^2 -7\lambda x + 12 \lambda+1\big).
+\end{align*}
+Since $\mathcal{L}(x,\lambda)$ is a quadratic function of $x$, we minimize it by setting the derivative $\nabla_x \mathcal{L}(x,\lambda)$ to zero, yielding
+$$
+2(\lambda+1)x - 7\lambda = 0 \Longrightarrow x = \frac{7\lambda}{2(\lambda+1)}.
+$$
+Substituting back into $\mathcal{L}(x,\lambda)$, simplifying the resulting $\theta(\lambda)$ and using the fact that we always have $\lambda \ge 0$, the dual problem becomes 
+$$\theta(\lambda)
+= \mathcal{L}(x^*(\lambda),\lambda)
+= 12\lambda + 1 - \frac{49\lambda^2}{4(1+\lambda)}.
+$$
+This expression is finite only if the quadratic is convex in $x$, i.e.
+$$
+1+\lambda > 0.
+$$
+Since $\lambda \ge 0$, this condition is automatically satisfied.
+Hence, the dual problem is
+\begin{align*}
+  & \max_\lambda \,\,\, 12\lambda + 1 - \frac{49\lambda^2}{4(1+\lambda)} \\
+  & \, \text{s.t.} \,\,\,\,\,\,\,\, \lambda \ge 0.
+\end{align*}
+We can readily confirm that $\theta(\lambda)$ is concave (negative second derivative), which is to be expected because dual functions are always concave.
+A quick calculation yields that the unique optimal point is at $\lambda^* = 6$. At this value $\theta(6)=10 = d^*$.
+
+We can compute the optimal value $x^*$ by solving
+$\nabla_x \mathcal{L}(x^*,\lambda^*,\nu^*) = 0$, which we solved already previously. Namely, we have $x = \frac{7\lambda}{2(\lambda+1)}$, and inserting $\lambda=\lambda^*=6$ gives
+$x^*=3$ and $f(3)=10=p^*$. Thus $d^{*}=p^{*}$, confirming optimality and strong duality in this problem.
+
+
+
+
+
+\medskip
+While convex quadratically constrained quadratic programs (QCQPs), as in the example above, can be solved efficiently, their nonconvex counterparts constitute a class of particularly challenging optimization problems.
+This fact should not come unexpected, since non-convex QCQPs represent a bridge
+between continuous and discrete optimization~\cite{calafiore2014optimization} (e.g. $x^2=1$ is equivalent to $x\in\{\pm1\}$).
+
+\medskip
+
+Dual certificates also play an important role in mathematically understanding the optimal solution of a convex optimization problem, they will be key in Chapter~\ref{c:community} where it will be shown that the solution of a convex optimization is precisely one is attempt to estimate, in that case the community structure of a network. Moreover, we will make frequent use of the dual certificate in Chapter~\ref{c:cs} when we investigate compressive sensing and sparsity and Chapter~\ref{c:lowrank} when we analyze low-rank matrix recovery.
+
+
+
+
+\medskip
+\noindent
+\textbf{The dual of the dual:}
+What happens if we take the dual of the dual optimization problem? Do we get back the primal problem? The answer depends on the nature of the primal problem.
+
+For convex optimization problems satisfying a constraint qualification (e.g. Slater's condition), strong duality holds, meaning the duality gap is zero. In this case taking the dual twice does indeed returns us to the primal problem.
+
+If the primal problem is non-convex, the dual of the dual does not necessarily return the original problem. Instead, it returns a {\em convex relaxation} of the primal problem, also called the {\em convex biconjugate} or {\em biconjugate relaxation}. Specifically, the objective of the ``dual of the dual'' will be the convex envelope (the largest lower-bounding convex function) of the original primal objective and the associated feasible set  will be the convex hull of the original primal feasible set. 
+
+An interesting aspect here is that in non-convex optimization adding redundant constraints to the primal can introduce additional dual variables, thereby strengthening the dual problem and yielding a tighter convex relaxation when taking the dual of the dual. Thus in non-convex optimization, 
+an algebraically redundant constraint (one that does not change the primal feasible set) is not necessarily computationally redundant. 
+
+This is also a key idea behind the Lasserre Hierarchy (and the dual sum-of-squares perspective, which we explore in Chapter~\ref{c:community}). 
+The Lasserre hierarchy does not just add a few random redundant constraints; it systematically 
+considers all sum-of-squares weighted combinations of the original constraints up to a given degree. By ``lifting'' the problem into a higher-dimensional semidefinite program, it provides a sequence of convex relaxations that, under mild conditions, is guaranteed to converge to the global optimum.
+
+
+
+\subsection{Subdifferential and subgradient}
+\label{ss:subgradient}
+
+We will encounter important situations in which the 
+objective function $f$ is convex but not differentiable at the solution. This happens for example for $f(x)=\|x\|_1$.
+In this situation the {\em subdifferential} takes the role of the derivative.
+
+Let us recall the definition of a subdifferential.
+
+\begin{definition}
+Let $f: \mathbb{R}^n \to \mathbb{R} \cup \{+\infty\}$ be a convex function. The {\em subdifferential} of $f$ at a point $x$, denoted by $\partial f(x)$, is the set of all vectors $g \in \mathbb{R}^n$ such that for all $y \in \mathbb{R}^n$:
+$$f(y) \geq f(x) + \langle g,y - x\rangle.$$
+Each vector $g$ in $\partial f(x)$ is called a {\em subgradient}.
+\end{definition}
+
+As shown in Figure~\ref{fig:subgradient}, there can be more than one subgradient of a function $f$ at a point $x$.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=90mm]{figures/Chapter7-subgradient1}
+\caption{At the point $x_1$, the convex function $f$ is differentiable, and $g_1$ is the unique subgradient (which is also the derivative) of $f$ at $x_1$. At the point $x_2$, $f$ is not differentiable. At this point, $f$ has (infinitely) many subgradients: two subgradients, $g_2$ and $g_3$, are shown.}
+\label{fig:subgradient}
+\end{center}
+\end{figure}
+
+Thus, when the constraint functions $g_i$ (inequalities) and $h_j$ (equalities) are differentiable but the objective function $f$ is not, the stationarity condition becomes a {\em set-inclusion} problem. Instead of searching for a point where the gradient of the Lagrangian is zero, we search for a point where the {\em zero vector} is contained within the set of all possible ``slopes'' generated by the subdifferential of the objective and the gradients of the constraints.
+Therefore, in this case the stationarity condition of the KKT conditions~\eqref{eq:kkt} essentially states that there must exist a specific subgradient $s \in \partial f(x^*)$ such that
+$$
+s + \sum_{i=1}^m \lambda^{*}_i \nabla g_i(x^*)  + \sum_{j=1}^r \nu^{*}_j \nabla h_j(x^*)  = 0. 
+$$
+
+
+
+\medskip
+\noindent
+\textbf{Example: Subdifferential for the $\ell_1$-norm.}
+Let us compute the subdifferential for the function $f(x) = \|x\|_1$. Because the $\ell_1$-norm is a separable function, its subdifferential is the Cartesian product of the subdifferentials of each individual absolute value component. So, we start with the scalar case:  $f(x) = |x|$.
+For a single variable, the subdifferential $\partial |x|$ is defined by the set of slopes $g$ that satisfy the subgradient inequality: $|y| \geq |x| + g(y - x)$ for all $y$.
+If $x > 0$, the function is differentiable with slope $1$. Thus, $\partial |x| = \{1\}$.
+If $x < 0$, the function is differentiable with slope $-1$. Thus, $\partial |x| = \{-1\}$.
+If $x = 0$, we need $|y| \geq 0 + g(y - 0)$, which simplifies to $|y| \geq gy$. This holds for all $y$ if and only if $g \in [-1, 1]$.
+We conclude that the subdifferential of the absolute value is the sign function
+$$
+\partial |x| = \text{sign}(x) = 
+\begin{cases} \{1\} & x > 0 \\ \{-1\} & x < 0 \\ 
+[-1, 1] & x = 0 \end{cases}
+$$
+Therefore, for the vector case, $f(x)=\|x\|_1$, the subdifferential is the set of vectors $g$ such that:
+$$g_i = \begin{cases} \text{sign}(x_i) & \text{if } x_i \neq 0 \\ \in [-1, 1] & \text{if } x_i = 0 \end{cases}$$
+
+\medskip
+\noindent
+\textbf{Example: Subdifferential for the nuclear norm.} 
+Recall that the nuclear norm of a matrix $X\in \R^{n_1 \times n_2}$ is defined as the sum of its singular values, i.e.,
+$$\|X\|_* = \sum_{i=1}^{\min(n_1,n_2)}\sigma_i(X),$$
+where $X=U\Sigma V$ is the SVD of $X$ and the $\sigma_i$ are the diagonal entries of $\Sigma$.
+The nuclear norm plays an important role in optimization, in particular as a convex surrogate in rank minimization problems, see also Chapter~\ref{c:lowrank}. We want to compute the subdifferential of $f(X) = \|X\|_*$.
+
+We  need to identify the set of matrices $Z$ that satisfy the subgradient inequality
+$$\|Y\|_* \geq \|X\|_* + \langle Z, Y - X \rangle \qquad \forall \, Y \in \mathbb{R}^{n_1 \times n_2}.$$
+
+
+Recall that the nuclear norm and the spectral norm are dual to each other. By the definition of the dual norm
+$$\|X\|_* = \sup_{\|Y\|\le 1} \langle Y, X \rangle.$$
+From the definition of a subgradient $Z \in \partial f(X)$, it follows that $X$ must satisfy
+\begin{enumerate}
+\item $\|Z\| \leq 1$ \quad (Membership in the dual unit ball)
+\item $\langle Z, X \rangle = \|X\|_*$ \quad (Equality in the dual characterization)
+\end{enumerate}
+
+
+Let the SVD of $X$ be $X = U \Sigma V^T$, where $U \in \mathbb{R}^{n_1 \times r}$, $V \in \mathbb{R}^{n_2 \times r}$, and $\Sigma$ is an $r \times r$ diagonal matrix with strictly positive singular values.
+We define the tangent space $\Tn$ at $X$ relative to the manifold of rank-$r$ matrices as
+$$\Tn = \{ U A^T + B V^T : A \in \mathbb{R}^{n \times r}, B \in \mathbb{R}^{m \times r} \}.$$
+The orthogonal complement $\Tn^{\perp}$ consists of matrices whose rows are orthogonal to $V$ and columns are orthogonal to $U$
+$$\Tn^{\perp} = \{ W : U^T W = 0, W V = 0 \}.$$
+Any matrix $Z$ can be decomposed as
+$$Z = P_\Tn(Z) + P_{\Tn^\perp}(Z).$$
+
+We require $\langle Z, X \rangle = \|X\|_*$. Substituting the SVD
+$$\langle Z, U \Sigma V^T \rangle = \text{tr}(Z^T U \Sigma V^T) = \text{tr}(V^T Z^T U \Sigma) =  \sum_{i=1}^r (U^T Z V)_{ii} \sigma_i.$$
+For this sum to equal $\sum \sigma_i$ (given $\|Z\| \leq 1$), we must have $(U^T Z V)_{ii} = 1$ for all $i$. In fact, the only way to satisfy $\|Z\| \leq 1$ and achieve this inner product is if
+$$P_T(Z) = UV^T.$$
+
+Now consider the component $W = P_{\Tn^\perp}(Z)$. For $Z$ to be a valid subgradient, the operator norm $\|Z\|$ must not exceed 1. Since $UV^T$ and $W$ have orthogonal row and column spaces (by the definition of $\Tn^\perp$):
+$$\|Z\| = \|UV^T + W\| = \max(\|UV^T\|, \|W\|)$$
+Because $\|UV^T\| = 1$, we must ensure that $\|W\| \leq 1$.
+Furthermore, the orthogonality conditions for $W \in \Tn^\perp$ are
+$$U^T W = 0 \quad \text{and} \quad WV = 0$$
+Combining these requirements yields that the subdifferential has the form
+\begin{equation}\label{eq:nuclearsubdifferential}
+\partial \|X\|_* = \{ UV^T + W : U^T W = 0, WV = 0, \|W\| \leq 1 \}.
+\end{equation}
+
+
+ 
+
+
+\section{Gradient-based methods and convergence} 
+\label{s:grad}
+
+
+
+
+
+{\em Gradient descent} is an iterative optimization algorithm used to minimize a differentiable function by moving in the direction of the {\em steepest descent}\,\footnote{Therefore gradient descent is also called the method of steepest descent in numerical analysis.}, as defined by the negative of the gradient. The gradient of a function at a point gives the direction of the steepest ascent. Therefore, to minimize the function, the gradient descent algorithm updates the parameters iteratively by moving in the opposite direction of the gradient
+\begin{equation}
+x_{k+1} = x_{k} - \eta \nabla_{\! x} \, f(x_k),  \qquad k=0,1,,\dots,
+\label{gradientdescent}
+\end{equation}
+where $x_{0}$ is some initial guess and $\eta $ is the {\em step size} or {\em learning rate}.
+
+Typical choices for the initial guess are the zero vector or some random initialization.
+The step size may be chosen constant, decaying, or adaptively. A step size that is too large might overshoot the minimum, while a step size that is too small may result
+in poor convergence.
+
+In this section we will discuss gradient descent methods and their convergence, focusing on unconstrained optimization problems. We will start with guarantees of converge of gradients for $L$-smooth functions in Section~\ref{s:gd:Lsmoothfunctions}; in Section~\ref{s:gd:convexLsmooth} we upgrade the conditions to include convexity of the function to be optimized and show convergence of function values to the minimum value; we then introduce the  \PLC to show converge of the iterates themselves to the minimizer in Section~\ref{s:gd:PolyakLojasiewicz}. 
+
+%Labels for subsections:
+%\ref{s:gd:Lsmoothfunctions}
+%\ref{s:gd:convexLsmooth}
+%\ref{s:gd:PolyakLojasiewicz}
+%\ref{s:gd:nonconvex}
+%\ref{s:gd:nesterovaccelation}
+%\ref{s:gd:subgradient}
+%\ref{s:gd:stochasticGD}
+
+\subsection{Gradient descent for $L$-smooth functions}\label{s:gd:Lsmoothfunctions}
+
+
+
+
+We recall a useful notion of regularity that quantifies how much a function changes, such that its gradient 
+provides a reliable local linear approximation, and which in turn will enable us to quantify the rate of convergence of gradient descent.
+
+\begin{definition}\label{Lipschitz}
+    The gradient of a function $f : \mathbb{R}^d \to \mathbb{R}$ is {\em $L$-Lipschitz continuous}  if there exists a constant $L > 0$ such that
+\begin{equation}
+    \label{def:Lipschitz}
+\|\nabla f(x) - \nabla f(y)\| \le L \|x - y\|, \quad \forall x,y \in \mathbb{R}^d.
+\end{equation}
+\end{definition}
+
+
+It is not difficult to see (and left as an exercise) that the $L$-Lipschitz condition is equivalent to the notion of $L$-smoothness often used in the literature in connection with gradient descent.
+
+\begin{definition}\label{def:Lsmooth}
+ A function $f : \mathbb{R}^d \to \mathbb{R}$  is called {\em $L$-smooth} if there exists a constant $L > 0$ such that
+\begin{align} \label{quadraticbound}
+\begin{split}
+f(y) & \le f(x) + \langle \nabla f(x) ,y - x \rangle  + \frac{L}{2} \|x - y\|^2 \quad \forall x,y \in \mathbb{R}^d, \\
+f(y) & \ge f(x) + \langle \nabla f(x) ,y - x \rangle  - \frac{L}{2} \|x - y\|^2 \quad \forall x,y \in \mathbb{R}^d.
+\end{split}
+\end{align}
+\end{definition}
+In other words, $f$ is bounded above and below by a quadratic function that touches its graph at each point $x$, see also Figure~\ref{fig:plotsmooth}.
+
+
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[width=.7\textwidth]{figures/Chapter7-plotsmooth}
+    \caption{A convex and $L$-smooth function}
+    \label{fig:plotsmooth}
+\end{center}
+\end{figure}
+
+
+
+We can use $L$-smoothness to quantify the improvement of one
+step of the gradient descent algorithm. The resulting 
+statement is often referred to as the {\em gradient descent lemma}.
+
+\begin{lemma}[Gradient Descent Lemma]\label{le:descentlemma}
+ Asssume that $f: \R^d \to \R$ is $L$-smooth. Then for any stepsize $\eta$ with $0 < \eta \le \frac{1}{L} $ each step of gradient descent~\eqref{gradientdescent} satisfies
+\begin{equation}\label{eq:descentlemma}
+f(x_{k+1}) \le f(x_k) - \frac{\eta}{2}\|\nabla f(x_k)\|^2.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+We apply~\eqref{quadraticbound} with $x=x_k$ and $y=x_{k+1}$:
+\begin{equation}
+   \label{descent1} 
+f(x_{k+1}) \le f(x_k) + \langle \nabla f(x_k),  x_{k+1} - x_k \rangle + \frac{L}{2}\|x_{k+1} - x_k\|^2.
+ \end{equation}
+ Substituting the gradient descent formula $x^{(k+1)} = x^{(k)} - \eta \nabla f(x^{(k)})$ into~\eqref{descent1}
+ gives
+ \begin{align*}
+     f(x_{k+1}) & \le f(x_k)  - \frac{\eta}{2}\|\nabla f(x_k)\|^2 + \frac{L}{2}\|x_{k+1} - x_k\|^2 \\
+     & = f(x_k)  - \eta \big( 1 - \frac{L}{2} \eta \big) \|\nabla f(x_k)\|^2.
+ \end{align*}
+ The assumption  $\eta \le \frac{1}{L}$ implies that $1 - \frac{L}{2} \eta \ge \frac{1}{2}$,
+ and the proof is complete.
+ 
+\end{proof}
+This suggests that, for $L$-smooth functions, a natural choice for the stepsize is $\eta = \frac{1}{L}.$
+
+If $f$ is lower bounded, the gradient descent lemma also implies that the gradients
+of the iterates $x_k$ must eventually become small: indeed, if $\frac{\eta}{2}\|\nabla f(x_k)\|^2$ stayed non-negligible over many iterates, then~\eqref{eq:descentlemma} would force the function of the values of the iterates to be arbitrarily small, which cannot happen for functions that are bounded below. This will be discussed in Section~\ref{s:gd:nonconvex} (see Theorem~\ref{th:stationary}). Note however that we have not yet assumed convexity of $f$ and, without
+%Note that we did not assume convexity of $f$ and without % in Proposition~\ref{prop:descent}. However, without 
+assuming convexity (or other suitable regularity conditions), guarantees of small gradients may be of limited use, because they do not necessarily imply that the associated function value is close to optimal.  To see this, consider for example the function $f(x) = \eps \log(1+e^x)$. The gradient of $f$ satisfies $\nabla f \le \eps$ for all $x \in \R^d$. Hence, $x$ could be arbitrarily far away from the optimum, while the associated gradient is nevertheless small. 
+
+\subsection{Gradient descent for convex $L$-smooth functions}\label{s:gd:convexLsmooth}
+
+With convexity we will be able to guarantee convergence of function values. To that end we first introduce a useful tool, the {\em Euclidean mirror descent lemma}.
+
+\begin{lemma}[Euclidean Mirror Descent Lemma]\label{euclideandescentlemma}
+Let $f: \R^d \to \R$ be a differentiable and convex function. Then, for any choice of stepsize $\eta$ and any two consecutive iterates $x_k, x_{k+1}$ produced by gradient descent~\eqref{gradientdescent} it holds that
+\begin{equation}\label{eq:mirror1}
+f(x_k) \le f(y) + \frac{1}{2\eta} \Big( \|y-x_k\|^2 - \|y-x_{k+1}\|^2  + \|x_{k+1} - x_k\|^2 \Big), \qquad \forall y \in \R^d.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+An easy calculation shows that
+\begin{equation}
+    \label{eq:mirror2}
+\langle x_k - x_{k+1}, y - x_k \rangle = - \frac{1}{2}\Big( \|y-x_k\|^2 - \|y-x_{k+1}\|^2  + \|x_{k+1} - x_k\|^2 \Big).
+\end{equation}
+Since $f$ is convex, we can employ the bound~\eqref{def:geomconvex} and obtain that for any $y \in \R^d$,
+\begin{equation}
+    \label{eq:mirror3}
+f(y) \ge f(x_k) + \langle \nabla f(x_k) , y - x_k \rangle.
+\end{equation}
+Substituting the gradient descent iteration rule $x_{k+1} = x_k - \eta \nabla f(x_k)$ in~\eqref{eq:mirror3} we obtain
+\begin{equation}
+    \label{eq:mirror4}
+f(y) \ge f(x_k) + \frac{1}{\eta} \langle x_k - x_{k+1} , y - x_k \rangle.
+\end{equation}
+Using~\eqref{eq:mirror2}, and rearranging terms gives
+$$
+f(x_k) \le f(y) + \frac{1}{2\eta} \Big( \|y-x_k\|^2 - \|y-x_{k+1}\|^2  + \|x_{k+1} - x_k\|^2 \Big),
+$$
+which is what we wanted to prove. 
+\end{proof}
+We will now use the Euclidean mirror descent lemma  to obtain a convergence rate
+in terms of the objective function value.
+
+\begin{theorem}\label{th:gradconv1}
+Let $f : \mathbb{R}^d \to \mathbb{R}$ be convex with $L$-Lipschitz continuous gradient, and let $x^* \in \arg\min_x f(x)$. 
+Assume we apply gradient descent with constant step size $ 0 < \eta\le  \frac{1}{L}$. 
+Then, for all $k \ge 1$,
+$$
+f(x_k) - f(x^*) \le \frac{\|x_0 - x^*\|^2}{2k\eta}.
+$$
+Hence, the error in function value decreases at rate ${\mathcal O}(1/k)$.
+\end{theorem}
+
+\begin{proof}
+Since $x_{k+1} - x_k = \eta \nabla f(x_k)$ by definition of the gradient descent algorithm, we can rewrite the bound~\eqref{eq:mirror1} as
+\begin{equation}\label{eq:mirror5}
+f(x_k) \le f(y) + \frac{1}{2\eta} \Big( \|y-x_k\|^2 - \|y-x_{k+1}\|^2  + \|\eta \nabla f(x_k)\|^2 \Big), \qquad \forall y \in \R^d.
+\end{equation}
+We apply Lemma~\ref{le:descentlemma} and get
+\begin{equation}
+    \label{eq:mirror6}
+\frac{\eta}{2} \|\nabla f(x_k)\|^2 \le 
+f(x_{k}) - f(x_{k+1}).
+\end{equation}
+Plugging~\eqref{eq:mirror6} into~\eqref{eq:mirror5} yields
+\begin{equation}\label{eq:mirror7}
+f(x_{k+1}) \le f(y) + \frac{1}{2\eta} \Big( \|y-x_k\|^2 - \|y-x_{k+1}\|^2 \Big), \qquad \forall y \in \R^d.
+\end{equation}
+In particular, setting $y=x^{*}$ gives
+\begin{equation}\label{eq:mirror7}
+f(x_{k+1}) \le f(x^*) + \frac{1}{2\eta} \Big( \|x^*-x_k\|^2 - \|x^*-x_{k+1}\|^2 \Big),
+\end{equation}
+whenever $\eta \le \frac{1}{L}$. By summing over $k=0,\dots,K-1$ and telescoping over the iterations, we obtain
+\begin{equation}\label{eq:mirror8}
+\sum_{k=0}^{K-1} f(x_{k+1}) \le K f(x^*) + \frac{1}{2\eta}  \|x^*-x_0\|^2.
+\end{equation}
+Lemma~\ref{le:descentlemma} implies that $f(x_k)$ is non-increasing in $k$, which implies that $\sum_{k=0}^{K-1} f(x_{k+1}) \le K f(x^K)$. Therefore,
+$
+K f(x_K) \le K f(x^*) + \frac{1}{2\eta}  \|x^*-x_0\|^2,
+$
+from which we conclude
+$
+f(x_K) - f(x^*) \le \frac{1}{2K\eta}  \|x^*-x_0\|^2$. 
+
+\end{proof}
+
+\subsection{Iterate convergence of gradient descent for strongly convex functions}\label{s:gd:PolyakLojasiewicz}
+
+Can we improve Theorem~\ref{th:gradconv1} to obtain a statement
+ at the level of the iterates, and not just at the level of the function values? I.e., can we obtain a result stating that $\|x_k - x^*\|$
+ decreases at rate ${\OOO}(1/k)$?  Alas, without further assumptions this is not possible. As Nesterov has shown (see Theorem 2.1.7 in~\cite{nesterov2018lectures}), there exist convex $L$-smooth functions for which convergence via gradient descent to the optimal point may be arbitrarily slow.
+
+
+
+
+
+One standard way to obtain the desired convergence rate bound at the level of the iterates $x_k$ is by assuming  in addition that $f$ is strongly convex. Here, we take a slightly different approach by using a weaker assumption, namely the so-called {\em \PL condition}, introduced independently by Polyak~\cite{Pol63} and \L ojasiewicz~\cite{Loj63}.
+
+\begin{definition}[\PLC]\label{PL condition}
+A lower-bounded function $f: \R^d \to \R$ satisfies the \PL\ condition if there exists $\mu > 0$ such that
+$$
+\frac{1}{2} \|\nabla f(x) \|^2 \ge \mu (f(x) - \finf), \qquad \forall x \in \R^d.
+$$
+\end{definition}
+
+We leave it as an exercise to show that strong convexity implies the \PL\ condition. However, the reverse is in general not true. Take for example the constant function $f(x)=c$ for some constant $c \in \R$, which trivially satisfies the \PL\ condition, but is clearly not strongly convex. In fact, the \PL\ condition does not even imply convexity. As case in point, consider the function $f(x) = x^2 + 3\sin^2(x)$, which is obviously not convex, but can be shown to satisfy the \PL\ condition (with $\mu = \frac{1}{32}$), see~\cite{karimi2016linear}.
+
+
+We need the following lemma in order to establish the sought-after convergence rate bound on the iterates.
+
+
+\begin{lemma}
+   \label{le:PL} 
+Let $f: \R^d \to \R$ be an $L$-smooth function which is lower-bounded by $\finf$ and which satisfies the \PL\ condition for some constant $\mu > 0$. Let the stepsize be given by $\eta = \frac{1}{L}$. Then, the $k$-th iterate $x_k$ of gradient descent satisfies
+\begin{equation}
+f(x_k) - f(x^*) \le \Big(1 - \frac{\mu}{L} \Big)^k (f(x_0) - \finf).
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Using the gradient descent lemma (Lemma~\ref{le:descentlemma}) (for $\eta = \frac{1}{L}$) and the \PL\  condition, we have
+\begin{align*}
+f(x_{k+1}) & \le f(x_k) - \frac{1}{2L} \| \nabla f(x_k)\|^2 \\
+& \le f(x_k) - \frac{\mu}{2L} (f(x_k) - \finf) \\
+& \le \Big(1-\frac{\mu}{L}\Big) f(x_k) + \frac{\mu}{L} \finf.
+\end{align*}
+Subtracting $\finf$ on both sides gives
+$$
+f(x_{k+1}) -  \finf \le \Big(1-\frac{\mu}{L}\Big) \big( f(x_k) - \finf \big).
+$$
+Solving the recurrence completes the proof.
+    
+\end{proof}
+
+We are now ready to show that  a function that satisfies the \PLC\ must attain a minimum and
+that the iterates produced by gradient descent converge at a rate exponential in $k$.
+
+
+\begin{theorem}\label{th:PLCbound}
+Let $f: \R^d \to \R$ be an $L$-smooth function which is lower-bounded by $\finf$ and which satisfies the \PLC\ for some constant $\mu > 0$. Let the stepsize $\eta$ satisfy $0 < \eta \le \frac{1}{L}$. Then, the sequence of iterates $x_k$ produced by gradient descent converges to some point $x^* \in \R^d$, with
+\begin{equation}\label{eq:mirror7}
+\|x_{k+1} - x^*\|^2 \le \frac{8 \eta L^2}{\mu^2}  
+\Big(1-\frac{\mu}{L}\Big)^k \big( f(x_0) - \finf \big).
+\end{equation}
+Moreover, 
+$\lim_{k \to \infty} f(x_k) = f(x^*) = \finf$.
+\end{theorem}
+
+\begin{proof}
+For any $k=0,1,2,\dots$, we have
+\begin{align*}
+\|x_{k+1} - x_k \|^2 & = \eta^2 \|\nabla f(x_k)\|^2 \\
+& \le 2 \eta \big(f(x_k) - f(x_{k+1})\big) \\
+& \le 2 \eta \big(f(x_k) - f(x^*)\big) \\
+& \le 2 \eta \Big(1-\frac{\mu}{L}\Big)^k \big( f(x_0) - \finf \big),
+\end{align*}
+where the second line follows from Lemma~\ref{le:descentlemma}
+and the fourth line from Lemma~\ref{le:PL}. 
+
+For convenience, we denote $q:=\Big(1-\frac{\mu}{L}\Big)$.
+For any $m < n$,
+\begin{align*}
+\|x_m - x_n\| & \le \sum_{k=m}^{n-1}\|x_k - x_{k+1}\| \\
+              & \le \sqrt{2\eta(f(x_0) - \finf)} \cdot \sum_{k=m}^{n-1} \sqrt{q}^k \\
+              & \le \sqrt{2\eta(f(x_0) - \finf)} \cdot \frac{\sqrt{q}^m}{1-\sqrt{q}},
+\end{align*}
+where the use of the geometric series formula is justified since  $0 \le q < 1$.
+Therefore, $\|x_m - x_n\| \to 0$ as $m,n\to \infty$, which establishes that $\{x_k\}$ is a Cauchy sequence. Since $\R^d$ is complete, 
+$x_k$ converges to some $x^* \in \R^d$. Now, we set $m=k$, let $n \to \infty$ and obtain
+$$
+\|x_k - x^*\| \le \sqrt{2\eta(f(x_0) - \finf)} \cdot \frac{\sqrt{q}^m}{1-\sqrt{q}}.
+$$
+Squaring both sides gives
+\begin{align}
+\|x_k - x^*\|^2 & \le 2\eta(f(x_0) - \finf) \cdot \frac{q^m}{(1-\sqrt{q})^2} \notag \\
+& \le 8\eta(f(x_0) - \finf) \cdot \frac{q^m}{q(1-q)^2}, \label{eq:mirror8}
+\end{align}
+where the last line follows from the fact that 
+$\frac{1}{(1-\sqrt{q})^2} \le \frac{4}{q(1-q)^2}$.
+Substituting back the definition of $q$ in~\eqref{eq:mirror8} yields the claimed bound in~\eqref{eq:mirror8}.
+
+\end{proof}
+
+Note that Theorem~\ref{th:PLCbound} does not guarantee that the solution $x^*$ is the {\em unique} minimizer, since
+the \PLC \ is not strong enough for that.
+Now, if $f$ is instead $\mu$-strongly convex (in addition to being $L$-smooth), then $x^*$ is indeed the {\em unique} minimizer and we can  tighten the convergence bound in~\eqref{eq:mirror7} (see e.g.~\cite{nesterov2018lectures}) as follows:
+\begin{equation}\label{eq:linearconvergenceGDstronglyconvex}
+\|x_{k} - x^*\|^2 \le   
+\Big(1-\frac{\mu}{L}\Big)^k \|x_{0} - x^*\|^2.
+\end{equation}
+
+\begin{remark}
+    Sequences of iterates $\{x_k\}_{k=0}^\infty$ that converge satisfying
+    $$
+\frac{\|x_{k+1} - x^*\|}{{\|x_{k} - x^*\|}} \le C
+    $$
+ for some constant $C$ are said to {\em converge linearly}, since the number of digits of precision increases linearly with iterations\footnote{This rate is sometimes also referred to as exponential convergence, because of the exponential decay with respect to the iteration count.}. Note that a convergence satisfying~\eqref{eq:linearconvergenceGDstronglyconvex} corresponds to linear convergence with $C = \sqrt{1-\frac{\mu}{L}}$.
+
+ Some second-order methods, such as Newton's method that involves Hessians, often converge quadratically in the sense
+ that the error at each iteration is approximately proportional to the square of the error at the previous iteration, 
+ which in practice means that once the algorithm is close to the solution, the number of correct digits of precision roughly doubles with each iteration. The caveat is that these second-order methods come with much higher computational cost per iteration due to forming and inverting the Hessian.
+\end{remark}
+
+
+\subsection{Gradient descent in non-convex optimization}\label{s:gd:nonconvex}
+
+
+
+
+We now turn to the behavior of gradient descent when the objective function $f:\mathbb{R}^d \to \mathbb{R}$ is {\em not convex}. In this regime, the global convergence guarantees of the convex case no longer hold, since a nonconvex function may have multiple local extrema and saddle points. 
+This is typically the case for cost functions employed in deep learning. 
+
+In principle, we did already briefly dive into the non-convex setting in the previous section when exploring the \PLC. However, this assumption is still quite strong and often not fulfilled for optimization problems arising in data science.
+So, what are minimal assumptions we can build on in the non-convex setting that still give meaningful convergence statements about the stationarity of the iterates?
+
+When a problem fails to be convex, some of our ideas, theorems, and methods may still apply ``locally''. One way to do this is by focusing on ``critical points''.
+Recall that a stationary point is a point where the gradient of a function vanishes. A first-order stationary point satisfies $\nabla f(x^\ast) = 0$, meaning the function is ``locally flat'', although it may correspond to a minimum, maximum, or saddle point.  
+
+We again consider the gradient descent iteration
+$$
+x_{k+1} = x_k - \eta \nabla f(x_k),
+$$
+for a differentiable (possibly non-convex) function $f$.
+We make the following two standard assumptions: 
+
+\smallskip
+\noindent
+(A1) $f$ has an $L$-Lipschitz continuous gradient (is $L$-smooth). 
+
+\smallskip
+\noindent
+(A2) $f$ is bounded below:
+$f(x) \ge f_{\inf} > -\infty, \, \forall x\in\mathbb{R}^d$, where $f_{\inf}:= \inf_{x} f(x)$.
+
+\smallskip
+These assumptions are mild and are (locally) satisfied by many neural network loss functions in practice.
+
+
+By the gradient descent Lemma (Lemma~\ref{le:descentlemma}) we have for any step size $0 < \eta \le 1/L$:
+\begin{equation}
+\label{descentlemma2}    
+f(x_{k+1}) \le f(x_k) - \frac{\eta}{2}\|\nabla f(x_k)\|^2.
+\end{equation}
+This inequality holds regardless of convexity.
+It shows that, as long as the step size is not too large, each iteration monotonically decreases the objective (unless $\nabla f(x_k)=0)$.
+
+
+We can now establish convergence to stationary points.
+
+\begin{theorem}\label{th:stationary}
+Suppose that $f$ satisfies assumptions (A1) and (A2), and that gradient descent uses a constant step size $0 < \eta \le 1/L$.
+Then:   
+\begin{itemize}
+\item[(a)]  The sequence $\{f(x_k)\}_{k=1}^{\infty}$ is nonincreasing and convergent. 
+\item[(b)] The gradients vanish asymptotically:
+   $$
+   \lim_{k \to \infty} \|\nabla f(x_k)\| = 0.
+   $$
+\item[(c)] Every limit point of $(x_k)$ is a first-order stationary point of $f$.
+\end{itemize}
+
+\end{theorem}
+
+\begin{proof}
+Using assumption (A1), we can apply~\eqref{descentlemma2} and obtain
+$$
+f(x_k) - f(x_{k+1}) \ge \frac{\eta}{2}\|\nabla f(x_k)\|^2.
+$$
+Summing over $k=0,\dots,K-1$ and employing assumption (A2) gives
+$$
+\frac{\eta}{2}\sum_{k=0}^{K-1}\|\nabla f(x_k)\|^2
+\le f(x_0) - f(x_K)
+\le f(x_0) - f_{\inf}.
+$$
+Thus the sum of gradient norms squared is finite:
+$$
+\sum_{k=0}^{\infty} \|\nabla f(x_k)\|^2 < \infty.
+$$
+In particular, $\|\nabla f(x_k)\| \to 0$ as $k \to \infty$.
+Monotone bounded sequences $\{f(x_k)\}$ converge; and by continuity of $\nabla f$, any accumulation point of $\{x_k\}$ must satisfy $\nabla f(x_\infty)=0.$  
+\end{proof}
+
+
+
+The above theorem guarantees convergence to a point where $\nabla f(x)=0$, but not necessarily to a local minimum/maximum.
+However, for a number of high-dimensional problems (notably in deep learning), the set of strict saddle points is of measure zero under certain conditions~\cite{lee2016gradient,panageas2017,sun2018geometric}.
+Thus, in practice, gradient descent (especially with stochastic perturbations and careful parameter tuning) frequently avoids saddle points and converges to local minima.
+This seems to play a role in the practical success of gradient-based optimization in deep learning.
+
+\medskip
+The proper choice of the stepsize  plays a key role for the performance of gradient descent. We have seen that in the convex setting, a fixed stepsize (which must be sufficiently small to respect the Lipschitz constant), suffices. Although recent work has shown that improvements can be gained in the convex setting from variable stepsizes, see e.g.~\cite{altschuler2024acceleration}.
+Conversely, in non-convex landscapes, the step size functions as a ``tool for exploration''. While a small step size is necessary for fine-tuning near a solution, a larger or more dynamic step size is often required to provide the ``numerical momentum'' needed to escape shallow local minima and navigate past stagnant saddle points. 
+
+
+
+
+\subsection{Gradient descent with momentum and Nesterov acceleration}\label{s:gd:nesterovaccelation}
+
+
+
+We previously mentioned that vanilla gradient descent can converge slowly, particularly in ill-conditioned problems where the objective function exhibits steep curvature in some directions and shallow curvature in others. In such cases, the algorithm may oscillate across narrow valleys while making little progress toward the optimum.
+
+
+Momentum methods address this limitation by introducing a velocity variable that accumulates gradient information across iterations~\cite{polyak1964some}. Rather than moving solely in the direction of the current gradient, the update incorporates a running average of past gradients, thereby smoothing the optimization trajectory and accelerating convergence along consistent descent directions.
+
+The classical momentum method updates the velocity $v_k$ and parameters $x_k$ as
+\begin{align*}
+v_{k+1} &= \mu v_k - \eta \nabla f(x_k), \\
+x_{k+1} &= x_k + v_{k+1},
+\end{align*}
+where $\mu \in [0,1)$ is the momentum coefficient. Intuitively, the velocity acts as an exponentially decaying memory of past gradients. When successive gradients point in similar directions, their contributions reinforce one another, leading to larger effective steps. Conversely, oscillations in directions of high curvature are damped, improving stability.
+
+Nesterov Accelerated Gradient (NAG)~\cite{nesterov1983method}---often referred to as Nesterov momentum---is a ``look-ahead'' modification designed to correct this behavior. Standard momentum is known in mathematical optimization as the ``Heavy Ball'' method: Think of a heavy ball rolling down a hill. It gains speed based on the current slope and its previous velocity. However, it does not know it should slow down until it has already started climbing the opposite side of the valley.
+
+Nesterov momentum refines the momentum approach by computing the gradient at a {\em look-ahead} position rather than at the current parameters. Instead of evaluating $\nabla f(x_k)$, Nesterov momentum evaluates the gradient at the anticipated future position $x_k + \mu v_k$.
+
+The update equations become
+\begin{align*}
+v_{k+1} &= \mu v_k - \eta \nabla f(x_k + \mu v_k), \\
+x_{k+1} &= x_k + v_{k+1}.
+\end{align*}
+
+As a result, Nesterov momentum tends to reduce overshooting and often reaches the global minimum in fewer iterations (and the cost per iteration increases only slightly) compared to vanilla gradient descent, as illustrated in Figure~\ref{fig:nestorov}.
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.8\textwidth]{figures/Chapter7-gradient_momentum2}
+    \caption{Convergence behavior of standard gradient descent and gradient descent with Nestorov momentum.  The convergence path of gradient descent is shows as blue dashed line, while the one of gradient descent with Nestorov momentum as red solid line. The level sets illustrate the contour of the optimization landscape. The solution at point (1,1) is depicted as black dot.}
+    \label{fig:nestorov}
+\end{center}
+\end{figure}
+
+
+From a theoretical perspective, Nesterov’s method achieves an improved convergence rate for convex optimization problems. We have seen that for smooth convex functions, standard gradient descent converges (in function values) at a rate of ${\mathcal O}(1/k)$ (see Theorem~\ref{th:gradconv1}). In comparison,  Nesterov momentum achieves a rate of ${\mathcal O}(1/k^2)$ under appropriate conditions. This improvement is significant and has made Nesterov momentum an  cornerstone of modern optimization, particularly in large-scale data science and machine learning problems.
+
+
+
+
+In practice, momentum coefficients are commonly set in the range $\mu \in [0.9, 0.99]$, while the learning rate $\eta$ must still be tuned to the problem at hand. Nesterov momentum often yields faster and more stable convergence than classical momentum with minimal additional computational cost, as it requires only one gradient evaluation per iteration.
+
+Both momentum and Nesterov acceleration are foundational ideas that underpin more advanced adaptive optimization algorithms,  such as Adam~\cite{kingma2014adam} or AdaGrad~\cite{duchi2011adaptive} which are often used in  high-dimensional, non-convex settings.
+
+\subsection{Subgradient descent}\label{s:gd:subgradient}
+
+Subgradient descent is the most straightforward extension of gradient descent to non-smooth functions, such as the $\ell_1$-penalty used in compressive sensing (see Chapter~\ref{c:cs}) or the nuclear norm in low-rank matrix recovery (see Chapter~\ref{c:lowrank}).
+
+The idea is straightforward: Replace the gradient $\nabla f(x)$ with any subgradient $g \in \partial f(x)$.
+But because the subgradient does not necessarily point in a descent direction, the objective value can fluctuate  during iterations. This often results in rather slow convergence. For a general convex function, the converges  rate is $\OOO(1/\sqrt{k})$, which means one needs $\OOO(1/\epsilon^2)$ iterations to reach an accuracy of $\epsilon$.
+
+For example, when used in connection with the sparsity-promoting $\ell_1$-penalty, subgradient descent rarely produces exactly sparse iterates during the process; sparsity emerges only asymptotically. That is, coefficients will be very small but not exactly zero. Therefore, other methods such as proximal methods or Riemannian manifold optimization (see~Section~\ref{s:nonconvexmodels} for both) are usually preferable in practice.
+
+
+\subsection{Stochastic gradient descent}\label{s:gd:stochasticGD}
+
+
+
+
+Stochastic Gradient Descent (SGD) is a variant of gradient descent that updates the parameters using a randomly selected subset of data points (often just a single data point) instead of the entire dataset. This makes SGD more computationally efficient and allows it to escape local minima more easily. Note, however, that even for very small $\eta$, the update~\eqref{gradientdescent} is no longer guaranteed to reduce the value of the loss function. After all, we have traded
+the mean for one sample. Hence, as Higham and Higham~\cite{higham2019deep} point out, the term ``stochastic gradient descent'' is a bit of a misnomer, and it would be more correct to call it just ``stochastic gradient''. Alas, we will be more sloppy than~\cite{higham2019deep} and will keep using the term stochastic gradient descent.
+
+In the standard gradient descent algorithm, the gradient is computed as
+$$
+\nabla_x f(x) = \frac{1}{n} \sum_{i=1}^{n} \nabla_x f_i(x),
+$$
+where $f_i(x)$ represents the error at the $ i $-th data point.
+
+In contrast, SGD updates the parameters using the gradient computed from a single randomly selected data point $ (x_i, y_i) $:
+$$
+x^{(k+1)} = x^{(k)} - \eta \nabla_x f_i(x^{(k)}).
+$$
+Here, the gradient is an unbiased estimate of the true gradient, which introduces noise into the optimization process. 
+The noise introduced by stochastic sampling in SGD can have both positive and negative effects. On the one hand, noise can help the algorithm escape local minima by introducing random perturbations to the parameters. On the other hand, excessive noise can hinder convergence and lead to suboptimal solutions.
+
+
+
+\subsubsection{Stochastic gradient descent and the Randomized Kaczmarz method}\label{ss:kaczmarz}
+
+We can gain some valuable insight into the rate of convergence of SGD in the linear setting by exploiting a useful connection to the randomized Kaczmarz method~\cite{SV06}. Indeed, for linear systems, SGD is essentially equivalent to  randomized Kaczmarz, as we will demonstrate below. 
+
+Consider a (possibly overdetermined) system of linear equations 
+\begin{equation}\label{kaczmarzsystem}
+    Ax=b,
+\end{equation}
+where $A \in \mathbb{R}^{m \times n}$ and $b \in \mathbb{R}^m$. We write the rows of $A$ as $a_1^T,\dots,a_m^T$, so the system is
+$$
+a_i^T x = b_i, \quad i=1,\dots,m.
+$$
+
+The Kaczmarz method~\cite{karczmarz1937} iteratively projects the current iterate onto the solution hyperplane of one equation
+$$
+x^{k+1}
+= x^k + \frac{b_i - \langle a_i, x^k \rangle}{\|a_i\|^2} a_i,
+$$
+where the row index $i$ is chosen cyclically or deterministically.
+Geometrically, each step is an orthogonal projection onto the hyperplane
+$H_i = \{x : \langle a_i, x\rangle = b_i\}$.
+
+The randomized Kaczmarz method selects the row index $i$ at random, with probability
+\begin{equation}
+\label{eq:importancesampling}   
+\mathbb{P}(i = j) = \frac{\|a_j\|^2}{\|A\|_F^2},
+\end{equation}
+where $\|A\|_F^2 = \sum_{j=1}^m \|a_j\|^2$.
+
+The update is
+$$
+x^{k+1} = x^k + \frac{b_i - \langle a_i, x^k\rangle}{\|a_i\|^2} a_i.
+$$
+
+
+
+Now, let us consider the same problem as a least-squares minimization task. We want to minimize the objective function
+$$f(x) = \frac{1}{2} \|Ax - b\|^2 = \sum_{i=1}^m \frac{1}{2} (\langle a_i,x\rangle - b_i)^2.$$
+In SGD, instead of computing the gradient of the entire sum, we pick one component $f_i(x) = \frac{1}{2} (\langle a_i, x\rangle - b_i)^2$ at random and update $x$ using its gradient
+$$\nabla f_i(x) = (\langle a_i, x\rangle - b_i) a_i.$$
+The SGD update rule with learning rate $\eta_k$ is
+\begin{align*}
+x_{k+1} & = x_k - \eta_k \nabla f_i(x_k) \\
+        & = x_k - \eta_k (\langle a_i, x_k\rangle - b_i) a_i \\
+        & = x_k + \eta_k (b_i - \langle a_i, x_k \rangle) a_i. 
+\end{align*}
+By comparing the two update formulas, the equivalence becomes clear: 
+\begin{align*}
+\text{SGD Update:} & \quad x_{k+1} = x_k + \eta_k (b_i - \langle a_i, x_k \rangle) a_i, \\
+\text{RK Update:} & \quad x_{k+1} = x_k + \frac{1}{\|a_i\|^2} (b_i - \langle a_i, x_k \rangle) a_i.
+\end{align*}
+If we choose a specific step size for SGD such that
+$\eta_k = \frac{1}{\|a_i\|^2}$,
+the two methods become identical, cf.\ also~\cite{needell2014stochastic}.
+
+
+The convergence rate of classical (deterministic) Kaczmarz method is highly sensitive to the ordering of the rows.
+If the rows are highly correlated, the projections move the estimate in very small increments, significantly slowing down the convergence rate. Randomization comes to our rescue. Indeed, the randomization in picking the rows during the iterations of the Kaczmarz method can dramatically improve convergence guarantees as the following theorem shows, see also~\cite{SV06}.
+
+\begin{theorem}
+Let $Ax = b$ be consistent, and let $x^*$ be the unique solution in $\mathrm{range}(A^T)$.
+Then the randomized Kaczmarz method converges in expectation, with the average error
+$$
+\mathbb{E}\big[\|x^k - x^*\|^2\big]
+\le
+\left(1 - \frac{\sigma_{\min}^2(A)}{\|A\|_F^2}\right)^k
+\|x^0 - x^*\|^2,
+$$
+where $\sigma_{\min}(A)$ is the smallest nonzero singular value of $A$.
+\end{theorem}
+
+Thus, the convergence rate is linear (exponential) in expectation. We note that the expression $\|A\|_F/\sigma_{\min}(A) = \|A\|_F \|A^{-1}\|:= \tilde{\kappa}(A)$ is also known as the scaled condition number, introduced by Demmel in~\cite{demmel1988probability}.
+
+\begin{proof}
+We have
+\begin{equation}
+\sum_{j=1}^m |\langle z, a_j \rangle |^2 \ge  \frac{\|z\|^2}{\|A^{-1}\|^2}
+ \qquad \text{for all $z \in \C^n$.}        \label{rows of A}
+\end{equation}
+Using the fact that $\|A\|_F^2=\sum_{j=1}^m \|a_j\|^2$ we can
+write~\eqref{rows of A} as
+\begin{equation} 
+\label{normalizedrows}
+\sum_{j=1}^m \frac{\|a_j\|^2}{\|A\|_F^2} \;
+  \Bigl| \Big\langle z, \frac{a_j}{\|a_j\|} \Big\rangle \Big|^2
+\ge \tilde{\kappa}(A)^{-2} \|z\|^2
+ \ \ \ \text{for all $z \in \C^n$}.
+\end{equation}
+The main point of the proof is to view the left hand side
+in~\eqref{normalizedrows} as an expectation of some random variable.
+Namely, recall that the solution space of the $i$-th equation of \eqref{kaczmarzsystem}
+is the hyperplane $\{y : \langle y, a_i \rangle = b_i \}$, whose normal is
+$\frac{a_i}{\|a_i\|}$.
+Define a random vector $Z$ whose values are the normals to all
+the equations of \eqref{kaczmarzsystem}, with probabilities as in our algorithm:
+\begin{equation}                    \label{Z}
+Z  =  \frac{a_j}{\|a_j\|}
+\ \ \ \text{with probability} \ \ \
+\frac{\|a_j\|^2}{\|A\|_F^2}, \ \ \
+j = 1, \ldots, m.
+\end{equation}
+Then \eqref{normalizedrows} says that
+\begin{equation}                    \label{expectation}
+\E | \langle z, Z\rangle |^2  \ge \tilde{\kappa}(A)^{-2} \|z\|^2
+ \ \ \ \text{for all $z \in \C^n$.}
+\end{equation}
+The orthogonal projection $P$ onto the solution space of a random
+equation of \eqref{kaczmarzsystem} is given by
+$P z = z - \langle z - x, Z \rangle \, Z$.
+
+
+Now we are ready to analyze our algorithm. We want to show that
+the error $\|x_k - x\|^2$ reduces at each step in average
+(conditioned on the previous steps) by at least the factor
+of $(1 - \tilde{\kappa}(A)^{-2})$.
+The next approximation $x_k$ is computed from $x_{k-1}$ as
+$x_k = P_k x_{k-1}$, where $P_1, P_2, \ldots$ are independent realizations
+of the random projection $P$.
+The vector $x_{k-1} - x_k$ is in the kernel of $P_k$. It is
+orthogonal to the solution space of the equation onto which $P_k$
+projects, which contains the vector $x_k - x$ (recall that $x$ is the
+solution to all equations). The orthogonality of these two vectors then yields
+$$
+\|x_k - x\|^2 = \|x_{k-1} - x\|^2 - \|x_{k-1} - x_k\|^2.
+$$
+To complete the proof, we have to bound $\|x_{k-1} - x_k\|^2$ from below.
+By the definition of $x_k$, we have
+$$
+\|x_{k-1} - x_k\|  =  \langle x_{k-1} - x, Z_k \rangle
+$$
+where $Z_1, Z_2, \ldots$ are independent realizations of the random vector $Z$.
+Thus
+$$
+\|x_k - x\|^2
+\le \Big( 1 - \Big| \Big\langle \frac{x_{k-1} - x}{\|x_{k-1} - x\|},
+                  Z_k
+                  \Big\rangle \Big|^2 \Big)
+  \;\|x_{k-1} - x\|^2.
+$$
+Now we take the expectation of both sides conditional upon
+the choice of the random vectors $Z_1, \ldots, Z_{k-1}$
+(hence we fix the choice of the random projections $P_1, \ldots, P_{k-1}$ and
+thus the random vectors $x_1, \ldots, x_{k-1}$, and we average over the
+random vector $Z_k$). Then
+$$
+\E_{\{Z_1,\ldots,Z_{k-1}\}}  \|x_k - x\|^2
+\le \Big( 1 - \E_{\{Z_1,\ldots,Z_{k-1}\}}
+                     \Big| \Big\langle \frac{x_{k-1} - x}{\|x_{k-1} - x\|},
+                     Z_k
+                     \Big\rangle \Big|^2 \Big)
+  \; \|x_{k-1} - x\|^2.
+$$
+By \eqref{expectation} and the independence,
+$$
+\E_{\{Z_1,\ldots,Z_{k-1}\}}  \|x_k - x\|^2
+\le   \big( 1 - \tilde{\kappa}(A)^{-2} \big) \; \|x_{k-1} - x\|^2.
+$$
+Taking the full expectation of both sides, we conclude that
+$$
+\E \|x_k - x\|^2
+\le   \big( 1 - \tilde{\kappa}(A)^{-2} \big) \; \E \|x_{k-1} - x\|^2.$$
+We complete the proof by induction.
+
+\end{proof}
+
+The randomized Kaczmarz method can also be
+cast as an iterative sketching method, see~\cite{gower2015randomized}.
+
+\bigskip
+\noindent
+\textbf{Stochastic gradient descent with importance sampling:}
+We have seen that in the randomized Kaczmarz algorithm, rows are typically sampled with probability proportional to $\|a_i\|^2$. In the realm of SGD, this corresponds to {\em importance sampling}, which helps to reduce the variance of the stochastic gradient estimate~\cite{needell2014stochastic}. See also Figure~\ref{fig:SGD}, which 
+demonstrates how importance sampling---choosing training examples based on their``influence''---can accelerate convergence (training of a linear model) compared to standard uniform sampling.
+We consider a dataset with $m = 1000$ samples and $n = 100$ features. To simulate a ``real-world'' scenario, such as in sensor networks, where some data points are more informative than others, we scale the feature vectors (rows of $A$) such that their squared norms $\|a_i\|^2$ vary across two orders of magnitude. We then generate a consistent target vector $b = Ax_{\text{true}}$.
+For vanilla SGD (i.e., vanilla Kaczmarz) at each iteration, a single sample $(a_i, b_i)$ is chosen with uniform probability $1/m$. This represents the standard approach in most deep learning frameworks. For SGD with importance sampling (i.e., randomized Kaczmarz with~\eqref{eq:importancesampling}), samples are selected with probability $P(i) = \|a_i\|^2 / \|A\|_F^2$. This strategy prioritizes samples that have a larger gradient magnitude, effectively spending more ``computational effort'' on the most impactful data points. The convergence plot, cf.~Figure~\ref{fig:SGD}, illustrates the significant speedup enabled by importance sampling. The point of this experiment is to illustrate the potential gain in convergence speed. A full comparison would also need to include the computational cost of calculating the norms of all the rows $a_i$ for SGD with importance sampling. 
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=90mm]{figures/Chapter7-randkaczmarz1}
+\caption{Effect of importance sampling for Stochastic Gradient Descent.}
+\label{fig:SGD}
+\end{center}
+\end{figure}
+
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}\label{ex:maxcutcontinuousoptimizationproblem}
+Show that optimization problem~\eqref{eq:minbis-andspectrum} remains mathematically unchanged if the constraints $x\in\{\pm1\}^n$ are replaced by $-1\leq x_i\leq 1$ (for all $1\leq i\leq n$).
+\end{myexercise}
+
+\begin{myexercise}
+Prove that if $f$ is continuously differentiable, convexity is equivalent to the {\em first-order condition} 
+\begin{equation*}
+ \label{def:geomconvex}
+f(y) \ge f(x) +  \langle \nabla f(x), y - x\rangle, \quad \forall x,y \in \mathbb{R}^d.
+\end{equation*}    
+\end{myexercise}
+
+
+\begin{myexercise}
+Show that strong convexity implies the \PLC. 
+\end{myexercise}
+
+\begin{myexercise} \label{eq:ex_uniqueness}
+This concerns the second claim in Theorem~\ref{th:convopt}.
+Prove that if the function $f$ is strictly convex, then the global minimum is unique.    
+\end{myexercise}
+
+\begin{myexercise}
+Prove that if  $f\in C^2$ and the Hessian $\nabla^2 f$ is positive definite, then $f$ is strictly convex.
+\end{myexercise}
+
+
+
+\begin{myexercise}
+Show that the $L$-Lipschitz condition is equivalent to the notion of $L$-smoothness.    
+\end{myexercise}
+
+\begin{myexercise}
+Show that the general linear program~\eqref{eq:linprog} is equivalent to the linear program (sometimes called linear program in standard form):
+\begin{align*}
+\begin{split}
+\underset{x\in\R^n}{\text{minimize}} & \qquad  \langle d, z \rangle  \\
+ \text{subject to} & \qquad \tilde{A}z = \tilde{b}, \\
+ & \qquad z \ge 0,
+\end{split}
+\end{align*}
+where $\tilde{A}$ and $\tilde{b}$ are properly augmented versions of $A$ and $b$, respectively.\\
+(Hint: decompose $x$ into $x=x^{+} - x^{-}$, where $x^{+}, x^{-} \ge 0$, and introduce slack variables.)
+
+\end{myexercise}
+
+\begin{myexercise}
+Prove Theorem~\ref{th:saddleploint}
+\end{myexercise}
+
+
+
+\begin{myexercise}
+Consider the problem
+\begin{align*}
+    \min_x &  \quad x \\
+    \text{s.t.} & \quad x^2 \le 0.
+\end{align*}
+Show that Slater's condition fails in this case.
+\end{myexercise}
+
+\begin{myexercise}
+    
+Consider the problem
+\begin{align*}
+    \min_{x,y} &  \quad -x \\
+    \text{s.t} & \quad y - (1-x)^3  \le 0 \\
+               & \quad x \ge 0 \\
+               & \quad y \ge 0
+\end{align*}
+Show that the KKT conditions fail in this case.
+\end{myexercise}
+
+
+\begin{myexercise}
+ Consider the problem
+\begin{align*}
+\min_x & \quad x^T Ax + 2b^T x \\
+\text{s.t.} & \quad x^T x \le 1,
+\end{align*}
+where the matrix $A \in \R^{n\times n}$ is symmetric, but not positive definite, and $b\in \R^n$. Thus this is not a convex problem. Show that strong duality nevertheless holds in this case.
+\end{myexercise}
+
+
+\begin{myexercise}
+Consider the absolute value function $f(x) = |x|$ for  $x \in \mathbb{R}$.
+If we perform subgradient descent with a constant step size $\eta$ on $f(x)$, starting at $x^{(0)} = 0.5\eta$, show that the iterate will ``oscillate'' across the origin rather than staying at the sparse solution $x=0$.
+\end{myexercise}
+
+\begin{myexercise}
+Find the dual problem for the {\em entropy maximization problem}:
+\begin{align*}
+ \min_x & \quad  \sum_{i=1}^n x_i \log x_i \\
+ \text{s.t.} & \quad Ax \le b \\
+                   & \quad {\mathbf 1}^\top x = 1
+\end{align*}
+with domain $\dom = \R^n_+$   
+\end{myexercise}
+
+\begin{myexercise}
+Consider the optimization problem
+\begin{align*}
+ \min_x & \quad  e^{-x} \\
+ \text{s.t.} & \quad \frac{x^2}{y} \le 0
+\end{align*}
+with variables $x,y$ and domain $\dom = \{(x,y) \, | \, y >0\}$.\\
+(a) Verify that this is a convex optimization problem. Find the optimal value. \\
+(b) Give the Lagrange dual problem, and find the optimal solution $\lambda^*$ and optimal value $d^*$ of the dual problem. What is the optimal duality gap? \\
+(c) Does Slater’s condition hold for this problem?    
+\end{myexercise}
+
+\begin{myexercise}
+Let
+$$
+f(x) = \frac{1}{2} x^T A x - b^T x,
+$$
+where $A \in \mathbb{R}^{d \times d}$ is symmetric positive definite. \\
+(a) Show that gradient descent converges linearly if
+$$
+0 < \eta < \frac{2}{\lambda_{\max}(A)}.
+$$
+(b) Express the convergence rate in terms of the condition number
+$$
+\kappa(A) = \frac{\lambda_{\max}(A)}{\lambda_{\min}(A)}.
+$$    
+\end{myexercise}
+
+\begin{myexercise}
+(Euclidean projection onto the probability simplex.) 
+For some probabilistic data science applications, we require that each of our data points is a discrete probability distribution (i.e., the components are positive and sum to 1). Namely, each point $x$ should belongs to the {\em probability simplex}
+$$
+    \Delta^{n-1}\;=\;\Bigl\{x\in\mathbb{R}^{n}\;\Big|\;
+                    \sum_{i=1}^{n} x_i = 1,\;x_i\ge 0 \,\,\,\forall i\Bigr\}.
+$$
+However, when a data point is not in such a probability simplex we may need to project the data onto this space.
+For a given vector $z\in\mathbb{R}^{n}$, the projection onto the probability simplex is the solution of
+\begin{equation}\label{eq:projsimplex} 
+    \min_{x\in\mathbb{R}^{n}}\;
+         \tfrac12\|x - z\|_{2}^{2}
+    \quad\text{s.t.}\quad
+         \mathbf{1}^{\top}x = 1,\;x\ge 0.
+\end{equation}
+
+\begin{enumerate}
+\item  Derive the KKT conditions for~\eqref{eq:projsimplex} using a scalar multiplier  $\nu$ for the equality constraint and a vector of multipliers  $\lambda\ge 0$ for the inequality constraints.
+\item  Show from the stationarity condition that
+$$x^\star_i \;=\;\max\!\{\,z_i - \nu,\;0\,\},
+                 \qquad i=1,\dots,n.$$
+Explain how complementary slackness implies that $\lambda_i = \max\{\,\nu-z_i,\,0\}$.
+\end{enumerate}
+\end{myexercise}
+
+
+\begin{myexercise}
+Consider the function $f(x,y)=10x^2+y^2$. This is a ``narrow valley'' potential (or a ridge, from which the name ``ridge regression'' is derived).  We want to solve $\min f(x,y)$ via gradient descent (pretending we do not know that the solution is obviously $(0,0)$). \\
+(a) Compare the convergence path and the number of iterations needed to reach $\|\nabla f\| \le 10^{-4}$ for $\eta = 0.01$, $\eta = 0.05$, and $\eta = 0.1$. \\
+(b) Apply Nesterov momentum with $\eta = 0.01$, $\eta = 0.05$, and $\eta = 0.1$, and compare your results to those in (a).
+\end{myexercise}
+
+\begin{myexercise} (Farkas’ Lemma) Let $A \in \mathbb{R}^{m \times n}$ and $b \in \mathbb{R}^m$. Prove that exactly one of the following two statements holds:
+\begin{enumerate}
+\item There exists $x \in \mathbb{R}^n$ such that
+$$ Ax = b$$
+\item There exists $y \in \mathbb{R}^m$ such that
+$$A^T y = 0,\quad y \ge 0,\quad b^T y < 0.$$
+\end{enumerate}
+\begin{hint}
+    Use a separating hyperplane argument.
+\end{hint}
+\end{myexercise}
+
+\begin{myexercise} (Self-dual linear programs).
+Consider the linear program
+\begin{align*}
+\max_x & \quad c^T x \\
+\text{s.t.} & \quad Ax \le b \\
+& \quad x \ge 0,
+\end{align*}
+where $A \in \mathbb{R}^{n \times n}$ is skew-symmetric $(A = -A^T)$ and $b = -c$. \\
+(a) Derive the dual linear program and show that it is equivalent to the primal. \\
+(b) Show that if the problem is feasible, then the primal and dual optimal values exist and are equal to zero. \\
+(c) Prove that any primal feasible solution $x$ and dual feasible solution $y$ satisfy
+$$
+c^T x + c^T y = 0.
+$$
+(d) Let $x^*$ be an optimal primal solution. By Parts (a) and (b), $x^*$ is also dual feasible (with $y = x^*$).
+Show that complementary slackness implies $x^T A x = 0$. 
+\end{myexercise}
+
+\begin{myexercise}
+Find the subdifferential of $f(x) =\|x\|_p$  for
+$p=2$ and $p=\infty$.
+\end{myexercise}
+
+
+\begin{myexercise}
+The {\em Geometric Median} (also known as the Fermat point) of a set of points $\{x_1, x_2, \dots, x_n\} \subset \mathbb{R}^d$ is defined as the point $x$ that minimizes the sum of Euclidean distances
+$$f(x) = \sum_{i=1}^{n} \|x - x_i\|_2.$$
+(a) Prove that the function $g(x) = \|x - a\|_2$ is a convex function for any fixed $a \in \mathbb{R}^d$. \\
+(b) Using the properties of convex functions, prove that the objective function $f(x)$ for the geometric median is convex.\\
+(c) Is $f(x)$ strictly convex? Consider the case where all points $x_i$ lie on a single line.\\
+(d) Compute the gradient $\nabla f(x)$ for $x \notin \{x_1, \dots, x_n\}$. Set the gradient to zero to find the optimality condition. Express the optimal solution $x^*$ as a weighted average of the points $x_i$.\\
+(e) Explain why this expression is not a ``closed-form'' solution in the same sense as the arithmetic mean $\bar{x} = \frac{1}{n}\sum x_i$. (Hint: Look at where $x^*$ appears in your equation).
+\end{myexercise}
+
+\begin{myexercise}
+(Optimal power allocation and the {\em water-filling algorithm}.)
+In communication systems, we often want to allocate a fixed amount of power $P$ across $n$ independent channels to maximize the channel capacity. If the noise level in channel $i$ is represented by $\alpha_i$, and we allocate power $x_i$, the capacity is proportional to $\log(1 + x_i/\alpha_i)$. Maximizing this is equivalent to the following convex problem
+\begin{align*}
+\text{minimize} & \quad -\sum_{i=1}^n \log(\alpha_i + x_i) \\
+\text{subject to} & \quad \sum_{i=1}^n x_i = P \\
+& \quad x_i \geq 0, \quad i=1, \dots, n
+\end{align*}
+For this exercise, we normalize the total power to $P=1$.
+
+\begin{enumerate}
+\item  Write down the Lagrangian $L(x, \lambda, \nu)$ for this problem, using $\nu$ for the equality constraint and $\lambda_i$ for the inequality constraints.
+\item  Derive the KKT conditions for this problem.
+\item Show that the optimal power allocation $x_i^*$ must satisfy:
+   $$x_i^* = \max(0, \eta - \alpha_i)$$
+   where $\eta = 1/\nu$ (often called the ``water level'').
+\item Explain why this is called ``water-filling.'' (Hint: Imagine $\alpha_i$ as the floor of a vessel. As you pour in a unit of ``water'' (power), which channels get filled first?)
+\item Assume you have $n = 6$ channels with the noise profile 
+$$\alpha = [0.1, 0.2, 0.5, 1.0, 2.0, 4.0].$$
+Solve the optimization problem using CVX (in Matlab) or CVXOPT (Python). Plot the results using a bar chart: (i)~Plot the noise levels $\alpha_i$ as the base of the bars; (ii)~Plot the allocated power $x_i$ on top of the noise levels; (iii)~Draw a horizontal line representing the resulting ``water level'' $\eta$.
+\end{enumerate}
+
+
+
+\end{myexercise}

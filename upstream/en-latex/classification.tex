@@ -1,0 +1,1047 @@
+
+\chapter{Classification} \label{c:classification}
+
+
+
+
+Classification is a fundamental task in data science and machine learning which arises in a wide range of applications, including medical diagnosis, finance,  computer vision, text analysis, and scientific data analysis.
+Patient data (symptoms, lab results, imaging features) are classified to predict the presence or absence of a disease; tumors are classified as benign or malignant based on imaging or genomic features. Loan applicants are classified as low-risk or high-risk based on financial history and demographic features. Images are classified according to the object they contain (e.g., bicycle vs.\ car). News articles are classified into categories such as politics, sports, technology, or finance. In the area of protein folding, classification models identify the functional category of a protein based on its amino acid sequence, which is essential for drug discovery.
+In each case, the objective is to assign observations to a finite set of categories based on measured features.
+
+
+While clustering and classification share the fundamental objective of partitioning the feature space, they have essential differences:  In clustering, which falls in the realm of unsupervised learning, the goal is to discover structure (groups) in unlabeled data. In classification, which falls in the realm of supervised learning, the goal is to assign data points to known groups using labeled examples. Clustering is primarily descriptive: it uses optimization to tell us about the structure of the current dataset. Classification is predictive: it uses optimization to create a rule that generalizes to unseen data.
+
+In this chapter we study two central approaches to  classification:
+\begin{enumerate}
+  \item {\em Logistic regression}, motivated by probabilistic modeling and likelihood maximization~\cite{cox1958regression};
+  \item {\em Support vector machines}, motivated by geometric margin maximization~\cite{cortes1995support}.
+\end{enumerate}
+Both methods lead to convex optimization problems and play a central role in modern data science.  
+
+Deep learning based classification, which has emerged as the dominant technique for large scale datasets, will be discussed in Chapter~\ref{c:deeplearning}.
+
+\section{Binary classification and linear classifiers}
+
+We begin our exploration of classification (or discrimination) with the special but very important and instructive case of {\em binary classification}:
+Given labeled data
+$\{(x_i,y_i)\}_{i=1}^n$ where the data $x_i \in \mathbb{R}^d$ and the binary labels $y_i$ are usually represented by %assumed to belong to 
+$\{-1,+1\}$%or to $\{0,+1\}$
+, the goal is to learn a rule that predicts the label $y$ of a new observation $x$.
+
+
+
+
+In a nutshell, a linear classifier is one whose decision boundaries are linear. Formally, a linear classifier is defined by parameters $(w,b) \in \mathbb{R}^d \times \mathbb{R}$ and the decision rule
+$$
+f(x) = \operatorname{sign}(w^T x + b).
+$$
+The decision boundary
+$$
+\{x \in \mathbb{R}^d : w^T x + b = 0\}
+$$
+is a hyperplane that separates the input space into two half-spaces.
+Learning a classifier thus amounts to choosing $w$ and $b$ so that points with different labels lie on different sides of this hyperplane. 
+
+Figure~\ref{fig:linearclass} shows a simple example of two sets of points and two  possible choices of linear classifiers (hyperplanes) that classify the two sets.
+Which hyperplane shall we choose among the potentially infinitely many candidates? Is there an optimal choice? If so, how can we find it?
+
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.5\textwidth]{figures/linearclass1}
+    \end{center}
+    \caption{The open and filled circles represent data from two different classes. 
+    These two sets can be linearly separated by a hyperplane. The depicted hyperplanes $H_1$ and $H_2$ are two out of infinitely many possible choices for such a separating hyperplane. Which hyperplane shall we choose a classifier?}
+    \label{fig:linearclass}
+\end{figure}
+
+\section{Logistic regression}\label{s:logisticregression}
+
+
+Logistic Regression, which has some of its roots\footnote{See~\cite{Cramer2002} for a detailed account on the history of logistic regression.} in the works of  Verhulst~\cite{verhulst1844recherches}, Berkson~\cite{berkson1944application} and Cox~\cite{cox1958regression}, is one of the most popular algorithms for (binary) classification problems.
+ While the name contains ``regression,'' it is fundamentally a tool for estimating the probability that an input belongs to a specific category.
+
+We start by considering a random variable (the binary label) $y\in \{0,1\}$, with $\P(y=1) = p$ and $\P(y=0) = 1-p$,
+where $p \in [0,1]$. The probability $p$ is assumed to depend on one or more explanatory variables, represented by the vector $x \in \R^n$. For instance, let us say we want to predict whether a patient has a certain disease ($y=1$) or not ($y = 0$). The probability of having this disease is $q$, which is modeled as being based on explanatory variables such as age, gender, weight,  blood pressure, temperature, collected in the vector $x.$
+
+In linear regression, we model the output as a linear combination of inputs 
+$$z = w^T x + b.$$ 
+However, $z$ can range from $-\infty$ to $+\infty$, making it unsuitable for representing a probability, which must be constrained to the interval $[0, 1]$.
+
+To map the linear predictor to a probability space, we use the logistic sigmoid function $\sigma(z)
+= (1 + e^{-z})^{-1}$.
+This gives
+$$\P(y=1 | x; w,b) = \sigma(w^T x + b) = \frac{1}{1 + \exp(-(w^T x + b))}.$$
+
+
+Logistic regression can be viewed as a linear model for the log-odds (logit) of the probability $p$. If $p = \P(y=1|x)$, the odds are defined as $p/(1-p)$. An easy calculation shows that taking the natural logarithm gives
+$$\log\Big( \frac{p}{1-p} \Big) = w^T x + b.$$
+
+This reveals that the decision boundary (where $p=0.5$) is the hyperplane defined by $w^T x + b = 0$.
+
+
+Unlike linear regression, which uses ordinary least squares, the parameters $w$ and $b$ in logistic regression are typically estimated using Maximum Likelihood Estimation. Assuming the observations are independent and identically distributed (i.i.d.), the likelihood function for $n$ observations is\footnote{Recall that the probability mass function of a Bernoulli variable is $\P(Y=y) = p^y (1-p)^{1-y}\,\, y \in \{0,1\}$.}
+$$L(w,b) = \prod_{i=1}^n [\sigma(w^T x_i + b)]^{y_i} [1 - \sigma(w^T x_i + b)]^{1 - y_i}.$$
+
+Maximizing the likelihood is equivalent to minimizing the {\em negative log-likelihood}, 
+$$
+J(w,b) = - \frac{1}{n} \sum_{i=1}^n
+[y_i \log \sigma( w^T x_i + b) + (1-y_i)\log\bigl(1-\sigma( w^T x_i + b)\bigr)],
+$$
+which is also known as the \emph{logistic loss} or \emph{cross-entropy loss}.
+
+
+It is not difficult to see that $J(w)$ is a convex function.
+As a result, logistic regression admits a unique global minimizer (up to degeneracies in the data) and can be solved efficiently using first-order or second-order optimization methods, such as gradient descent or Newton’s method.
+
+
+The gradient of the loss  is remarkably elegant
+$$
+\nabla_{w,b} J(w,b) =
+\frac{1}{n}\sum_{i=1}^n
+\bigl(\sigma(w^T x_i + b) - y_i\bigr)x_i,
+$$
+This gradient resembles the one found in linear regression, though the underlying hypothesis is non-linear.
+
+
+
+In the basic logistic regression model,  if the data is linearly separable, the optimization algorithm will try to drive the weights $w$ toward infinity.
+This is so, since a larger $\|w\|$ makes the sigmoid function $\sigma(w^T x + b)$ steeper, pushing the predicted probabilities closer to  $1$ or $0$. This leads to overfitting and the model becomes  sensitive to small fluctuations in the training data.
+It also can lead to numerical instability and to 
+``exploding'' gradients.
+
+There are several pathways to address this problem.
+To derive the regularized version, we can for instance treat $w$ not as a fixed parameter to be found, but as a random variable with a prior distribution. This is known as Maximum A Posteriori (MAP) estimation.
+
+Here, we assume a Gaussian prior on the weights $w$ centered at zero, namely $w \sim {\mathcal N}(0,\eta^2 I)$. However, we do not place any prior on $b$. We can express this ``flat'' prior on $b$ as
+$b \sim {\mathcal N}(0,\gamma^2)$, where $\gamma \to \infty$ (this is sometimes written as
+$b \sim {\mathcal N}(0,\infty)$).
+
+According to Bayes’ Theorem~\cite[Chapter 7.2.3]{casella2024statistical}, the posterior probability of the weights $w$ given the data $x$ is
+\begin{equation}\label{eq:bayes}
+\pi(w,b | x, y)  \propto  \pi(w)\pi(b) \pi(y | x, w,b) ,
+\end{equation}
+where $\pi(y | x, w,b)$ is the standard likelihood function used in basic logistic regression.
+Colloquially,~\eqref{eq:bayes} is 
+$$\quad \,\, \text{posterior}  \propto \text{prior} \times \text{likelihood.}$$    
+To find the MAP estimate, we maximize the log-posterior
+$$\log \pi(w,b | x, y) =  \log \pi(w)+\log \pi(b) + \log \pi(y | x, w,b)  + C,$$
+where $C$ is a constant independent of $w$.
+
+Substituting the ``flat'' prior for $b$, we have
+$\log \pi(b) = - \frac{b}{2\gamma^2} + C$, which  gives $\log \pi(b) \to 0$ as $\gamma \to \infty$.
+
+We now substitute the Gaussian prior for $w$ and obtain
+$$\log \pi(w) = - \frac{1}{2} w^T (\eta^2 I)^{-1} w +C = -\frac{1}{2\eta^2} \|w\| +C.$$
+Thus, by flipping the sign to convert this into a minimization problem, we arrive at the $\ell_2$-regularized objective
+$$J(w, b) =-\frac{1}{n} \sum_{i=1}^n \left[ y_i \log \sigma(w^T x_i +b) + (1-y_i) \log(1-\sigma(w^T x_i +b)) \right] + \lambda \|w\|^2,$$
+where the regularization parameter $\lambda > 0$ controls the trade-off between fitting the data and keeping the weights small.
+
+
+
+The $\ell_2$-term $\|w\|^2$ is strictly convex. Adding a strictly convex function to a convex function results in a strictly convex objective. Hence, for $\lambda>0$, the objective is strictly convex and thus has a unique minimizer, even in the presence of data degeneracies. It also makes the objective strongly convex, which greatly improves convergence of gradient descent (see Chapter~\ref{c:optimization}).
+
+Note that logistic regression outputs probabilities and not binary decisions. Thus, strictly speaking, logistic regression by itself is not a classifier.  
+Logistic regression produces a {\em score}
+$$
+s(x) := \sigma(w^T x + b) \in (0,1),
+$$
+which is interpreted as an estimated posterior probability.
+Classification is then typically performed by applying the decision rule
+$$
+\hat y_\tau =
+\begin{cases}
+1, & s(x) \ge \tau,\\
+0, & s(x) < \tau,
+\end{cases}
+$$
+for a particular choice of $\tau \in [0,1]$
+to the output of logistic regression.
+This is equivalent to a ($\tau$-dependent) {\em linear decision boundary}
+$$
+w(\tau)^T x + b(\tau) = 0,
+$$
+which defines a hyperplane separating the two classes. Thus, logistic regression is a linear classifier, although it differs from margin-based methods such as support vector machines in its objective and interpretation.
+
+But how shall we choose the threshold $\tau$? While it seems natural and tempting to set $\tau = \frac{1}{2}$, it is not clear that this would be the best choice. Lowering the threshold typically reduces false negatives while increasing false positives, and raising it has the opposite effect. So how shall we go about choosing $\tau$? This question deserves some consideration, and is directly related to a bigger question, namely how should we evaluate a supervised learning classifier? We take a brief interlude and explore this question in the next section.
+
+
+\section{Evaluation of classifiers, confusion matrix, and ROC} 
+
+
+
+The confusion matrix provides a simple way to shed some light  on the performance of an algorithm’s predictions against the actual ground truth for binary classification.
+It breaks down the predictions into four categories:
+\begin{itemize}
+\item True Positive (TP): The model correctly predicted a positive outcome i.e the actual outcome was positive.
+\item True Negative (TN): The model correctly predicted a negative outcome i.e the actual outcome was negative.
+\item False Positive (FP): The model incorrectly predicted a positive outcome i.e the actual outcome was negative. It is also known as a Type I error.
+\item False Negative (FN): The model incorrectly predicted a negative outcome i.e the actual outcome was positive. It is also known as a Type II error.
+\end{itemize}
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{cc>{\centering\arraybackslash}p{2.8cm}>{\centering\arraybackslash}p{2.8cm}}
+
+  \multicolumn{2}{c}{} 
+    & \multicolumn{2}{c}{\textbf{Predicted}} \\[0.4ex]
+
+  \multicolumn{2}{c}{}
+    & \textbf{Positive}
+    & \textbf{Negative} \\[0.3ex]
+
+  \cline{3-4}
+
+  \multirow{2}{*}{\rotatebox[origin=c]{90}{\textbf{Actual}}}
+    & \textbf{Positive}
+    & \multicolumn{1}{|>{\centering\arraybackslash}p{2.8cm}|}{\makecell{True Positive \\ (TP)}}
+    & \multicolumn{1}{>{\centering\arraybackslash}p{2.8cm}|}{\makecell{False Negative \\ (FN)}} \\
+
+  \cline{3-4}
+
+    & \textbf{Negative}
+    & \multicolumn{1}{|>{\centering\arraybackslash}p{2.8cm}|}{\makecell{False Positive \\ (FP)}}
+    & \multicolumn{1}{>{\centering\arraybackslash}p{2.8cm}|}{\makecell{True Negative \\ (TN)}} \\
+
+  \cline{3-4}
+
+\end{tabular}
+\caption{Confusion matrix for binary classification.}
+\end{table}
+
+
+
+Let us take this opportunity to introduce a few more terms that are often used in practice when evaluating the performance of a classifier.
+{\em Sensitivity} (true positive rate) is the probability of a positive test result, conditioned on the individual truly being positive.
+{\em Specificity} (true negative rate) is the probability of a negative test result, conditioned on the individual truly being negative.
+False positives, i.e., negative instances incorrectly predicted as positive are also referred to as {\em Type I error}, while false negatives, i.e., positive instances incorrectly predicted as negative are called {\em Type II error}.
+
+From the counts appearing in the confusion matrix, several frequently used metrics can be derived:
+\begin{align}\label{def:recall}
+\begin{split}
+\text{Accuracy} = \frac{\text{TP}+\text{TN}}{\text{TP}+\text{FP}+\text{TN}+\text{FN}},& \quad
+\text{Precision} = \frac{\text{TP}}{\text{TP}+\text{FP}},\\
+\text{F1} = 2 \cdot \frac{\text{Precision}\cdot \text{Recall}}{\text{Precision + Recall}}, & \quad
+\text{Recall (TPR)} = \frac{\text{TP}}{\text{TP}+\text{FN}}.
+\end{split}
+\end{align}
+
+To visualize the tradeoff between True Positive Rate (TPR) and the False Positive Rate (FPR) as a function of the threshold, one commonly uses the Receiver Operating Characteristic (ROC) curve\footnote{The Receiver Operating Characteristic curve was originally developed in the context of radar signal detection, hence the name.}, see also Figure~\ref{fig:ROC}. A random classifier produces a diagonal line (gray line),  while a useful classifier lies above this line (blue curve), and a perfect classifier reaches the top-left corner $(0,1)$ (red curve). 
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=0.5\textwidth]{figures/roc2}
+\caption{An ROC (Receiver Operating Characteristic) curve represents the performance of a classification model by plotting the True Positive Rate against the False Positive Rate across all possible classification thresholds.}
+\label{fig:ROC}
+\end{center}
+\end{figure}
+
+
+The Area Under the Curve (AUC) summarizes the ROC curve as a single number. If AUC=1, we have perfect class separation, while AUC=0.5 corresponds to random guessing. 
+The AUC can be interpreted as the probability that the classifier assigns a higher score to a randomly chosen positive sample than to a randomly chosen negative sample.
+
+
+
+In situations with class imbalance, the ROC curve can be misleading. The Precision–Recall (PR) curve may be preferable in that case. It plots Precision versus Recall (both are defined in~\eqref{def:recall}) across thresholds. As such, it highlights performance on the positive class, which is critical in rare-event detection (e.g., fraud, disease diagnosis).
+
+
+
+\medskip
+So, where does that leave us regarding how to choose the threshold $\tau$ for logistic regression, the question that triggered this excursion into evaluation of classifiers? The ROC curve does not determine a unique decision threshold $\tau$. The default choice $\tau = 0.5$ is appropriate when class priors are approximately equal and false positives and false negatives have about equal cost. It is often used as a baseline, but rarely optimal in practice.  Maximizing the F1 score is a pragmatic way to select a threshold when the impact of different error types is unknown~\cite{van2004geometry}.
+Another frequently used choice is to pick the $\tau$ that minimizes the distance to the top-left corner $(0,1)$ (the optimal point of a perfect classifier), i.e.,
+$$\tau^* = \argmin_{\tau} \sqrt{(1-\text{TPR}(\tau))^2 +
+\text{FPR}(\tau)^2},$$
+which treats false positives and false negatives symmetrically.
+
+
+Ultimately, the threshold is a decision parameter, not a model parameter. As such,
+the ``right'' choice of $\tau$ depends on the application-specific trade-off between false positives and false negatives.
+
+
+
+
+
+
+
+
+
+\section{Support Vector Machines}\label{s:svm}
+
+
+A natural idea to construct a linear classifier would be to find an affine function that approximately classifies the points such that one minimizes the number of points misclassified. However, this is in general a computationally infeasible combinatorial optimization problem.  One heuristic to circumvent the computational hardness is to instead try to maximize a ``gap'' between classes, relying only on a critical subset of points called Support Vectors. 
+Support Vector Machines (SVMs)~\cite{cortes1995support} thus represent a shift from the probabilistic perspective of Logistic Regression to a geometric perspective. An important property of support vector machines is that the
+determination of the model parameters corresponds to a convex optimization problem (as was also the case for logistic regression).
+
+\subsection{Hard-margin SVM}
+
+Consider a linearly separable dataset $\{(x_i, y_i)\}_{i=1}^n$ where $y_i \in \{-1, 1\}$. We seek a hyperplane defined by $w^T x + b = 0$ that separates the two classes.
+
+Let us first determine the distance from a point $x_i$ to this hyperplane.
+We can decompose $x_i$ as
+$$x_i = x_i^* + r \frac{w}{\|w\|},$$
+where $x_i^*$ is the orthogonal projection of $x_i$ onto the hyperplane (so $w^T x_i^* + b = 0$), and $r$ is the signed  distance -- positive if $x_i$ is on the same side as $w$, negative on the other side. We want to find $r$. Since $x_i^* = x_i - r\frac{w}{\|w\|}$ lies on the hyperplane
+$$w^T\!\left(x_i - r\frac{w}{\|w\|}\right) + b = 0,$$
+which, after some basic linear algebra, can be written as 
+$$r = \frac{w^T x_i + b}{\|w\|}.$$
+Hence, the signed distance from $x_i$ to the hyperplane, measured along $w/\|w\|$, is $r$. Its magnitude is the geometric (unsigned) distance.
+
+Now let us incorporate the label $y_i$ to get a signed margin.
+The expression $r = (w^T x_i + b)/\|w\|$ is positive when $x_i$ is on the $w$-side of the hyperplane and negative on the other side.  If $y_i = +1$, then $x_i$ should be on the positive side, so $w^T x_i + b > 0$, and $r > 0$. If $y_i = -1$, then $x_i$ should be on the negative side, so $w^T x_i + b < 0$, and $r < 0$.
+
+In both cases, $y_i \cdot r > 0$. Multiplying by $y_i$ therefore flips the sign for negative-class points, making every correctly classified distance positive, giving
+$$\gamma_i = y_i \cdot r = \frac{y_i(w^T x_i + b)}{\|w\|}.$$
+
+
+
+
+
+The goal of the SVM is to maximize the margin $\gamma$, which is the distance to the nearest point,
+see also Figure~\ref{fig:margin}.
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.6\textwidth]{figures/plotmargin}
+    \end{center}
+    \caption{The margin is defined as the distance between the decision boundary (the red line) and the closest data point.}
+    \label{fig:margin}
+\end{figure}
+
+
+
+For convenience, we scale $w$ and $b$ such that the nearest points satisfy $y_i(w^T x_i + b) = 1$. This is called canonical scaling in the SVM literature and the expression $y_i(w^T x_i + b)$ is also called functional margin. Without loss of generality we can set this quantity to unity, since the direction of the hyperplane is unchanged when we scale both $w$ and $b$ by the same factor. The margin then becomes $1/\|w\|$.
+
+Maximizing $1/\|w\|$ is equivalent to minimizing $\frac{1}{2}\|w\|^2$:
+\begin{align}\label{svm}
+\begin{split}
+\min_{w, b} & \quad \frac{1}{2}\|w\|^2 \\
+\text{s.t.} & \quad y_i(w^T x_i + b) \geq 1, \quad \forall i.
+\end{split}
+\end{align}
+
+To solve the constrained optimization, we use the method of Lagrange multipliers, as described in Chapter~\ref{s:duality}. The Lagrangian becomes
+$$\mathcal{L}(w, b, \alpha) = \frac{1}{2}\|w\|^2 - \sum_{i=1}^n \alpha_i [y_i(w^T x_i + b) - 1],$$
+where $\alpha_i \geq 0$ are the Lagrange multipliers.
+
+Setting the partial derivatives of $\mathcal{L}$ with respect to $w$ and $b$ to zero gives
+\begin{align*}
+& \nabla_{w} \mathcal{L} = w - \sum \alpha_i y_i x_i = 0 \implies w = \sum_{i=1}^n \alpha_i y_i x_i, \\
+& \frac{\partial \mathcal{L}}{\partial b} = \sum \alpha_i y_i = 0.
+\end{align*}
+Substituting these back into the Lagrangian yields the dual objective
+\begin{align}\label{SVMdual}
+\begin{split}
+ \max_{\alpha} & \quad \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i,j=1}^n \alpha_i \alpha_j y_i y_j \langle x_i, x_j\rangle \\
+\text{s.t.}      & \quad \sum \alpha_i y_i = 0,  \\
+& \quad \,\, \alpha_i \geq 0.
+\end{split}
+\end{align}
+
+By the KKT Complementary Slackness condition~\eqref{eq:slackness}, 
+$$\alpha_i [y_i(w^T x_i + b) - 1] = 0.$$ 
+
+This  equation dictates exactly which points ``exist'' in the final model. To see this, note that based on this KKT condition, all training points $x_i$ fall into two mutually exclusive categories:
+\begin{enumerate}
+\item  \textbf{Non-Binding Constraints (the ``disappearing'' points):}
+If a point $x_i$ lies strictly outside the margin, then its margin is greater than 1, i.e., 
+$$y_i(w^T x_i + b) > 1.$$
+For the product in the KKT condition to be zero, the Lagrange multiplier must be
+$$\alpha_i = 0.$$
+Looking at the formula for the weight vector, 
+\begin{equation}\label{eq:svmweight}
+w = \sum_{i=1}^n \alpha_i y_i x_i,
+\end{equation}
+we see that these points make no contribution to the sum. If one were to remove these points from the dataset and retrain the model, the resulting hyperplane would remain identical. In the context of complementary slackness (cf.~Chapter~\ref{ss:KKT}), we also refer to such data points as having ``slack''.
+
+
+\item \textbf{Binding Constraints (the support vectors):}
+If a point $x_i$ lies exactly on the margin, then
+$$y_i(w^T x_i + b) = 1.$$
+In this case, the constraint is active, and $\alpha_i$ can be non-zero ($\alpha_i > 0$). These are the {\em support vectors}: they are the only points that ``support'' the hyperplane.
+\end{enumerate}
+Let $S = \{i : y_i(w^T x_i + b) = 1\}$ be the set of indices of the support vectors and denote the optimal weight vector by $w^*$. We can rewrite the summation~\eqref{eq:svmweight} as
+$$w^* = \sum_{i \in S} \alpha_i y_i x_i.$$
+Thus, $w^*$ is a linear combination of only the support vectors. 
+
+We summarize this insight in the following theorem:
+\begin{theorem}[Sparsity of the SVM]
+The optimal weight vector $w^*$ of a Support Vector Machine is determined solely by the subset of training points for which the canonical functional margin is exactly $1$.
+\end{theorem}
+
+
+
+
+Figure~\ref{fig:svm} illustrates SVM in action. Depicted are a linearly separable
+data set, the separating hyperplane computed by solving~\eqref{svm}, the associated maximal margin and the support vectors.
+
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=0.6\textwidth]{figures/svm_plot}
+    \end{center}
+    \caption{By solving the optimization problem~\eqref{svm} we find an affine function that gives the largest gap  between the two sets. Geometrically, we are finding the thickest slab that separates the two sets of points. In the plot, open circles represent the support vectors.}
+    \label{fig:svm}
+\end{figure}
+
+
+
+\subsection{Soft-margin SVM}
+
+
+In real-world data, classes often overlap. To accommodate 
+a trade-off between the margin (the distance between the
+two critical hyperplanes) and the classification error on the training set, we introduce slack variables $\xi_i \geq 0$ that allow points to be on the ``wrong side'' of the margin.
+Under this {\em soft-margin} constraint, the primal problem takes the form 
+\begin{align*}
+\min_{w, b, \xi} & \quad \frac{1}{2}\|w\|^2 + \mu \sum_{i=1}^n \xi_i, \\
+\text{s.t.} & \quad y_i(w^T x_i + b) \geq 1 - \xi_i, \\
+& \quad \xi_i \ge 0.
+\end{align*}
+This is a convex quadratic program  with linear constraints.
+Here, $\mu$ is a hyperparameter that controls the trade-off between maximizing the margin and minimizing classification errors. In the limit $\mu \to \infty$, we will recover the earlier hard-margin support vector machine.
+
+The goal of the soft-margin SVM is to find a classifier that balances margin maximization and training errors, yielding robustness to noise and better generalization. Soft-margin SVM is also more robust to outliers, since it prevents a single anomalous data point from dictating the entire boundary.
+
+
+
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.62\textwidth]{figures/softsvm_plot}
+    \end{center}
+    \caption{Classification via soft-margin SVM. 
+    Open circles represent the support vectors. The larger margin leads to misclassification of one (blue) point in this example.  Soft-margin SVM 
+    improves generalization by allowing for a trade-off between maximizing the margin and minimizing classification errors.}
+    \label{fig:softsvm}
+\end{figure}
+
+
+It is instructive to rewrite the soft-margin SVM as an unconstrained optimization problem.
+To that end, we first express $\xi_i$ solely in terms of $w, b$, and the data. From the constraints, we see that
+if the point is correctly classified and outside the margin ($y_i(w^T x_i + b) \geq 1$), the smallest possible $\xi_i$ that satisfies the constraints is $0$. On the other hand,
+if the point violates the margin ($y_i(w^T x_i + b) < 1$), the smallest $\xi_i$ that satisfies the first constraint is $1 - y_i(w^T x_i + b)$.
+This can be written concisely as
+$$\xi_i = \max(0, 1 - y_i(w^T x_i + b)).$$
+By substituting the expression for $\xi_i$ back into the primal objective, we get
+$$\min_{w, b} \,\,\,  \sum_{i=1}^n \max(0, 1 - y_i(w^T x_i + b))  + \lambda \|w\|^2.$$
+
+The term $\max(0, 1 - z)$ is known as the {\em hinge loss}.
+It is called ``hinge'' because of its shape: it is flat (zero) for values $\ge 1$ and increases linearly for values $<1$.
+As the hinge loss is an upper bound on the 0-1 indicator loss (misclassification count), minimizing the SVM objective provides a convex surrogate for minimizing classification error.
+
+
+
+\medskip
+
+Logistic regression can also be considered as a variant of the SVM where the hinge function $\max(0,1 - z)$ is replaced with the (smooth and convex) logistic
+function $\ln(1 + e^{-z})$.
+Because the hinge loss is exactly zero for points far from the boundary, the gradient is also zero for those points. This is why SVMs are sparse (only support vectors matter).
+But unlike the logistic loss, the hinge loss is not differentiable at the ``elbow'' (where $y_i(w^T x_i +b)=1$). In practice, we use sub-gradient descent to solve this.
+
+Figure~\ref{fig:compsvmlogreg} shows a comparison between logistic regression and soft-margin SVM. As we can see, the methods produce somewhat different decision boundaries. In logistic regression every point has a non-zero influence on the gradient because the sigmoid derivative is never exactly zero. In contrast, in SVM, once a point is correctly classified and beyond the margin, its gradient becomes exactly zero. 
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.9\textwidth]{figures/compsvmlogreg}
+    \end{center}
+    \caption{A comparison between logistic regression and soft-margin SVM.
+    In logistic regression even a point far away from the decision boundary exerts a tiny ``pull'' on the solution. In contrast, in SVM, the hinge loss has a flat region. Once a point is correctly classified and beyond the margin, its gradient becomes exactly zero. It ``disappears'' from the optimization.
+    }
+    \label{fig:compsvmlogreg}
+\end{figure}
+
+
+
+
+\subsection{Kernel SVM}
+
+
+The SVMs we discussed so far are limited to datasets that are (approximately) linearly separable. However, for many real-world datasets this may not be the case. We can address this by mapping the input features $x \in \mathbb{R}^d$ into a higher-dimensional feature space  via a non-linear mapping function $\Phi(x)$ with the aim that in this higher-dimensional space, a linear separation may become possible.
+
+However, if we perform the mapping $\Phi(x)$ explicitly, we face a major computational challenge.
+Indeed, if we want to work in a high-dimensional space, the SVM dual objective requires us to compute the inner product of these transformed vectors. Thus, the kernel-analog of~\eqref{SVMdual}  takes the form
+\begin{align}\label{SVMdualkernel}
+\begin{split}
+     \max_{\alpha} & \quad 
+ \sum \alpha_i - \frac{1}{2} \sum \alpha_i \alpha_j y_i y_j \langle \Phi(x_i), \Phi(x_j) \rangle \\
+\text{s.t.} & \quad \alpha_i \geq 0 \\
+            & \quad \sum \alpha_i y_i = 0. 
+ \end{split}           
+\end{align}
+In high dimensions calculating $\Phi(x_i)$ and then the inner product $\langle \Phi(x_i), \Phi(x_j)\rangle$ for every pair of points is computationally impossible.
+
+The {\em kernel trick} introduced in Chapter~\ref{s:kernellearning}, comes to our rescue: 
+We can simply replace the inner product $\langle \Phi(x_i), \Phi(x_j) \rangle$  in~\eqref{SVMdualkernel} with the kernel function $K(x_i, x_j)$. We are now effectively computing the boundary in a high-dimensional space while only performing simple arithmetic in the original low-dimensional space.
+This modification of SVM is referred to as {\em kernel SVM}~\cite{boser1992training,scholkopf2002learning}.
+The Gaussian kernel $K(x,x') = \exp (-\|x-x'\|^2/2\eps)$ is a common default choice for kernel SVM.
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.45\textwidth,height=45.5mm]{figures/kernelsvm1}
+ \qquad
+\includegraphics[width=0.45\textwidth,height=45mm]{figures/kernelsvm2}
+\end{center}
+    \caption{Linear SVM (left) and kernel SVM (right) with a Gaussian kernel $K(x,x') = \exp (-\|x-x'\|^2/2\eps)$ with $\eps =1$, applied to 
+    a non-linearly separable dataset with two classes. Class membership is illustrated by red and blue colors. The decision boundary is plotted in black. The support vectors are indicated by open circles. While linear SVM obviously must fail to separate the two clusters, kernel SVM (with properly chosen hyperparameter) succeeds in disentangling them.}
+    \label{fig:kernelsvm}
+\end{figure}
+
+
+
+
+
+\section{Beyond binary classification}
+
+Binary classification addresses problems with only two possible outcomes. However, many practical and scientific applications naturally involve multiple classes, making multiclass classification essential.
+Indeed, in many domains, categories are inherently multi-valued, such as 
+medical diagnosis with multiple disease categories, object recognition (car, pedestrian, bicycle,...), or document topic classification (politics, sports, technology,...).
+
+\subsection{Multiclass Logistic Regression (Softmax Regression)}
+
+While binary logistic regression uses the sigmoid function to map a score to a probability, multiclass logistic regression (also known as Softmax Regression) generalizes this by using the Softmax function.
+
+For $K$ classes, we maintain $K$ separate weight vectors $\{w_1, w_2, \dots, w_K\}$. For a given input $x$, the probability that it belongs to class $k$ is
+\begin{equation}    \label{multiclass}
+\P(y=k \mid x) = \frac{\exp(w_k^T x+b_k)}{\sum_{j=1}^K \exp(w_j^T x + b_j)},
+\end{equation}
+where the function on the right-hand side in~\eqref{multiclass} is also known as softmax function.
+
+
+The denominator ensures that $\sum_{k=1}^K \P(y=k \mid x) = 1$, creating a valid probability distribution.
+The optimization objective generalizes to the categorical cross-entropy loss
+$$J(W) = -\sum_{i=1}^n \sum_{k=1}^K \mathbf{1}\{y_i = k\} \log(\P(y_i=k \mid x_i)).$$
+Here, the indicator $\mathbf{1}\{y_i = k\}$ is the ``multiclass version'' of the $y$ and $(1-y)$ used in binary logistic regression, which equals 1 if the true class of the 
+$i$-th sample is $k$, and it equals 0 otherwise.  
+$W$ is a matrix where each column (or row) corresponds to the weight vector $w_k$ for class $k$.
+The decision rule consists of predicting the class with the highest probability: $\hat{y} = \arg\max_k \P(y=k \mid x)$.
+
+\subsection{Multiclass Support Vector Machines}
+
+Unlike logistic regression, the SVM objective does not naturally produce a probability distribution across multiple classes. Instead, SVMs use meta-strategies to decompose the multiclass problem into multiple binary problems~\cite{hsu2002comparison}.
+
+One such strategy is called ``one-vs-all,'' this is the most common approach. The strategy consists of training $K$ separate binary SVMs. For each class $k$, we train a classifier where class $k$ is the positive label ($+1$) and all other classes are the negative label ($-1$). For the prediction step we calculate the decision function $f_k(x) = w_k^T x  + b_k$ for all $K$ classifiers. The input is assigned to the class with the highest (most positive) score.
+However, this approach comes with the drawback that
+the individual classifiers are trained on imbalanced datasets (one class vs.\ all other classes). 
+
+This issue can be mitigated by considering a
+``one-vs.-one'' strategy. There, one trains a binary SVM for every possible pair of classes. This results in $K(K-1)/2$ classifiers. The prediction is done via a ``majority vote'': Each classifier performs a ``vote.'' If the SVM for class 1 vs.\ class 2 chooses class 1, then class 1 gets a point. The class with the most votes wins. This strategy  has the benefit that each binary problem is smaller and more balanced, and it has the obvious downside that it is computationally more intense.
+
+
+\section{Rademacher complexity and generalization bounds}\label{ss:rademacher}
+
+In this section, we develop a systematic connection between geometric measures of complexity and generalization guarantees for SVMs.
+We show how {\em Rademacher complexity} provides a natural measure that leads directly to margin-based risk bounds~\cite{bartlett2002rademacher,koltchinskii2000rademacher,shalev2014understanding}. In a nutshell, Rademacher complexity is a measure of the richness of a class of (binary or real-valued) functions with respect to a probability distribution.
+
+
+
+Let us start with a thought experiment\footnote{This thought experiment is inspired by lectures notes of Aditya Bhaskara on the {\em Theory of Machine Learning}, \url{https://utah.instructure.com/courses/1023142}.}. 
+Suppose there is an unknown distribution ${\mathcal D}$ from which we draw $m$ i.i.d.\ samples 
+$S = \{(x_1, y_1), \dots, (x_n, y_n)\}$. Let
+$\ell$ be a given loss function and
+let $\loss_S(f)=\frac{1}{n} \sum_{i=1}^n \ell(f(x_i), y_i)$ denote the associated empirical loss of a hypothesis $f \in {\mathcal F}$, where ${\mathcal F}$ denotes a (possibly infinite) hypothesis class\footnote{In statistical learning theory, a hypothesis class is the set of all prediction rules that a learning algorithm is allowed to choose from. For example, for linear classifiers,  $\mathcal{F} = \{ x \mapsto \operatorname{sign}(w^\top x + b) : w \in \mathbb{R}^d, b \in \mathbb{R} \}$.}, and $\loss_{\mathcal D}(f) = \mathbb{E}_{(x,y) \sim {\mathcal D}} [\ell(f(x), y)]$ its true (population) loss. We can compute $\loss_S(f)$, but
+since ${\mathcal D}$ is usually unknown, we cannot calculate $\loss_{\mathcal D}(f)$ directly.
+In order to establish a generalization bound, we aim to show that the discrepancy between these two quantities is small uniformly over all $f \in {\mathcal F}$. 
+
+To build intuition, consider the following experiment. Suppose we are given a fixed hypothesis $f$ together with the sample $S$, and we wish to estimate the quantity $\loss_S(f) - \loss_{\mathcal D}(f)$. A natural approach is to employ a form of cross-validation: partition the sample $S$ into two disjoint subsets, $S_1$ (training) and $S_2$ (test), where for simplicity we assume that $|S_1| = |S_2| = |S|/2$. We aim to approximate $\loss_S(f) - \loss_{\mathcal D}(f)$ by
+$$
+\loss_S(f) - \loss_{\mathcal D}(f) \approx \loss_{S_1}(f) - \loss_{S_2}(f).
+$$
+We now expand this expression more explicitly. Let ${\textbf 1}_{(f, x_i)}$ be the indicator function that equals 1 if the hypothesis $f$ makes an error on the example $x_i$, and equals $0$ otherwise.
+The expression above can therefore be rewritten as
+\begin{equation}\label{eq:rademacher1}
+\loss_S(f) - \loss_{\mathcal D}(f)
+\approx
+\frac{1}{|S_1|}\sum_{x_i \in S_1} {\textbf 1}_{(f, x_i)} 
+- \frac{1}{|S_2|}\sum_{x_i \in S_2} {\textbf 1}_{(f, x_i)}.
+\end{equation}
+ 
+Fixing the sample $S$, each loss term ${\textbf 1}_{(f, x_i)}$ appears with a coefficient of $+1$ if $x_i \in S_1$ and with a coefficient of $-1$ if $x_i \in S_2$. Let us denote this sign by $\sigma_i$. With this notation, we may write
+$$
+\loss_{S_1}(f) - \loss_{S_2}(f) = \frac{2}{n} \sum_i \sigma_i 
+{\textbf 1}_{(f, x_i)}.$$
+
+
+Now suppose the sample $S$ is fixed, and we form the partition into $S_1$ and $S_2$ uniformly at random. This is equivalent to choosing the signs $\sigma_i$ independently and uniformly from ${\pm 1}$, in which case the sum above can be viewed as a randomized estimate of the generalization gap. 
+The resulting quantity is commonly referred to as a Rademacher average. Informally, Rademacher complexity,  is the supremum of the quantity above, over $f \in {\mathcal F}$.
+
+We will make this concept now rigorous. We distinguish between the empirical version (calculated on a specific set) and the population version (an average over all possible sets) of Rademacher complexity.
+
+\begin{definition}\label{de:empiricalrademacher}
+Let $\mathcal{F}$ be a class of real-valued functions $f : \mathcal{X} \to \mathbb{R}$, and let
+$S = (x_1, x_2, \ldots, x_n)$ be a fixed sample from $\mathcal{X}$. Let $\sigma_1, \ldots, \sigma_n$ be independent Rademacher random variables, i.e.
+$$
+\mathbb{P}(\sigma_i = +1) = \mathbb{P}(\sigma_i = -1) = \tfrac12.
+$$
+The {\em empirical Rademacher complexity} of $\mathcal{F}$ with respect to $S$ is defined as
+$$
+\widehat{\Rade}_S(\mathcal{F})
+\coloneqq 
+\mathbb{E}_{\sigma} \Big[
+\sup_{f \in \mathcal{F}}
+\frac{1}{n}
+\sum_{i=1}^n \sigma_i  f(x_i)
+\Big].
+$$
+\end{definition}
+Moving from this data-dependent estimate to its expected, distribution-level counterpart gives the population Rademacher complexity.
+
+
+\begin{definition}\label{de:empiricalrademacher}
+Let ${\mathcal D}$ be a distribution over $\mathcal{X}$. The (population) Rademacher complexity of $\mathcal{F}$ with respect to $n$ samples from ${\mathcal D}$ is
+$$
+\Rade_n(\mathcal{F})
+\coloneqq
+\mathbb{E}_{S \sim {\mathcal D}^n}
+\left[\widehat{\Rade}_S(\mathcal{F})
+\right] =
+\mathbb{E}_{S \sim {\mathcal D}^n} \mathbb{E}_{\sigma}
+\left[\sup_{f \in \mathcal{F}} \frac{1}{n}
+\sum_{i=1}^n \sigma_i f(x_i) \right].
+$$
+\end{definition}
+If $\mathcal{F} \subseteq \{ f : \mathcal{X} \to \{0,1\} \}$, the same definitions apply verbatim, with $f(x_i) \in \{0,1\}$.
+
+Rademacher complexity is closely related to the {\em Gaussian width}, a concept arising in high-dimensional geometry and statistical learning theory
+which we will explore in depth in Chapter~\ref{s:gordon}. For the current purposes, it suffices to know that for a closed set $T \subset \mathbb{R}^n$, the Gaussian width $w(T)$ is defined as
+$$w(T) = \mathbb{E}_{g \sim \mathcal{N}(0, I_n)} \left[ \sup_{t \in T} \,\langle g, t \rangle \right].$$
+Thus, for Rademacher complexity we are essentially replacing Gaussian random variables with Rademacher random variables.
+The close connection between these two concepts is further manifested  by the following relationship between the Rademacher complexity and Gaussian width (see Exercise~\ref{ex:rademacher}):
+$$\sqrt{\frac{2}{\pi}}\,w(\mathcal{F}) \leq  \Rade_n(\mathcal{F})\leq \sqrt{2 \ln(2n)} \,w(\mathcal{F}).$$
+
+\medskip
+Rademacher complexity is one of the central tools 
+in classical statistical learning theory.
+ If a hypothesis class has low Rademacher complexity (or Gaussian width), it will generalize well, as established by the following theoretical analysis. 
+
+\begin{definition}\label{de:risk}
+Given a hypothesis $f \in \mathcal{F}$, a loss function $\loss$, and a training sample $S = \{(x_1, y_1), \dots, (x_n, y_n)\}$, the empirical risk $\hat{R}_S(f)$ is defined as 
+$$\hat{R}_S(f) = \frac{1}{n} \sum_{i=1}^n \loss(f(x_i), y_i).$$
+\end{definition}
+
+While the ``true risk'' (or ``expected risk'') is the error we expect to see on all future, unseen data, the empirical risk is the error we can actually calculate using the data we have (the training set).
+
+The following theorem connects the true risk to the empirical risk  using the population Rademacher complexity.
+Intuitively, if a hypothesis class cannot fit random noise well, then empirical performance reliably predicts true performance.
+
+\begin{theorem}[Fundamental Generalization Bound]\label{th:rademachergeneralization}
+Let $\mathcal{F}$ be a hypothesis class of functions mapping to $[0, 1]$. For any $\delta > 0$, with probability at least $1 - \delta$ over a sample $S$ of size $n$, every $h \in \mathcal{F}$ satisfies
+\begin{equation}\label{eq:radebound}
+R(f) \leq \hat{R}_S(f) + 2\Rade_n(\mathcal{F}) + \sqrt{\frac{\ln(1/\delta)}{2n}},
+\end{equation}
+where $R(f) = \mathbb{E}[\loss(f(x), y)]$ is the expected risk, $\hat{R}_S(f)$ is the empirical risk on the sample $S$, and  $\Rade_n(\mathcal{F})$ is the population Rademacher complexity.
+\end{theorem}
+
+\begin{proof}
+The proof has three main components: (i)~concentration, (ii)~symmetrization, and (iii)~reduction to Rademacher complexity.
+
+(i)~Concentration via McDiarmid’s Inequality:
+Define a function $\Phi(S)$ that represents the maximum gap between true and empirical risk for our class
+$$\Phi(S) = \sup_{f \in \mathcal{F}} (R(f) - \hat{R}_S(f))$$
+We want to show that $\Phi(S)$ does not vary much if we change one element in $S$. Let $S$ and $S'$ differ only in the $i$-th element ($x_i$ vs $x'_i$).
+We compute
+$$|\Phi(S) - \Phi(S')| \leq \sup_{f \in \mathcal{F}} |\hat{R}_{S'}(f) - \hat{R}_S(f)| = \sup_{f \in \mathcal{F}} \frac{1}{n} |f(x'_i) - f(x_i)| \leq \frac{1}{n},$$
+where we have used that the range of $f$ is $[0, 1]$. By McDiarmid’s Inequality~\cite{mcdiarmid1989method}, with probability $1 - \delta$ it holds that
+\begin{equation}\label{eq:rade4}
+\Phi(S) \leq \mathbb{E}_S[\Phi(S)] + \sqrt{\frac{\ln(1/\delta)}{2n}}.
+\end{equation}
+
+(ii) Symmetrization:
+Now we bound the expectation 
+$$\mathbb{E}_S[\Phi(S)] = \mathbb{E}_S \left[ \sup_{f \in \mathcal{F}} (R(f) - \hat{R}_S(f)) \right].$$
+To that end, we introduce a ``ghost sample'' $S' = \{x'_1, \dots, x'_n\}$ drawn from the same distribution. Note that $R(f) = \mathbb{E}_{S'}[\hat{R}_{S'}(f)]$.
+We have
+\begin{align*}
+&\mathbb{E}_S[\Phi(S)]  =  \mathbb{E}_S \left[ \sup_{f \in \mathcal{F}} (\mathbb{E}_{S'}[\hat{R}_{S'}(f)] - \hat{R}_S(f)) \right] \\
+& \quad \quad \leq \mathbb{E}_{S, S'} \left[ \sup_{f \in \mathcal{F}} (\hat{R}_{S'}(f) - \hat{R}_S(f)) \right] = \mathbb{E}_{S, S'} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n (f(x'_i) - f(x_i)) \right],
+\end{align*}
+where we have used Jensen’s inequality in the last step.
+
+(iii) Introducing Rademacher variables:
+Since $x_i$ and $x'_i$ are i.i.d., the distribution of $(f(x'_i) - f(x_i))$ is symmetric. We can multiply by Rademacher variables $\sigma_i \in \{-1, 1\}$ without changing the expectation and obtain
+\begin{align}\label{eq:rade5}
+\begin{split}
+& \mathbb{E}_{S, S', \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n \sigma_i (f(x'_i) - f(x_i)) \right]
+\le  \\
+& \qquad \leq \mathbb{E}_{S', \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n \sigma_i f(x'_i) \right] + \mathbb{E}_{S, \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n -\sigma_i f(x_i) \right],
+\end{split}
+\end{align}
+where we have used the property of suprema ($\sup(A-B) \leq \sup A + \sup(-B)$).
+Both terms are identical and equal to the population Rademacher complexity $\Rade_n(\mathcal{F})$.
+Therefore, $\mathbb{E}_S[\Phi(S)] \leq 2\Rade_n(\mathcal{F})$.
+
+Substituting the result of~\eqref{eq:rade5} back into the McDiarmid bound from~\eqref{eq:rade4} gives
+$$\Phi(S) \leq 2\Rade_n(\mathcal{F}) + \sqrt{\frac{\ln(1/\delta)}{2n}}$$
+Since $R(f) - \hat{R}_S(f) \leq \Phi(S)$ for all $f \in \mathcal{F}$, the bound is proved. 
+
+\end{proof}
+
+If we wish to use the empirical Rademacher complexity $\hat{\Rade}_S(\mathcal{F})$ (which we can actually compute from data), the bound becomes slightly looser to account for the variance of the sample, namely
+\begin{equation}\label{eq:radebound2}
+R(f) \leq \hat{R}_S(f) + 2\hat{\Rade}_S(\mathcal{F}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.
+\end{equation}
+The proof of this bound is left to the reader (see Exercise~\ref{ex:rademacher2}).
+
+\medskip
+
+We are now ready to state the Rademacher Complexity  generalization bound for linear classes.
+
+\begin{theorem}\label{th:rademacher_linear}
+Denote $\mathcal{F}_B := \{x \mapsto \langle w, x \rangle : \|w\|\leq B\}$ and let $S = \{x_1, \dots, x_n\}$ be a sample such that $\|x_i\| \leq r$ for all $i$. The empirical Rademacher complexity of $\mathcal{F}_B$ satisfies
+$$\hat{\Rade}_S(\mathcal{F}_B) \leq \frac{Br}{\sqrt{n}}.$$
+\end{theorem}
+
+\begin{proof}
+We have
+$$\hat{\Rade}_S(\mathcal{F}_B) = \mathbb{E}_{\sigma} \left[ \sup_{\|w\| \leq B} \frac{1}{n} \sum_{i=1}^n \sigma_i \langle w, x_i \rangle \right]  = \frac{1}{n} \mathbb{E}_{\sigma} \Big[ \sup_{\|w\| \leq B} \Big\langle w, \sum_{i=1}^n \sigma_i x_i \Big\rangle \Big].$$
+To maximize the inner product $\langle w, \sum \sigma_i x_i \rangle$ subject to the constraint $\|w\| \leq B$, we choose $w$ to be in the same direction as the vector $\sum \sigma_i x_i$.
+Specifically, the optimal $w^*$ is $B \frac{\sum \sigma_i x_i}{\|\sum \sigma_i x_i\|}$. Substituting this in gives
+\begin{align}\label{eq:rade6}
+\begin{split}
+\hat{\Rade}_S(\mathcal{F}_B) & = \frac{1}{n} \mathbb{E}_{\sigma} \Big[ B \Big\| \sum_{i=1}^n \sigma_i x_i \Big\| \Big] = \frac{B}{n} \mathbb{E}_{\sigma} \Big[ \Big( \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 \Big)^{\frac{1}{2}} \Big] \\
+& \leq \frac{B}{n} \sqrt{ \mathbb{E}_{\sigma} \Big[ \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 \Big] },
+\end{split}
+\end{align}
+where we have used the concavity of the square root function and Jensen's Inequality.
+
+Furthermore, 
+\begin{equation}
+\mathbb{E}_{\sigma} \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 =
+\mathbb{E}_{\sigma} \Big[ \sum_{i,j} \sigma_i \sigma_j \langle x_i, x_j \rangle \Big] = \sum_{i,j} \mathbb{E}_{\sigma}[\sigma_i \sigma_j] \langle x_i, x_j \rangle.
+\end{equation}
+
+Since the $\sigma_i$ are independent and have mean zero we have that if $i \neq j$, then $\mathbb{E}[\sigma_i \sigma_j] = \mathbb{E}[\sigma_i]\mathbb{E}[\sigma_j] = 0$, and  if $i = j$, then $\mathbb{E}[\sigma_i^2] = 1$. Hence,  the double sum collapses to
+$\sum_{i=1}^n \mathbb{E}[\sigma_i^2] \langle x_i, x_i \rangle = \sum_{i=1}^n \|x_i\|^2$.
+
+Given our assumption that $\|x_i\| \leq R$, we have $\sum_{i=1}^n \|x_i\|^2 \leq nR^2$. Substituting this back into the inequality~\eqref{eq:rade6} yields
+$$\hat{\Rade}_S(\mathcal{F}_B) \leq \frac{B}{n} \sqrt{nR^2} =  \frac{BR}{\sqrt{n}}.$$
+
+\end{proof}
+
+
+
+The following result, known as Talagrand's Contraction Lemma, 
+is the key tool for passing from linear predictors to hinge, logistic, or other Lipschitz losses in SVM analysis. It
+allows us to relate the complexity of the ``composed'' function class (loss $\circ$ hypothesis) back to the original hypothesis class.
+
+\begin{theorem}[Talagrand’s Contraction Lemma~\cite{LT91}]\label{th:talagrandcontraction}
+Let $\mathcal{F}$ be a class of functions mapping $\mathcal{X} \to \mathbb{R}$. Let $\phi_1, \dots, \phi_n$ be functions such that each $\phi_i: \mathbb{R} \to \mathbb{R}$ is $L$-Lipschitz. Then for any sample $S = \{x_1, \dots, x_n\}$
+$$\mathbb{E}_{\sigma} \left[ \sup_{f \in \mathcal{F}} \sum_{i=1}^n \sigma_i \phi_i(f(x_i)) \right] \leq L \cdot \mathbb{E}_{\sigma} \left[ \sup_{f \in \mathcal{F}} \sum_{i=1}^n \sigma_i f(x_i) \right].$$
+\end{theorem}
+
+\begin{proof}
+We assume $L=1$ without loss of generality. We proceed by induction on $n$, the number of samples.
+
+Let $n=1$:
+We want to show that
+$$\mathbb{E}_{\sigma_1} [\sup_{f \in \mathcal{F}} \sigma_1 \phi_1(f(x_1))] \leq \mathbb{E}_{\sigma_1} [\sup_{f \in \mathcal{F}} \sigma_1 f(x_1)].$$
+Expanding the expectation gives
+$$\frac{1}{2} \Big( \sup_{f \in \mathcal{F}} \phi_1(f(x_1)) + \sup_{g \in \mathcal{F}} [-\phi_1(g(x_1))] \Big) = \frac{1}{2} \sup_{f, g \in \mathcal{F}} [\phi_1(f(x_1)) - \phi_1(g(x_1))]$$
+By the Lipschitz property we have $\phi_1(f(x_1)) - \phi_1(g(x_1)) \leq |f(x_1) - g(x_1)|$.
+The right-hand side of the case $n=1$ is $\frac{1}{2} \sup_{f, g \in \mathcal{F}} [f(x_1) - g(x_1)]$.
+We note that $\sup_{f,g} |f-g| = \sup_{f,g} (f-g)$ in our case, since $f$ and $g$ are interchangeable in the supremum, hence the inequality holds.
+
+
+Assume now the theorem holds for $n-1$. Let $U_{n-1}(f) := \sum_{i=1}^{n-1} \sigma_i \phi_i(f(x_i))$. We analyze
+\begin{equation}\label{eq:radeE}
+E := \mathbb{E}_{\sigma_{1:n}} \left[ \sup_{f \in \mathcal{F}} U_{n-1}(f) + \sigma_n \phi_n(f(x_n)) \right],
+\end{equation}
+(where we have used the shorthand $\sigma_{1:n} = (\sigma_1,\dots,\sigma_n)$) and isolate the expectation over $\sigma_n$. We get
+$$E = \mathbb{E}_{\sigma_{1:n-1}} \left[ \frac{1}{2} \sup_{f \in \mathcal{F}} \left( U_{n-1}(f) + \phi_n(f(x_n)) \right) + \frac{1}{2} \sup_{g \in \mathcal{F}} \left( U_{n-1}(g) - \phi_n(g(x_n)) \right) \right].$$
+For any fixed values of $\sigma_{1:n-1}$, let $f^*$ and $g^*$ be the functions that achieve the two suprema above. Then the expression inside the outer expectation is
+\begin{equation}\label{eq:radeU}
+\frac{1}{2} \left[ U_{n-1}(f^*) + \phi_n(f^*(x_n)) + U_{n-1}(g^*) - \phi_n(g^*(x_n)) \right].
+\end{equation}
+Using the Lipschitz property, $\phi_n(f^*(x_n)) - \phi_n(g^*(x_n)) \leq |f^*(x_n) - g^*(x_n)|$.
+We now consider the sign of $(f^*(x_n) - g^*(x_n))$:
+If $f^*(x_n) \geq g^*(x_n)$,~\eqref{eq:radeU} becomes $\frac{1}{2} [ U_{n-1}(f^*) + U_{n-1}(g^*) + f^*(x_n) - g^*(x_n) ]$.
+If $f^*(x_n) < g^*(x_n)$,~\eqref{eq:radeU} becomes $\frac{1}{2} [ U_{n-1}(f^*) + U_{n-1}(g^*) - f^*(x_n) + g^*(x_n) ]$.
+
+In both cases, notice that this matches the expansion of the supremum of the untransformed $n$-th variable
+$$\frac{1}{2} \left[ \sup_{f \in \mathcal{F}} (U_{n-1}(f) + f(x_n)) + \sup_{g \in \mathcal{F}} (U_{n-1}(g) - g(x_n)) \right].$$
+Substituting this back into~\eqref{eq:radeE} gives
+$$E \leq \mathbb{E}_{\sigma_{1:n-1}} \mathbb{E}_{\sigma_n} \left[ \sup_{f \in \mathcal{F}} \sum_{i=1}^{n-1} \sigma_i \phi_i(f(x_i)) + \sigma_n f(x_n) \right].$$
+By repeating this argument for $\sigma_{n-1}, \sigma_{n-2}, \dots, \sigma_1$, we peel away each $\phi_i$ one by one. After $n$ iterations, we obtain
+$$\mathbb{E}_{\sigma} \left[ \sup_{f \in \mathcal{F}} \sum_{i=1}^n \sigma_i \phi_i(f(x_i)) \right] \leq \mathbb{E}_{\sigma} \left[ \sup_{f \in \mathcal{F}} \sum_{i=1}^n \sigma_i f(x_i) \right].$$
+This completes the proof.
+
+\end{proof}
+
+
+
+It is easy to see that the hinge loss and the logistic loss are 1-Lipschitz.
+Therefore, by virtue of Talagrand's Contraction Lemma, generalization bounds for linear predictors automatically extend to SVM and logistic regression, as manifested by the Theorem~\ref{th:marginbound} below.
+
+We define the margin loss (or ramp loss) $\Phi_\gamma: \mathbb{R} \to [0, 1]$  by
+$$\Phi_\gamma(u) = \min\Big(1, \max\big(0, 1 - \frac{u}{\gamma}\big)\Big) = \begin{cases} 1 & \text{if } u \leq 0, \\ 1 - u/\gamma & \text{if } 0 < u \leq \gamma, \\ 0 & \text{if } u > \gamma. \end{cases}$$
+
+
+\begin{theorem}\label{th:marginbound}
+Let $\mathcal{D}$ be a distribution over $\mathcal{X} \times \{-1, +1\}$, where $\mathcal{X}$ is an input space such that $\|x\| \leq R$ for all $x \in \mathcal{X}$. Let $\mathcal{F}_B$ denote the hypothesis class defined by
+$$\mathcal{F}_B = \{ x \mapsto \langle w, x \rangle : \|w\| \leq B \}.$$
+For any margin $\gamma > 0$, and for any  $\delta \in (0, 1)$, with probability at least $1 - \delta$ over the choice of a sample $S = \{(x_1, y_1), \dots, (x_n, y_n)\}$ drawn i.i.d. from $\mathcal{D}$, every $f \in \mathcal{F}_B$ satisfies
+$$\P_{(x,y) \sim \mathcal{D}}(y f(x) \leq 0) \leq \frac{1}{n} \sum_{i=1}^n \Phi_\gamma(y_i f(x_i)) + \frac{2BR}{\gamma \sqrt{n}} + 3 \sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+
+\end{theorem}
+
+\begin{proof}
+We want to bound the true risk $R(f) = P_{(x,y) \sim \mathcal{D}}(yf(x) \leq 0)$. Define the indicator loss $\loss_{0/1}(u) = \mathbb{1}_{u \leq 0}$.
+The margin loss function $\Phi_\gamma(u)$ is defined such that for all $u \in \mathbb{R}$
+$$\mathbf{1}_{u \leq 0} \leq \Phi_\gamma(u)$$
+Therefore, the true risk is dominated by the expected margin loss
+$$R(f) = \mathbb{E}[\mathbb{1}_{yh(x) \leq 0}] \leq \mathbb{E}[\Phi_\gamma(yh(x))].$$
+Let $\mathcal{G}$ be the family of functions $\mathcal{G} = \{ (x, y) \mapsto \Phi_\gamma(y f(x)) : f \in \mathcal{F}_B \}$. Since the range of $\Phi_\gamma$ is $[0, 1]$, we apply the bound~\eqref{eq:radebound2}. For any $\delta > 0$, with probability at least $1 - \delta$
+\begin{equation}\label{eq:rade7}
+\mathbb{E}[\Phi_\gamma(yf(x))] \leq \frac{1}{n} \sum_{i=1}^n \Phi_\gamma(y_i f(x_i)) + 2\hat{\mathcal{R}}_S(\mathcal{G}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.\end{equation}
+
+Note that $\Phi_\gamma(u)$ is $L$-Lipschitz with $L = \frac{1}{\gamma}$. By Talagrand’s Contraction Lemma,
+\begin{equation}\label{eq:radem8}
+\hat{\mathcal{R}}_S(\mathcal{G}) = \mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i \Phi_\gamma(y_i h(x_i)) \right] \leq \frac{1}{\gamma} \mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i y_i h(x_i) \right].
+\end{equation}
+
+Consider the term $\mathbb{E}_\sigma [ \sup \frac{1}{n} \sum \sigma_i y_i f(x_i) ]$. Since $y_i \in \{-1, 1\}$ are fixed constants in the empirical complexity and $\sigma_i$ are independent Rademacher variables, the product $\sigma_i y_i$ is also a Rademacher variable with the same distribution as $\sigma_i$. Thus,
+$$\mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i y_i f(x_i) \right] = \mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i f(x_i) \right] = \hat{\mathcal{R}}_S(\mathcal{F}_B) \leq \frac{BR}{\sqrt{n}},$$
+where we have used Theorem~\ref{th:rademacher_linear} in the last step.
+We combine this bound with the inequality~\eqref{eq:radem8} and obtain
+\begin{equation}\label{eq:rade9}
+\hat{\mathcal{R}}_S(\mathcal{G}) \leq \frac{1}{\gamma} \cdot \frac{BR}{\sqrt{n}}.
+\end{equation}
+
+Substitute the  bound from~\eqref{eq:rade9} into the generalization inequality~\eqref{eq:rade7}
+gives
+$$\mathbb{E}[\Phi_\gamma(yh(x))] \leq \frac{1}{n} \sum_{i=1}^n \Phi_\gamma(y_i h(x_i)) + \frac{2BR}{\gamma \sqrt{n}} + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+We complete the proof by noting that
+$R(h) \leq \mathbb{E}[\Phi_\gamma(yh(x))]$.
+
+\end{proof}
+
+
+
+
+
+When applying standard SVM, we assume the data is (essentially) linearly separable. Assuming the linear separability holds strictly,  then in hard-margin SVM the optimization ensures that for all training points, $y_i f(x_i) \geq 1$. If we set our theoretical margin parameter $\gamma = 1$, then the hard-margin SVM ensures $y_i f(x_i) \geq 1$, which means $\Phi_\gamma(y_i f(x_i)) = 0$ for every single training point. Therefore, the empirical risk term in Theorem~\ref{th:marginbound} becomes zero. The generalization bound then tells us that the true error is entirely bounded by the complexity term $\frac{2BR}{\sqrt{n}}$ and the concentration term.
+
+
+In a soft-margin SVM, we allow some points to violate the margin using slack variables $\xi_i$. Recall that the hinge loss, $\loss_{\text{Hinge}}(u) = \max(0, 1-u)$, is an upper bound on the ramp loss $\Phi_\gamma(u)$. While the ramp loss is what we use in the theorem to get a tight bound between 0 and 1,  the soft-margin SVM actually minimizes the hinge loss because it is convex and easier to solve via quadratic programming.
+Because $\loss_{\text{Hinge}} \geq \Phi_\gamma$,  minimizing the hinge loss is a principled approach to trying to minimize the empirical term in the margin generalization bound.
+
+\medskip
+The generalization bounds are also applicable to kernel-SVM. It is not difficult to establish the following result (see also Exercise~\ref{ex:kernelSVMbound}).
+
+\begin{theorem}\label{th:marginkernelSVM}
+Let $K: \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ be a symmetric, positive-definite kernel, and let $\mathbb{H}_K$ be its associated Reproducing Kernel Hilbert Space with norm $\|\cdot\|_K$. Assume there exists a constant $R > 0$ such that $K(x, x) \leq R^2$ for all $x \in \mathcal{X}$.
+Let 
+$$\mathcal{F}_B = \{ f \in \mathbb{H}_K : \|f\|_K \leq B \}.$$
+Then with probability at least $1-\delta$
+$$R(f) \leq \hat{R}_{S, \gamma}(f) + \frac{2B \sqrt{\tr(K)/n}}{\gamma \sqrt{n}} + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+\end{theorem}
+
+\medskip
+In this RKHS setting, the empirical Rademacher complexity is strictly bounded by the trace of the kernel matrix
+$$\hat{\mathcal{R}}_S(\mathcal{F}_B) \leq \frac{B}{n} \sqrt{\sum_{i=1}^n K(x_i, x_i)} \leq \frac{BR}{\sqrt{n}}.$$
+
+Thus, Theorem~\ref{th:marginkernelSVM} shows that even if $\mathbb{H}_K$ is infinite-dimensional (like with a Gaussian kernel), the complexity of the learning task is governed only by the norm of the function (the parameter $B$) and the kernel's behavior on the data (the parameter $R$), not the dimensionality of the space.
+
+
+
+
+\section{Alternative classification methods}
+
+The choice of classification method depends strongly on factors like the inherent structure of the data (such as its dimensionality, sparsity, and linearity), the practical setting (for instance, a high-frequency trading platform might prioritize speed, while in medical diagnostics accuracy or need for interpretability may have higher priority), the available computational resources, as well as the amount of labeled data available and the signal-to-noise ratio.
+
+Thus, the  optimal classifier is not necessarily the most complex one, but rather the model that best balances accuracy, interpretability, robustness, and feasibility within the constraints of the intended application. With this in mind, we briefly mention a variety of alternative classification methods beyond linear models and margin-based classifiers which are widely used in practice.
+
+
+$k$-Nearest Neighbor (k-NN) methods~\cite{cover1967nearest} classify data points based on local proximity in feature space and require minimal modeling assumptions, although they scale poorly with dimension. 
+
+Random Forests and related tree-based ensembles~\cite{ho1998random,breiman2001random} construct classifiers by aggregating many randomized decision trees, offering strong empirical performance and robustness at the cost of reduced interpretability. 
+
+Boosting methods, such as AdaBoost and gradient boosting~\cite{freund1997decision,friedman2001greedy,chen2016xgboost}, combine weak learners into a powerful classifier through iterative reweighting, with strong theoretical guarantees under suitable conditions. 
+
+
+Neural networks are currently the state-of-the-art approach for multiclass classification, particularly when the relationship between the input features and the classes is non-linear or highly complex (like in images, audio, or natural language) and when a large number of training data is available. 
+
+In fact, the multiclass logistic regression model can be interpreted as a ``single-layer'' neural network. Deep Learning expands this by adding hidden layers between the input and the final softmax output. We will explore neural networks in more detail in Chapter~\ref{c:deeplearning}.
+
+
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}\hfill
+
+\noindent
+(a) Write down the KKT conditions for the soft-margin SVM.\\
+(b) Interpret each KKT condition geometrically. \\
+(c) Explain how complementary slackness characterizes support vectors.
+\end{myexercise}
+
+
+\begin{myexercise}
+Generate a binary classification dataset in $\mathbb{R}^2$ via: 
+\begin{itemize}
+\item[] \quad $\bullet$ \, Class $+1$: 100 samples from $\mathcal N((2,2), I)$,
+\item[] \quad $\bullet$ \, Class $-1$: 100 samples from $\mathcal N((-2,-2), I)$.
+\end{itemize}
+(a) Fit logistic regression with no regularization;\\
+(b) Fit logistic regression with $\ell_2$-regularization $(\lambda = 0.01, 0.1, 1)$.
+\\
+Compare norm of the weight vector, classification accuracy, and margin width. Visualize decision boundaries.
+    
+\end{myexercise}
+
+\begin{myexercise}\label{ex:rademacher}
+Show that the following relationship between the Rademacher complexity and Gaussian width holds:
+$$\sqrt{\frac{2}{\pi}}\,w(\mathcal{F}) \leq  \Rade_n(\mathcal{F})\leq \sqrt{2 \ln(2n)} \,w(\mathcal{F}).$$
+\end{myexercise}
+
+\begin{myexercise}\label{ex:rademacher2}
+Prove the following data-dependent generalization bound: \\
+For a hypothesis class $\mathcal{F}$ mapping to $[0, 1]$, with probability at least $1 - \delta$ over a sample $S$ of size $n$, every $f \in \mathcal{F}$ satisfies
+$$R(f) \leq \hat{R}_S(f) + 2\hat{\Rade}_S(\mathcal{F}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+\end{myexercise}
+
+\begin{myexercise}\label{ex:kernelSVMbound}
+Prove Theorem~\ref{th:marginkernelSVM}.
+\end{myexercise}
+
+
+
+
+
+\begin{myexercise}
+Consider a soft-margin SVM where each training example is a triplet $(x_i,y_i,p_i)$ with
+$0 < p \le 1$ denoting the importance of example $i$. 
+\begin{itemize}
+\item[(a)] Modify the primal optimization problem so that the penalty for violating the margin constraint on example $i$ is scaled by $p_i$.
+\item[(b)] Derive the corresponding dual optimization problem and describe how the importance weights affect the dual variables.
+\item[(c)] Briefly interpret the effect of $p_i$ on the solution. 
+\end{itemize}
+
+\end{myexercise}
+
+
+\begin{myexercise}
+Suppose we have a binary classification problem in one dimension. The two classes, $\mathcal{C}_0$ and $\mathcal{C}_1$, are distributed according to Gaussian probability density functions: 
+\begin{itemize}
+\item[(i)] 
+Class 0 (Negative): $p(x | \mathcal{C}_0) \sim \mathcal{N}(\mu_0, \sigma^2)$,
+\item[(ii)] Class 1 (Positive): $p(x | \mathcal{C}_1) \sim \mathcal{N}(\mu_1, \sigma^2)$.
+\end{itemize}
+Assume $\mu_1 > \mu_0$ and that the classes have equal prior probabilities, $\P(\mathcal{C}_0) = \P(\mathcal{C}_1) = 0.5$. We define a classifier with a decision threshold (cut-off) $\tau$, such that we predict class $\mathcal{C}_1$ if $x > \tau$, and class $\mathcal{C}_0$ otherwise.
+
+Derive analytical expressions for the following metrics as a function of the threshold $\tau$, the means $\mu_0, \mu_1$, and the variance $\sigma^2$. Use the standard normal cumulative distribution function $\Phi(z)$ or the complementary error function $\text{erfc}(z)$ in your answers.
+\begin{enumerate}
+\item  True Positive Rate (Sensitivity): $\text{TPR}(\tau)$.
+\item
+True Negative Rate (Specificity): $\text{TNR}(\tau)$.
+\item
+False Positive Rate: $\text{FPR}(\tau)$.
+\item
+The Confusion Matrix: Express the expected values of the matrix entries for a dataset of size $N$.
+\item
+ROC Curve Equation: Derive the functional relationship between $\text{TPR}$ and $\text{FPR}$ by eliminating $\tau$.
+\item
+Area Under the Curve: Show that the AUC for this 1-D Gaussian case is given by $\Phi\big(\frac{\mu_1 - \mu_0}{\sqrt{2\sigma^2}}\big)$.
+\end{enumerate}
+\end{myexercise}
+
+
+
+\begin{myexercise}
+The MNIST dataset consists of grayscale images of handwritten digits $0,1,\dots,9$, each represented as a vector in $\mathbb{R}^{784}$. 
+In this problem, we consider the binary classification task of distinguishing between the digits 3 and 8.
+Let
+$$
+{(x_i,y_i)}_{i=1}^n \subset \mathbb{R}^{784} \times \{-1,+1\}
+$$
+denote the dataset, where $y_i = +1$ corresponds to the digit 8 and $y_i = -1$ corresponds to the digit 3.
+Extract all images of digits 3 and 8 from the MNIST dataset, and normalize each image so that its pixel values lie in $[0,1]$. Split the data into a training set $80\%$ and a test set $20\%$. \\
+(a) Compare logistic regression and soft-margin SVM in terms of classification accuracy, convergence behavior, and robustness to misclassified samples. \\
+(b) Visualize several test images that are misclassified by each method.
+\end{myexercise}
+
+\begin{myexercise}(The Breast Cancer Wisconsin Diagnostic Dataset).
+Download the {\em Breast Cancer Wisconsin (Diagnostic) dataset} (e.g.\ from the UCI Machine Learning Repository). The goal in this exercise is to predict whether a tumor is malignant or benign based on 30 features (radius, texture, smoothness, etc.). \\
+(a) Train  SVM on the raw data. Then, standardize the features (subtract mean, divide by standard deviation) and retrain. Why does the SVM performance change so drastically with scaling, while Logistic Regression is relatively more robust? \\
+(b) Extract the weights $w$ from the Logistic Regression model. Which physical feature (e.g., ``area'' vs. ``concavity'') is the strongest predictor of malignancy? 
+\end{myexercise}
+
+
+\begin{myexercise}
+The Spambase dataset (UCI Machine Learning Repository) consists of email messages represented as feature vectors of 57 attributes. Each email is labeled as either {\em spam} or {\em non-spam}. Let
+$$
+{(x_i, y_i)}_{i=1}^n \subset \mathbb{R}^{57} \times \{-1,+1\}
+$$
+denote the dataset, where $y_i = +1$ corresponds to spam and $y_i = -1$ corresponds to non-spam. \\
+(a) Train logistic regression models for $\ell_1$-regularization, $\ell_2$-regularization, and 
+no regularization. \\
+(b) Train a soft-margin SVM. \\
+Compare logistic regression and soft-margin SVM in terms of classification accuracy, sparsity of learned parameters, and robustness to regularization parameter choice.
+\end{myexercise}
+
+\begin{myexercise}
+The goal of this exercise is to compare the performance of Support Vector Machines  and Feed-Forward Neural Networks as a function of training set size. This project consists of four parts.
+
+\smallskip
+\noindent
+Load the MNIST Dataset: Filter the dataset to include only the two digits 4 and 9.
+This pair is chosen because these two digits are visually (somewhat) similar and provide a meaningful challenge.
+Flatten the $28 \times 28$ images into 784-dimensional vectors. Scale the pixel values to the range $[0, 1]$. Reserve a fixed test set of 1,000 images for evaluation.
+
+You will train two models:
+\begin{itemize}
+\item Model A (SVM): Use a Gaussian kernel with $C=10$ and $\gamma=0.01$.
+\item Model B (Neural Network): A simple Multi-Layer Perceptron (MLP) with one hidden layer of 100 neurons, using ReLU activation and a Sigmoid output layer. Use the Adam optimizer with a learning rate of $0.001$.
+\end{itemize}
+
+Train both models on subsets of increasing size $N$ of the training data: for each subset size $N \in \{20, 50, 100, 500, 1000, 5000\}$, record the test accuracy.
+(To ensure statistical stability, you should repeat each training session five times with different random subsets and report the average accuracy.)
+
+
+\begin{itemize}
+\item[(a)] At what value of $N$ (roughly) does the neural network begin to outperform the SVM? Explain why the SVM performs better at very low values of $N$.
+\item[(b)] 
+Overfitting: Compare the training accuracy vs.\ test accuracy for the neural network at $N=50$. What does this gap tell you about the model's complexity relative to the data size?
+\item[(c)] 
+Support Vectors: For the $N=500$ SVM model, calculate the number of support vectors. How does this number compare to the total number of parameters in your neural network?
+\end{itemize}
+
+\end{myexercise}
+
+\begin{myexercise} This exercise deals with a highly imbalanced dataset, a problem we often encounter in practice. 
+
+
+From the MNIST dataset select two classes: Pick digit ``0'' (Majority) and digit ``8'' (Minority). Create an imbalanced dataset by taking 5,000 samples of the digit ``0'', and taking only 50 samples of the digit ``8''.
+Combine them into a training set where the minority class represents only 1\% of the data.
+But use a balanced test set (500 of each) to see how the model generalizes.
+Train a baseline by training a standard Logistic Regression or SVM on this imbalanced set. Then calculate accuracy: You will likely achieve ~99\% accuracy (why?)
+Calculate the Precision, Recall, and F1-Score. If the model simply predicts ``0'' for every single image, what would the accuracy be? Is this model actually useful?
+
+We will explore different intervention strategies to address this imbalance problem.
+
+\vspace*{-2mm}
+\begin{enumerate}
+\item Class weighting:
+Modify the SVM or Logistic Regression loss function to penalize mistakes on the minority class more heavily.
+
+\item Precision-recall thresholding:
+Instead of using the default 0.5 probability threshold, move the decision boundary.
+Plot a Precision-Recall Curve. Find the threshold that yields a Recall of at least 0.80 and report the resulting Precision.
+The ROC Curve and the Precision-Recall Curve are both used to evaluate classifiers. In this imbalanced experiment, which curve was more ``honest'' about the model's poor performance on the minority class? Why?
+
+\item Data augmentation: Come up with your own strategy to create additional (synthetic) versions of the digit ``8''. But you can only use the current 50 digits of ``8'' to do this, you cannot simply add other digits ``8'' from the MNIST dataset or some other existing dataset.
+
+\item Subsampling: Create a balanced dataset by downsampling the majority class to 50 samples. 
+\end{enumerate}
+
+Compare the results of the three different strategies to the baseline in terms of accuracy, precision for digit ``8'', precision for digit ``0'', and F1-score. Comment on the advantages and disadvantages of each strategy.
+Which intervention strategy seems most promising?
+    
+\end{myexercise}

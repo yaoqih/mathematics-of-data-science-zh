@@ -1,0 +1,113 @@
+\chapter{Introduction}\label{c:introduction}
+
+
+
+
+\section{Origins}
+
+The idea of this book emerged from the classes on ``mathematics of data science'' that the authors have been teaching at their home
+institutions Princeton University (AS), UC Davis (TS), and MIT, NYU, and ETH (ASB)\footnote{Lecture notes from these classes also
+contain a list of mathematical open problems~\cite{Afonso_10L42P}, which has now helped to inspire a mathematical blog of open problems at~\url{https://randomstrasse101.math.ethz.ch/}. The open problems of 2024 are available at~\cite{RandomstrasseProblems2024}.}. The lecture notes eventually became the basis to this book. While there are specialized books and many advanced research papers on each topic covered in this book, we believe it fills in the gap of being a single source that provides an accessible entry point at an advanced undergraduate, or graduate, level to mathematics of data science. The book can serve readers as a segue to those more advanced and specialized topis. In that light, one of the main purposes of this book is to be used as a textbook at both the (advanced) undergraduate and graduate levels. This book also differs from most texts in the way that it interweaves mathematical theory with some of its applications in data science.
+
+\section{The data science revolution}
+
+The data science revolution is one of the most profound shifts in modern history, reshaping industries, economies, and societies with unprecedented speed and scale.
+%In the digital age, data has emerged as one of the most valuable resources across various domains, transforming industries, reshaping business models, and influencing the very fabric of daily life.
+At its core, the data science revolution is driven by the exponential growth in data, advances in computing power, and the development of sophisticated analytical techniques.
+
+Data science and its cousin artificial intelligence have  become a cornerstone of modern decision-making and innovation, penetrating almost all aspects of our life.
+In healthcare, for example, data science is driving personalized medicine and predictive analytics. By analyzing patient data, healthcare providers can tailor treatments to individual needs, predict potential health issues before they arise, and improve patient outcomes.
+In finance, data science is revolutionizing risk management, fraud detection, and investment strategies. Algorithms analyze market trends, assess creditworthiness, and identify unusual transactions to mitigate risks and enhance decision-making.
+
+Retailers leverage data science to understand consumer behavior, optimize supply chains, and personalize marketing efforts.  The transportation industry benefits from data science through advancements in autonomous vehicles, route optimization, and predictive maintenance. Companies use data to enhance logistics, reduce costs, and improve safety.
+The energy sector uses data science to optimize resource allocation, predict equipment failures, and enhance energy efficiency. Data-driven insights help in managing renewable energy sources and reducing environmental impact.
+
+From the statistical techniques that form the basis of data analysis to the complex algorithms that power machine learning and artificial intelligence, mathematics is at the heart of data science. Understanding the connection between data science and mathematics is crucial for appreciating the depth and breadth of this revolution.
+%From the recommendation engines that guide our entertainment choices and precision agriculture which has as one of its goals maximizing yield while minimizing environmental impact to  data-driven diagnostics in medicine and predictive models driving financial markets, data science has become a cornerstone of modern decision-making and innovation.
+
+
+\section{Mathematics as a foundation of data science}
+
+
+Data science is an inherently interdisciplinary field that merges techniques from mathematics, statistics, computer science, signal processing, and domain-specific knowledge to extract insights from data. However, at its core, data science is fundamentally about understanding and leveraging patterns in data. This understanding is built on a complex and nuanced foundation of mathematical principles that enable the development of models and algorithms capable of making sense of complex datasets. This book aims to unravel many of these mathematical principles and provide a thorough grounding in the essentials of data science from a rigorous, mathematical perspective.
+
+
+
+Mathematics provides the language and framework for formalizing the processes involved in data analysis, from data collection and preprocessing to modeling and evaluation. It offers the tools necessary for designing effective algorithms, making precise predictions, visualizing complex datasets, quantifying uncertainty, and interpreting the results of data-driven experiments. %By delving into many of these mathematical foundations, this book seeks to bridge the gap between theoretical concepts and practical applications.
+As the field of data science keeps evolving at a rapid speed, new algorithms and techniques are constantly being developed. A strong mathematical foundation enables practitioners to quickly understand and adopt these innovations because they can grasp the underlying principles rather than just following black-box implementations.  Moreover, with a solid grasp of mathematics, learning new methods becomes easier.
+
+Also, when algorithms fail to produce correct results in real world applications, we would like to know why they failed. Is it because of %some
+ mistakes in the experimental setup, did we gather the wrong kind of data, do we have insufficient data, is it because of corrupted measurements, calibration errors, or  incorrect modeling assumptions, or perhaps due to fundamentally unrealistic expectations, or is it due to a deficiency of the algorithm itself? If it is the latter, can it be fixed by a better initialization, a more careful tuning of the parameters, or by choosing a different algorithm? Or is a more fundamental modification required, such as developing a different model, including additional prior information, taking more measurements, or a better compensation of calibration errors? How reliable are our  algorithms to small changes in the input data and
+can we explain why an algorithm arrives at a certain prediction?
+
+As we are dealing with larger datasets and we aim for faster and faster throughput,  it becomes increasingly important to address the aforementioned challenges in a systematic and principled manner.
+Thus, a rigorous and thorough study of computational algorithms both from a theoretical and numerical viewpoint is not a luxury, but  emerges as
+an imperative ingredient towards effective data-driven discovery.
+
+
+
+While a thorough mathematical framework can never completely avoid some guessing and trial-and-error, it can dramatically reduce  the time and resources we spend on trial-and-error. Good mathematical theory can help in predicting if a problem is solvable at all in feasible time. Moreover, fundamental mathematical analysis often leads to new discoveries such as faster or more robust algorithms, and it may reveal hitherto unknown connections to other, already well studied problems.
+
+
+
+
+At the heart of data science lies a rich tapestry of mathematical concepts. Key areas include statistics and  probability, linear algebra, optimization,  numerical algorithms, analysis, and graph theory,  but this list is by no means exhaustive. This book emphasizes the geometric viewpoint of data sets. Specifically, it is a very powerful way to think about a dataset as a point cloud in a high dimensional space for a wide range of analysis tasks such as clustering, classification, dimension reduction, prediction, denoising, outlier detection, and more. In this geometric viewpoint, linear models of data are interpreted as linear subspaces in a Euclidean space, while non-linear models can be viewed as manifolds embedded in the ambient space. Equally powerful is the representation of data points and their interconnections and similarities as a graph and learning using graph algorithms and analysis. In particular, the graph representation provides a powerful way to extend classical methods for function approximation and interpolation to the setting of complex and high dimensional setting of modern data sets. The computational machinery provided by classical harmonic analysis on Euclidean spaces such as Fourier analysis can be extended in this way to more complex geometries and networks.
+
+
+As data science continues to evolve, new mathematical techniques and approaches will emerge, expanding the possibilities for analyzing and interpreting data. This book provides a solid foundation upon which readers can build their expertise, adapt to new developments, and contribute to the advancement of the field.
+
+
+Data science also opens a new playground for mathematics, motivating new questions and new areas of mathematical inquiry. For this reason, another goal of this book is to motivate mathematicians (and, in particular, mathematics students) to engage with these topics and to create new mathematics motivated by questions arising from data and computation.
+
+
+\section{Whom is this book for?}
+
+Many of the concepts, algorithms, and methods presented in this book do not only belong in the toolbox of a well trained data scientist, but are also found in the standard repertoire of researchers and practitioners of machine learning and AI.
+
+The purpose of this book is twofold.  On the one hand. the book is designed to guide readers through many of the mathematical foundations of data science in a structured and accessible manner. It assumes a basic familiarity with mathematical concepts and aims to build upon this foundation to explore more advanced topics relevant to data science.
+On the other hand, the selection of data science topics for this book is also guided by our desire to demonstrate how data science leads to deep and exciting mathematical problems, and how (sometimes seemingly unrelated) mathematical concepts can provide key insight into data science tasks. This mutual enrichment is akin to how physics and mathematics have had a vibrant cross-fertilization over many centuries.
+
+While the tools and methods of data science and machine learning that are currently {\em en vogue} tend to change quickly, a solid grasp of the underlying mathematical principles provides an enduring foundation that allows one to adapt to, and even shape, the innovations of  future data science. We sincerely hope that this book can make a contribution to this endeavor. 
+
+\emph{What prerequisites should a reader have?}  An undergraduate level knowledge of linear algebra and probability is assumed.
+
+\section{Book organization and some omissions}
+
+\emph{What is covered in this book?}
+This book contains the material that one might want to teach in either a year-long course or a one-semester course on the mathematical foundations of data science.
+
+The book is separated into  sixteen chapters, and an effort was made to intertwine mathematical techniques and motivating applications. It starts with a description of the curious phenomena of high dimensional geometry, taking the opportunity to introduce and recall some probability theory in Chapter~\ref{c:surprises}. It proceeds to discussing linear dimension reduction techniques (such as PCA and truncated SVD) and doing a recap of several linear algebra concepts in Chapter~\ref{c:svd}. Linear regression and least squares are the central topics in Chapter~\ref{c:linreg_ls}.
+
+We move on to graph theory (including spectral graph theory, and spectral clustering in Chapter~\ref{c:graphs}) and non-linear dimension reduction (including diffusion maps in Chapter~\ref{c:diffusion}), continuing to highlight how central the spectrum of matrices formed from data are to understanding the data geometry. 
+Chapter~\ref{c:johnson} focuses on dimension reduction via randomized methods, including a brief introduction to randomized linear algebra. In Chapter~\ref{c:optimization} we dive into the tools of optimization that play a key role in data science, such as convex optimization and gradient descent.
+We explore several classical classification methods in Chapter~\ref{c:classification} and present a gentle introduction to Deep Learning in Chapter~\ref{c:deeplearning}.
+
+In Chapter~\ref{c:convergence} we analyze the large sample limit 
+of diffusion maps and other non-linear dimensionality reduction methods.
+The concept and power of convex relaxations is illustrated via the community detection problem in Chapter~\ref{c:community}. 
+Chapters~\ref{c:probability-gaussiananalysis} and~\ref{c:probability-matrixconcentration} are devoted to probability, the first to Gaussian analysis and concentration of measure, and the second to matrix concentration inequalities. 
+Finally, Chapters~\ref{c:cs} and~\ref{c:lowrank} deal with sparse data models, the first one is dedicated to Compressive Sensing, while the second one covers low-rank matrix recovery.
+
+
+\emph{What is not covered in this book? }
+This book does not cover everything related to mathematics of data science. Indeed, there are several topics not included to keep the book at a manageable length. 
+Perhaps the most notable omissions are relevant topics from statistics such as statistical inference and parameter estimation (e.g., Bayesian inference, etc.). There are already excellent textbooks dedicated to these topics, which are also being typically taught in separate courses. Such courses in statistics are of course recommended to those interested in data science, and can be taken either before, after, or in parallel to a course based on this book. The book also does not cover more specialized (but definitely very important) topics like data privacy, which is deeply connected to the mathematics of data science. The book is also at fault to not discuss optimal transport which has gained a lot of attention in mathematical data science. And we do not dive too deep into learning theory (such as VC dimension), as there are already plenty of resources on this topic. Notwithstanding these deliberate omissions, we believe that this book covers most of the foundational mathematical pillars of data science. 
+
+
+
+
+
+
+\section{Some related resources}
+
+%Warning: If URL breaks line, the pdf link doesn't work anymore
+
+At~{\footnotesize{\url{https://video.ethz.ch/lectures/d-math/2025/autumn/401-4944-20L}}} you can access videos of lectures given by one of the authors on parts of this book (or see~{\footnotesize{\url{https://people.math.ethz.ch/~abandeira/videos.html}}} for more videos on related topics).
+For the readers that find themselves looking for more problems or exercises: you might enjoy this note~\cite{JigSawStatCompGaps2025} which presents many exciting new results in theoretical computer science and high dimensional statistics via mathematical exercises. For open problems related to many topics of this book, you can visit~{\footnotesize{\url{https://randomstrasse101.math.ethz.ch/}}} or~\cite{RandomstrasseProblems2024} (or~\cite{Afonso_10L42P} for a less updated list).
+
+\section*{Acknowledgment}
+
+We want to thank our students, colleagues, and readers of earlier drafts of this book, who provided valuable feedback, alerted us to errors, and pointed out typos. Please keep doing so! We are grateful to Junda (Albie) Sheng and Stefan Broecker for generating some of the figures and to Yuan Ni for providing code for some numerical simulations. We are very thankful for the invaluable help that teaching assistants provided while we teach our courses on this topic, including the designing of countless problems and exercises on these topics. A particular thank you to Pedro Abdalla, Kevin Lucca, Anastasia Kireeva, Antoine Maillard, Petar Niz\'{i}c-Nikolac, and Almut R\"odder, who have greatly helped with the teaching of 
+classes on Mathematics of Data Science at ETH; many exercises in the book originated as homework problems in these classes~\cite{ExercisesInMDS2025}. Amit Singer acknowledges support from the Simons Foundation Math+X Investigator Award, AFOSR FA9550-20-1-0266, AFOSR FA9550-23-1-0249, NSF DMS 2009753, NSF DMS 2510039, and NIH/NIGMS R01GM136780-01.
+Thomas Strohmer  acknowledges support from NSF DMS-2208356, NIH R01HL16351, P41EB032840, and DE-SC0023490. 
+

@@ -1,0 +1,24 @@
+---
+title: "导论"
+description: "数据科学的兴起、数学基础与全书结构"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `introduction.tex`，尚待翻译。
+:::
+
+## 起源 {#sec-origins}
+
+## 数据科学革命 {#sec-data-science-revolution}
+
+## 数学：数据科学的基础 {#sec-mathematical-foundations}
+
+## 本书面向谁 {#sec-audience}
+
+## 全书结构与部分取舍 {#sec-book-organization}
+
+## 相关资源 {#sec-related-resources}
+
+## 致谢 {.unnumbered}
+

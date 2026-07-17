@@ -1,0 +1,1515 @@
+\chapter{Low-Rank Matrix Recovery}
+\label{c:lowrank}
+
+\newcommand{\PO}{P_{\Omega}}
+\newcommand{\cA}{{\mathcal A}}
+\newcommand{\Hn}{{\mathcal H}}
+\newcommand{\Hnn}{{\mathcal H}_n}
+\newcommand{\cT}{{\mathcal T}}
+\newcommand{\Tp}{{\mathcal T}^{\perp}}
+\newcommand{\cto}{{{\mathcal T}_{X_0}}}
+\newcommand{\tpo}{{{\mathcal T}^{\perp}_{X_0}}}
+
+Low-rank matrices arise throughout the sciences because many high-dimensional datasets are governed by a small number of latent factors, leading to strong correlations among variables~\cite{udell2019big}.
+Low-rank matrix recovery is a fundamental problem in mathematics and computer science that deals with recovering a matrix
+from {\em incomplete measurements}~\cite{WrightMa}. What does {\em incomplete} mean in this context? Consider for example a matrix
+ $X \in \R^{n_1\times n_2}$. Then, $X$ is determined by $n_1 n_2$ parameters. Assume we are given  $k$ measurements of this matrix with $k \ll n_1n_2$. Without any further assumptions, the problem of recovering $X$ from these measurements is ill-posed in this case, admitting infinitely many solutions. 
+But what if $X$ is a low-rank matrix? Can we recover a low-rank matrix from fewer measurements, and if so, can we do it in 
+ a numerically robust and efficient manner? And what other conditions do the measurements have to satisfy to make such an endeavour possible? These are the questions we intend to answer in this chapter.
+
+A prominent example of matrix completion and low-rank modeling is collaborative filtering, widely used in
+recommender systems~\cite{koren2009matrix,agarwal2016statistical,udell2016generalized}.  Imagine a user-item rating matrix $X$, where $X_{i,j}$ represents the rating given by user
+$i$ to item $j$.  Most entries in this matrix are typically missing, as users usually rate only a small fraction of the available items.  The goal of collaborative filtering is to predict the missing ratings, allowing the system to recommend relevant items to users.  By assuming that the rating matrix is approximately low-rank (reflecting latent factors like user preferences and item characteristics), we can use matrix completion techniques to infer the missing ratings and provide personalized recommendations.  A famous example is the ``Netflix Prize'' competition conducted between 2006 and 2009, see~\cite{netflix} for details.
+
+An important application of low-rank matrix recovery arises in quantum tomography~\cite{gross2010quantum}.  In this context, the matrix $X$ represents the density matrix
+of a quantum system.  Due to limitations in measurement devices, we often can only obtain incomplete information about
+the density matrix.  The density matrix is a positive semi-definite matrix with trace 1, and often, it is low-rank,
+especially for systems in a mixed state or when only a limited number of degrees of freedom are accessible.  Matrix
+completion techniques can be used to reconstruct the full density matrix from the incomplete measurements. This
+reconstruction is crucial for characterizing the state of the quantum system and performing quantum information
+processing tasks. The low-rank assumption is justified by the physical nature of many quantum states, and
+carefully exploiting it  allows for efficient and robust state reconstruction.  
+
+Other applications of matrix recovery and low-rank modeling arise in link prediction in social networks~\cite{chiang2014prediction,menon2011link}, Euclidean distance matrix embedding~\cite{javanmard2013localization,dokmanic2015euclidean},  robust photometric stereo~\cite{WrightMa}, 
+ phase retrieval~\cite{CESV2013}, blind deconvolution~\cite{ahmed2013blind}, and self-calibration~\cite{LS15}. We will discuss some of these applications in more detail later in this chapter.
+
+As the reader may suspect, there are strong connections between compressive sensing and low-rank matrix recovery.
+The connection lies in the fact that both rely on parsimonious structural assumptions (sparsity for compressive sensing and low-rank for matrix recovery) and can be tackled using convex relaxation. In both cases, the idea is to exploit these structures to recover the original data efficiently despite having far fewer observations than the ambient dimension of the signal of interest. Thus, it is not surprising that throughout this chapter we will see many parallels to compressive sensing. Nevertheless, matrix recovery poses some additional challenges, as the attentive reader will discover.
+
+\section{Rank minimization and the nuclear norm}
+
+We will refer to a matrix $X \in \R^{n_1 \times n_2}$ as {\em low-rank} if its rank $r$ is small compared to $\min\{n_1, n_2\}$. The choice that $X$ is real-valued is just for convenience, but all results can easily be adapted to the complex-valued setting.
+A simple computation reveals that such an $X$ has $r(n_1+n_2-r)$ degrees of freedom, which corresponds to the 
+dimension of the tangent space to the manifold of rank-$r$ matrices.
+
+
+We write $\Hnn$ for the Hilbert space of all $n \times n$ Hermitian matrices equipped
+with the Hilbert-Schmidt inner product $\langle X,Y \rangle := Tr(Y^\ast X)$
+We will also deal with linear transformation which acts on the space $\R^{n_1\times n_2}$, we will use
+calligraphic letters to denote these operators, as in ${\mathcal A}(X)$.
+
+Now, consider a matrix  $X_0 \in \R^{n_1 \times n}$ with rank
+$r \ll \min(n_1,n_2)$.
+and assume we are given measurements of the form
+\begin{equation}
+\label{tracemeasures}
+\langle A_j,X_0 \rangle  = y_j, \qquad j=1,\dots,m,
+\end{equation}
+where the $A_j$ are some matrices  in $\R^{n_1 \times n_2}$. For notational convenience, we define the measurement operator
+\begin{equation}
+\label{tracemeasureop}
+\cA(X_0): \R^{n_1 \times n_2} \to \R^m, \quad 
+\cA(X_0)_j = \langle A_j,X_0 \rangle, \qquad j=1,\dots,m.
+\end{equation}
+Thus, we can express the (possibly noisy) matrix measurement process in compact form via
+$$y = {\mathcal A}(X_0) + \eps,$$
+where $y=\{y_j\}_{j=1}^m$ contains all measurement outcomes and $\eps \in \R^m$ denotes additive noise.
+
+For reference, the adjoint operator $\cA^*$ maps real-valued inputs
+into Hermitian matrices, and is given by
+\[
+\begin{array}{lll}
+  \R^{m} & \to & \mathcal{H}^{n \times n}\\
+  z & \mapsto & \sum_i a_i \, a_k a_k^*.
+\end{array}
+\]
+
+
+
+Let us first consider the noiseless case. A natural approach to recovering $X_0$ is to solve the rank minimization problem
+\begin{align}\label{eq:rankmin}
+\begin{split}
+\min_{X \in \mathbb{R}^{n_1 \times n_2}} \quad & \operatorname{rank}(X) \\
+\text{subject to} \quad & \mathcal{A}(X) = y.
+\end{split}
+\end{align}
+
+This formulation directly encodes the assumption that the solution should have minimal rank among all matrices consistent with the measurements.
+
+In a few cases, rank-minimization problems can be solved explicitly and efficiently. Consider for example the problem
+\begin{align}\label{eq:ranksvd}
+\begin{split}
+\text{minimize} \quad & \operatorname{rank}(X) \\
+\text{subject to} \quad & \|X - A\| \le \eps,
+\end{split}
+\end{align}
+where $A \in \R^{n_1\times n_2}$ is a given matrix. Let $A= \sum_{i=1}^{\min(n_1,n_2)} \sigma_i u_i v_i^T$ denote the SVD of $A$. Utilizing our findings in Chapter~\ref{ss:lowranksvd}, it is easy to see that the solution is given by a properly truncated SVD of $A$, namely $X= \sum_{i=1}^{r} \sigma_i u_i v_i^T$, where $r$
+is the smallest number such that $\sigma_{r+1} \le \eps$.
+
+However, the rank function is non-convex, discontinuous, and combinatorial in nature. As a result, rank minimization problems are NP-hard in general, even in seemingly simple settings~\cite{LVanderberghe_SBoyd_1996,fazel2002matrix}. 
+One way to see this is by considering the special case where $X$
+is a diagonal matrix. In that case we have $\rank X = \|X\|_0$ and the rank minimization problem takes the form
+\begin{align*}
+\min \quad & \|X\|_0 \\
+\text{subject to} \quad & \mathcal{A}(X) = y,
+\end{align*}
+which played a central role in Chapter~\ref{c:cs}, and we already know it to be 
+NP-hard~\cite{natarajan1995sparse,FoucartRauhut_CSbook}.
+
+
+
+This computational intractability motivates the search for tractable relaxations that retain the essential structure of the original problem.
+
+
+
+
+
+
+
+%\section{Convex relaxation via the nuclear norm}
+
+A standard convex surrogate for the rank function is the {\em nuclear norm}, defined as
+$$
+\|X\|_* := \sum_{i} \sigma_i(X),
+$$
+where ${\sigma_i(X)}$ are the singular values of $X$. The nuclear norm is convex and can be viewed as the matrix analogue of the $\ell_1$-norm for vectors, which is known to promote sparsity. In fact, the nuclear norm is the tightest convex lower bound of the rank function on the unit spectral-norm ball, see e.g. Theorem~1 in~\cite{fazel2001rank}. Compare also Figure~\ref{fig:nucball} to Figure~\ref{fig:l1l2}(a).
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=50mm,height=55mm]{figures/nucball1}
+\caption{The ``nuclear ball'' and the affine feasible set. 
+The nuclear ball corresponds to $2\times 2$ symmetric matrices with nuclear norm at most equal to that of $X_0$.
+The gray affine subspace represents the solution
+space to the equation ${\mathcal A}(X) = {\mathcal A}(X_0)$.
+When the feasible set is tangent to the ball at $X_0$, the
+solution to~\eqref{eq:nuclearnormrelaxation} is exact.}
+\label{fig:nucball}
+\end{center}
+\end{figure}
+
+
+Replacing the rank objective in~\eqref{eq:rankmin} by the nuclear norm yields the convex optimization problem~\cite{fazel2002matrix,CR08,recht2010guaranteed}
+\begin{align}\label{eq:nuclearnormrelaxation}
+\begin{split}
+\min_{X \in \mathbb{R}^{n_1 \times n_2}} \quad & \|X\|_* \\
+\text{subject to} \quad & \mathcal{A}(X) = y.
+\end{split}
+\end{align}
+
+This problem can be cast as a semidefinite program (see Exercise~\ref{ex:nuclear_SDP}). Consequently it can be solved efficiently using interior-point methods for moderate problem sizes or first-order methods for large-scale instances.\footnote{Generally, first-order methods have better time-complexity dependency on the problem size, but worse dependency on the desired distance to optimality.}  
+
+In the presence of noise, i.e,, $y=\cA(X_0)+w$, where $w$ represents the noise term, one typically considers a relaxed formulation
+\begin{align}\label{eq:nuclearnormrelaxationnoise}
+\begin{split}
+\text{minimize} \quad &  \|X\|_*  \\
+\text{subject to} \quad & \|\mathcal{A}(X) - y\| \leq \tau,
+\end{split}
+\end{align}
+where $\tau$ is an upper bound on the error, that is
+$\|w\|\le \tau$.
+
+
+
+Although nuclear norm minimization is only a relaxation of rank minimization, it has been shown to recover the true low-rank solution exactly under suitable conditions on the measurement operator $\mathcal{A}$. These conditions can be expressed in various ways, including restricted isometry properties, incoherence assumptions, or geometric criteria based on descent cones and Gaussian width.
+
+The success of the convex relaxation is therefore not accidental: the nuclear norm captures the essential geometry of low-rank matrices in a way that allows both computational tractability and provable recovery guarantees, similarly to how the $\ell_1$ does for Sparsity (Chapter~\ref{c:cs}). As a result, nuclear norm minimization has become a cornerstone of modern low-rank matrix recovery theory. We will explore this topic in more detail in the next sections.
+
+
+
+
+
+\section{Recovery guarantees via descent cone analysis}
+\label{s:descentcone}
+
+A central challenge in low-rank matrix recovery is to determine when a convex optimization procedure---typically nuclear norm minimization---can exactly recover a matrix of low rank from a set of linear measurements. A powerful and general framework to analyze this question arises from descent cone\footnote{The descent cone is sometimes equated to the tangent cone from convex geometry, although technically they do not usually coincide.} analysis and conic geometry, developed in~\cite{chandrasekaran2012convex,amelunxen2014living,tropp2015convex}
+and refined in numerous followup papers, such as~\cite{kueng2017low,abbasi2019universality,fuchs2022proof}.
+Our analysis will follow in part the perspicuous presentations in~\cite{tropp2015convex,fuchs2022proof}.
+
+
+\begin{definition}\label{def:descentcone}
+The descent cone $\mathcal{D}(f,X_0)$ of a proper convex function\footnote{A proper convex function is an extended real-valued convex function with a non-empty domain, that never takes on the value $-\infty$ and also is not identically equal to $+\infty$.} $f: \mathbb{C}^{n_1 \times n_2}\rightarrow \R$ at a point $X_0 \in \mathbb{C}^{n_1 \times n_2}$ is the conic hull of directions in which $f$ decreases near $X_0$ 
+\begin{align*}
+    \mathcal{D}(f,X_0) :=\{Z\in \mathbb{C}^{n_1 \times n_2}: f(X_0 + \epsilon Z) \le f(X_0) \text{ for some } \epsilon > 0\}.
+\end{align*}
+\end{definition}
+The descent cone of a convex function is always a convex cone, but it may not be closed.
+
+The descent cone analysis approach is widely applicable. In connection with low-rank matrix recovery, we are concerned with the case where $f(X) = \|X\|_*$. 
+
+
+
+Consider now the following two convex optimization problems:
+
+
+\begin{multicols}{2}
+\noindent
+\begin{align}\label{fmin_nonoise}
+\begin{split}
+\text{min.} \quad  & f \left(X\right) \\
+\text{s.t.} \quad & \mathcal{A} \left(X\right) = y.
+\end{split}
+\end{align}
+\qquad
+\begin{align}\label{fmin_noise}
+\begin{split}
+\text{min.} \quad  & f \left(X\right) \\
+\text{s.t.} \quad & \|\mathcal{A} \left(X\right) - y\|_2\le \tau.
+\end{split}
+\end{align}
+\end{multicols}
+
+
+\begin{figure}[htbp]
+\begin{center}
+\subcaptionbox{Noiseless case}{
+\includegraphics[width=45mm]{figures/descentconeX0}}
+\qquad \qquad
+\subcaptionbox{Noisy case}{
+\includegraphics[width=45mm]{figures/descentconenoiseX0}}
+\caption{Descent cone analysis for the noiseless and the noisy case. Theoretical guarantees for low-rank matrix recovery can be obtained by analyzing the relative geometric orientation of the feasible space of the optimization problem with respect to the objective function’s descent cone (the reddish shaded areas) anchored at the matrix $X_0$.
+For low-rank matrix recovery we take the function $f$ in the picture above to be $f(X)=\|X\|_*$.}
+\label{fig:descentcone}
+\end{center}
+\end{figure}
+
+We start with the noiseless case. If $X_0$ is the ground truth to $\mathcal{A} \left(X \right) = y$, then 
+any minimizer $\hat{X}$ of~\eqref{fmin_nonoise} must satisfy $f(\hat{X}) \le f(X_0)$ and $\cA(\hat{X}) = y$.
+This implies that $\hat{X}$ can be decomposed into $\hat{X} = X_0+Z$, where $Z \in \mathcal{D}(f,X_0) \cap \ker(\cA)$. If the intersection between the nullspace $\ker(\cA)$ and the descent cone $\mathcal{D}(f,X_0)$ only contains the zero element, then $X_0$ must be the 
+unique optimal solution to~\eqref{fmin_nonoise}, as illustrated in Figure~\ref{fig:descentcone}(a).
+
+In the noisy case, we cannot ask for exact recovery. But in light of~\eqref{fmin_noise} we hope that the error between a solution $\hat{X}$  and the ground truth $X_0$ is of the order of $\tau$. Let $\hat{X}=X_0+Z$ be a feasible solution of~\eqref{fmin_noise} and note that
+the constraint $\|\mathcal{A} \left(X_0+Z\right) - y\|_2\le \tau$ implies $\|\mathcal{A} \left(Z\right)\|_2\le \tau$. Thus, to bound the error $\|\hat{X} - X_0\|_F = \|Z\|_F$, we need to focus our attention on the intersection of $\mathcal{D}(f,X_0)$ and
+$\{Z: |\mathcal{A} \left(Z\right)\|_2\le \tau\}$. The smaller the size of the intersection, the smaller the error will be, cf.~also Figure~\ref{fig:descentcone}(b).
+
+The size of $\mathcal{D}(f,X_0) \cap \{Z: |\mathcal{A} \left(Z\right)\|_2\le \tau\}$ can be controlled by a quantity called the {\em smallest conic singular value}\footnote{The terminology originates in the fact that $\sigma_{\min}\big(\cA,\R^{n_1\times n_2})$
+coincides with the usual minimum singular value of $\cA$.}~\cite{tropp2015convex,chandrasekaran2012convex,fuchs2022proof}, which is defined by
+\begin{equation}\label{conesv}    
+\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big) :=   
+\inf_{Z \in \mathcal{D}(f,X_0) \setminus \{0\}} \frac{\|\cA(Z)\|}{\|Z\|_F}.
+\end{equation}
+The following proposition shows that when $\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big)$ is large, the size of the intersection will be small, which in turn would yield a smaller error~\cite{tropp2015convex,chandrasekaran2012convex,fuchs2022proof}.
+\begin{proposition} \label{prop:cone}
+Let $\cA: \R^{n_1\times n_2} \to \R^m$ be a linear operator and assume
+that $y = \cA(X_0)+w$ with $\|w\|\le \tau$.  Then, any minimizer $\hat{X}$ of the optimization problem~\eqref{fmin_noise} satisfies
+\begin{equation}\label{cone_error1}
+ \|\hat{X} - X_0\|_F \le \frac{2\tau}{\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big)}.  
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+We have 
+\begin{equation}\label{cone_error2}
+\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big) \le \frac{\|\cA(Z)\|}{\|Z\|_F} \le 
+\frac{\|\cA(Z)-w\|+\|w\|}{\|Z\|_F} \le 
+\frac{2\tau}{\|Z\|_F},
+\end{equation}
+for any feasible $Z$. Here, the first inequality in~\eqref{cone_error2} follows from the definition of
+$\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big)$, the second inequality from the triangle inequality, and the third one from $\|\mathcal{A} \left(Z\right)\|_2\le \tau$ and the assumption $\|w\|\le \tau$. Rearranging the terms in~\eqref{cone_error2} concludes the proof.
+
+\end{proof}
+As a consequence, if we can show that $\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big) > 0$, then this would imply exact recovery in the noiseless scenario. However, Proposition~\ref{prop:cone} is deceptive in its simplicity. In general it is actually rather difficult to compute or bound 
+the smallest conic singular value of a matrix. The situation becomes more promising once we introduce  randomness in the measurement process, and thereby into $\cA$. We will explore such a scenario next.
+
+\subsection{Low-rank matrix recovery from Gaussian measurements}\label{ss:matrixrecoverygaussian}
+
+We consider the case of low-rank matrix recovery with measurements of the form
+$$
+\cA(X_0)_i = y_i = \langle A_i,X_0 \rangle, \qquad i=1,\dots,m,
+$$
+where the $A_i$ are $n_1 \times n_2$  Gaussian matrices. 
+
+
+
+The proof strategy to bound $\sigma_{\min}\big(\cA,\mathcal{D}(f,X_0)\big)$ for this Gaussian measurement operator is based on  Gordon's Theorem, the use of which was first proposed in the context of sparse recovery by Rudelson and Vershynin in~\cite[Section 4]{rudelson2008sparse}. It revolves around the concept of Gaussian width, which we introduced in Definition~\ref{def:gaussianwidth}.
+
+Setting $S:= \{Z \in \mathcal{D}(\|\cdot \|_*,X_0):\|Z\|_F =1\}$, our goal becomes to bound $\inf_{Z \in S} \|\cA(Z)\|$ from below. 
+Revisiting Gordon's Theorem,  an inspection of the proof of Theorem~\ref{GordonsTheorem} (in particular~\eqref{eq:5:usingGaussianconcentration_2}) yields the following tail bound\footnote{ The observant reader might have noticed that in~\eqref{gordontail} we have replaced the {\em minimum} in~\eqref{eq:gordon2} by the {\em infimum}. This switch (the verification of which is left to the reader) is due to the fact that the descent cone $S$ may not be closed.}
+\begin{equation}\label{gordontail}
+\inf_{x\in S} \| \cA(Z) \| \geq \sqrt{m-1} - \omega(S) - t, \qquad \text{for $t > 0$,}
+\end{equation}
+with probability at least $e^{-t^2/2}$,
+where we have used the well known bound $a_d \ge \sqrt{d-1}$ in~\eqref{eq:gordon2} and $d=m$  to adapt the notation in Chapter~\ref{c:probability-gaussiananalysis} to the current setting ($m$ denotes the number of measurements in this chapter).
+If $w(S)$ does not exceed $\sqrt{m-1}$, then we can obtain probabilistic recovery guarantees via Proposition~\ref{prop:cone}.
+
+As pointed out in~\cite{fuchs2022proof}, Gordon's Theorem---and therefore also the tail bound in~\eqref{gordontail}---only requires $S$ to be a subset of the Frobenius unit sphere\footnote{The Frobenius unit sphere is ${\mathcal S}_F(\R^{n_1\times n_2}):= \{Z\in \R^{n_1\times n_2}: \|Z\|_F=1\}$.} ${\mathcal S}_F(\R^{n_1\times n_2})$. Therefore, one is not
+restricted to a specific descent cone but one can instead choose the union over all possible descent
+cones corresponding to rank-$r$ matrices in order to obtain uniform recovery guarantees:
+\begin{align*} 
+S_r = {\mathcal S}_F(\R^{n_1\times n_2}) \cap K_r \quad \text{where} \quad K_r = \bigcup_{{\small 
+\begin{matrix}
+    X \in \R^{n_1\times n_2} \\ \rank(X)=r
+\end{matrix} }}
+ \mathcal{D} \left( \| \cdot \|_*, X \right).
+\end{align*}
+
+
+\begin{proposition}[\cite{fuchs2022proof},  Corollary~2.1]\label{prop:matrixconebound}
+    The Gaussian width of $S_r$, the union over all possible descent cones with an anchor point of rank-$r$ can be bounded by
+    \begin{align*}
+        w(S_r) 
+        \lesssim \sqrt{r} \left( \sqrt{n_1} + \sqrt{n_2}\right).
+    \end{align*}
+    Furthermore, let $\mathcal{A}: \R^{n_1\times n_2}\rightarrow \R^m$ be a Gaussian measurement operator. Then, $\lambda_{\min} \left( \mathcal{A},  \mathcal{D}(f,X)\right)$ is bounded away from zero for any rank-$r$ matrix X w.h.p. if
+    \begin{align*}
+        m \gtrsim  r (n_1 + n_2).
+    \end{align*}
+\end{proposition}
+
+The proof of Proposition~\ref{prop:matrixconebound} makes use of the following result, which we state without proof.
+\begin{lemma}[\cite{fuchs2022proof},  Lemma~2.2]
+\label{le:conerank}
+Suppose that $Z \in \R^{n_1 \times n_2}$  is contained in the nuclear norm descent cone of a rank-$r$ matrix $X \in \R^{n_1 \times n_2}$. Then,
+\begin{align*}
+\|Z\|_* \leq  \left(1+\sqrt{2}\right) \sqrt{r}  \|Z\|_F.
+\end{align*}
+\end{lemma}
+
+
+\begin{proof}[of Proposition~\ref{prop:matrixconebound}]
+    Using H\"older's inequality and Lemma \ref{le:conerank}, the Gaussian width $w(S_r)$ can be bounded in terms of the expected operator norm of a standard Gaussian matrix:
+\begin{align*}
+    w(S_r) = \mathbb{E}\sup_{Z\in S_r} \langle A, Z\rangle & \leq \sup_{Z \in S_r} \|Z \|_* \,\mathbb{E} \|A  \| \\ & \leq\left(1+\sqrt{2}\right)
+    \sqrt{r} \mathbb{E}\|A\| \\
+    & \lesssim 
+    \sqrt{r}(\sqrt{n_1}+\sqrt{n_2}),
+    %\le \left(1+\sqrt{2}\right) \sqrt{r} (\sqrt{n_1}+\sqrt{n_2})
+\end{align*}
+where in last inequality we have used the bound $\mathbb{E}\|A\| \lesssim \sqrt{n_1}+\sqrt{n_2}$ , which can be found in e.g.~\cite[Remark 4.4.4]{vershynin2010introduction}. Using the tail bound~\eqref{gordontail} derived from Gordon's Theorem, we obtain
+\begin{align*}
+    \inf_{X\in S_r}\|\mathcal{A}(Z)\|_2 = \inf_
+    {{\small \begin{matrix}
+    X \in \R^{n_1\times n_2} \\ \rank(X)=r
+\end{matrix}} }
+ \lambda_{\min} \left( \mathcal{A},  \mathcal{D}(\Vert \cdot \Vert_{\ast},X_0)  \right) \ge \sqrt{m-1} - w(S) - t
+\end{align*}
+ with probability at least $1-e^{-t^2/2}$. Therefore, if
+$$
+    m \gtrsim r (n_1+n_2) 
+    %could use instead \ge 1 + (1+\sqrt{2})^2r (n_1 + n_2 + 2\sqrt{n_1 n_2}),
+$$
+we can pick $t>0$, such that $\inf_{X\in S_r}\|\mathcal{A}(Z)\|_2 $ is positive w.h.p. 
+\end{proof}
+
+
+
+
+
+\section{Low-rank matrix recovery and dual certificates}\label{s:matrixdual}
+
+
+The descent cone approach, while geometrically appealing, faces arduous challenges\footnote{Some, but not all, of these challenges can be addressed by employing Mendelson’s small ball method, see~\cite{mendelson2015learning,koltchinskii2015bounding,tropp2015convex,fuchs2022proof}.}
+when we deal with problems where additional structure, such as incoherence of the unknown signals, is critical to exclude exceptional instances where the reconstruction must necessarily fail (see~\cite{fuchs2022proof} for a more detailed discussion  of the issues that arise).
+Thus, in applications like quantum state tomography, phase retrieval, and matrix completion, an approach based on dual certification introduced in Chapter~\ref{s:duality}, is often preferable.
+
+
+
+The next lemma will pave the way to establishing tractable conditions that the nuclear norm relaxation~\eqref{eq:nuclearnormrelaxation}  attains its optimal value at a specific point is through the provision of a dual certificate (sometimes also called {\em dual witness}).
+
+Recall from our computation of the subdifferential of the nuclear norm in Chapter~\ref{ss:subgradient} the definition the tangent space $\Tn$ at a rank$-r$ $n_1 \times n_2$ matrix $X$ with SVD $X = U \Sigma V^T$ relative to the manifold of rank-$r$ matrices:
+$$\Tn_X = \{ U A^T + B V^T : A \in \mathbb{R}^{n_1 \times r}, B \in \mathbb{R}^{n_2 \times r} \}.$$
+
+
+
+
+
+\begin{lemma}[Dual certificate,  \cite{candes2009exact}]\label{le:candesrechtlowrank}
+Let $X_0 \in \R^{n_1 \times n_2}$ be such that $\mathcal{A}\left( X_0 \right) = y \in \R^m$.
+Assume that the following two conditions hold:
+\begin{enumerate}
+ \item There exists a vector $\lambda \in \R^m$ such that $Y=\mathcal{A}^* \lambda$ satisfies
+\begin{equation}\label{eq:nucleardualcond}
+ \mathcal{P}_{\Tn_{X_0}}  Y = UV^* \quad \text{and} \quad \Vert \mathcal{P}_{\Tn^{\perp}_{X_0}} Y  \Vert < 1.
+\end{equation}
+\item The linear operator $ \mathcal{A}$ is injective when restricted to the tangent space $\Tn_{X_0}$.
+\end{enumerate}
+Then $X_0$ is the unique minimizer of~\eqref{eq:nuclearnormrelaxation}.
+\end{lemma}
+
+
+\begin{proof}
+Suppose $X_0$ is feasible and has SVD
+$X_0 = U \Sigma V^T$ with $\rank(X_0)=r$.
+Let $P_{\cto}$ and $P_{\tpo}$  
+denote the  orthogonal projections on $\Tn_{X_0}$ and
+$\tpo$, respectively.
+
+The Lagrangian is
+$$
+\mathcal L(X,\lambda)
+= \|X\|_* + \langle \lambda,, \mathcal A(X)-b\rangle.
+$$
+
+The KKT conditions for optimality of $X_0$ are (note that we do not have inequality constraints):
+(i)~Primal feasibility: $\mathcal A(X_0)=b$.
+(ii)~Dual feasibility: $\mathcal A^*(\lambda) \in \partial\|X_0\|_*$.
+(iii)~Complementary slackness: these are trivially fulfilled here since all constraints are equalities.
+Thus, to certify optimality it suffices to construct a $\lambda$ such that
+$$
+Y := \mathcal A^*(\lambda) \in \partial\|X_0\|_*.
+$$
+We have seen in~\eqref{eq:nuclearsubdifferential}  that 
+$$
+\partial \|X_0\|_* =
+\left\{UV^T + W : \mathcal P_{\mathcal T}(W)=0, \|W\|\le 1
+\right\}.
+$$
+So any matrix of the form
+$$
+Y = UV^T + W,
+\quad
+W\in \tpo, \|W\|\le 1
+$$
+is a valid subgradient.
+
+
+Suppose now there exists $Y=\mathcal A^*(\lambda)$ such that $\mathcal P_{\cto}(Y) = UV^T$ and 
+$\|\mathcal P_{\tpo}(Y)\| < 1$.
+We will show that this implies $Y\in\partial\|X_0\|_*$.
+
+
+Write
+$$Y = {\mathcal P}_{\cto}(Y) + {\mathcal P}_{\tpo}(Y)
+= UV^T + W,
+$$
+where $W := \mathcal P_{\tpo}(Y)$.
+By assumption, $W \in \tpo$ and $\|W\|< 1$, thus 
+all conditions in~\eqref{eq:nuclearsubdifferential} are satisfied, and therefore
+$Y \in \partial\|X_0\|_*$.
+Since $X_0$ is feasible and
+$Y=\mathcal A^*(\lambda)\in\partial\|X_0\|_*$,
+the KKT conditions hold, so $X_0$ is optimal.
+
+
+If additionally
+$$
+\|\mathcal P_{\tpo}(Y)\| < 1
+\quad\text{and ${\mathcal A}$ is injective on $\cto$},
+$$
+then one can show that for any feasible $X\neq X_0$,
+$$
+\|X\|_* > \|X_0\|_*,
+$$
+hence $X_0$ is the unique minimizer.
+This follows from the subgradient inequality
+$$
+\|X\|_* \ge \|X_0\|_* + \langle Y, X-X_0\rangle,
+$$
+with equality only if $X-X_0\in \cto$. 
+
+\end{proof}
+
+
+The hard part is now to verify that a given measurement operator $\cA$ actually  satisfies the conditions of Lemma~\ref{le:candesrechtlowrank}, in particular condition~\eqref{eq:nucleardualcond}.
+One of the most successful and widely applicable approaches for this relies on the so-called {\em golfing scheme}, introduced by
+David Gross~\cite{gross2011recovering}. 
+In~\cite{gross2011recovering} Gross demonstrates that the conditions in Lemma~\ref{le:candesrechtlowrank} can be relaxed and that the
+existence of an {\em approximate} dual certificate suffices to establish uniqueness
+and this approximate dual certificate can be constructed via the golfing scheme in an iterative manner\footnote{In~\cite{fuchs2022proof} it is shown that a minor modification of the golfing scheme gives an explicit randomized construction for an exact dual certificate, which does not use more measurements than the original argument.}.
+
+The concept of an {\em approximate dual certificate} allows for small errors on the tangent space $\mathcal{T}$ and a margin of safety on the orthogonal complement $\mathcal{T}^\perp$.
+
+\begin{definition}\label{de:approxdual}
+A matrix $Y \in \range(\mathcal{A}^*)$ is an $(\alpha, \beta)$-approximate dual certificate for $X_0 = U\Sigma V^\top$ if it satisfies the two conditions:
+\begin{enumerate}
+\item \begin{equation}\label{eq:dualalpha}
+\text{Alignment on $\Tn$: $\|P_{\mathcal{T}}(Y) - UV^\top\|_F \le \alpha$,}
+\end{equation}
+\item 
+\begin{equation}\label{eq:dualbeta}
+\text{Constraint on $\Tn^\perp$: $\|P_{\mathcal{T}^\perp}(Y)\| \le \beta < 1$.}
+\end{equation}
+\end{enumerate}
+\end{definition}
+
+\medskip
+The operator $\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp}$ will play an important role in our subsequent analysis. It dictates how much of a signal can hide in the kernel of the operator relative to its projection onto the tangent space $\Tn$.
+The next lemma quantifies the ``spectral-to-Frobenius'' leakage. It ensures that any matrix in the kernel of the measurement operator cannot have its energy concentrated in the ``signal'' space $\mathcal{T}$ without having significantly more energy in the ``noise'' space $\mathcal{T}^\perp$.
+
+\begin{lemma}[Leakage Lemma]\label{le:leakage}
+Let $\mathcal{A}: \mathbb{C}^{d \times d} \to \mathbb{R}^m$ be a measurement operator. For any $H \in \ker(\mathcal{A})$, the following inequality holds
+$$\|P_{\mathcal{T}}(H)\|_F \le \Cleak \|P_{\mathcal{T}^\perp}(H)\|,$$
+where the {\em leakage constant} is defined as 
+$$\Cleak := \frac{\|\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp}\|_{\text{op} \to \text{F}}}{\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}})},$$
+and $\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}})$ denotes the smallest eigenvalue of $\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}$.
+\end{lemma}
+
+\begin{proof}
+ Since $H \in \ker(\mathcal{A})$, we have $\mathcal{A}(H) = 0$ and $\mathcal{A}(P_{\mathcal{T}}(H)) = -\mathcal{A}(P_{\mathcal{T}^\perp}(H))$.
+Lower Bound (RIP on $\mathcal{T}$): Let $\mathcal{R}_{\mathcal{T}} = \mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}$. For any $Z \in \mathcal{T}$, we have $\|\mathcal{A}(Z)\|^2 = \langle Z, \mathcal{R}_{\mathcal{T}} Z \rangle \ge \lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}) \|Z\|_F^2$. Applying this to $P_{\mathcal{T}}(H)$ gives
+$$\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}) \|P_{\mathcal{T}}(H)\|_F^2 \le \|\mathcal{A}(P_{\mathcal{T}}(H))\|^2.$$
+We have
+\begin{align*}
+\|\mathcal{A}(P_{\mathcal{T}}(H))\|^2 & = \langle \mathcal{A}(P_{\mathcal{T}}(H)), \mathcal{A}(P_{\mathcal{T}}(H)) \rangle = \langle \mathcal{A}(P_{\mathcal{T}}(H)), -\mathcal{A}(P_{\mathcal{T}^\perp}(H)) \rangle\\
+& = -\langle P_{\mathcal{T}}(H), \mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp} (P_{\mathcal{T}^\perp}(H)) \rangle.
+\end{align*}
+Applying Cauchy-Schwarz and induced norms gives
+$$\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}) \|P_{\mathcal{T}}(H)\|_F^2 \le \|P_{\mathcal{T}}(H)\|_F \cdot \|\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp}\|_{\text{op} \to \text{F}} \cdot \|P_{\mathcal{T}^\perp}(H)\|$$
+Dividing both sides by $\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}) \|P_{\mathcal{T}}(H)\|_F$ establishes the desired bound. 
+\end{proof}
+
+
+
+
+
+
+
+
+
+
+\begin{theorem}\label{th:dualnuclear}
+Let $X_0$ be a rank-$r$ matrix with tangent space $\mathcal{T}$. Suppose there exists an $(\alpha, \beta)$-approximate  dual certificate $Y = \mathcal{A}^*(y)$.
+ with leakage constant $\Cleak$ such that $\alpha < \frac{1-\beta}{\Cleak}$, then $X_0$ is the unique minimizer of the nuclear norm minimization problem~\eqref{eq:nuclearnormrelaxation}.
+\end{theorem}
+
+\begin{proof}
+We must show that for any non-zero $H \in \ker(\mathcal{A})$, $\|X_0 + H\|_* > \|X_0\|_*$.
+
+By the definition of the nuclear norm subgradient at $X_0$
+$$\|X_0 + H\|_* \ge \|X_0\|_* + \langle UV^\top, H \rangle + \|P_{\mathcal{T}^\perp}(H)\|_*.$$
+Since $H \in \ker(\mathcal{A})$ and $Y \in \text{range}(\mathcal{A}^*)$, we have $\langle Y, H \rangle = 0$. Thus
+$$0 = \langle P_{\mathcal{T}}(Y), P_{\mathcal{T}}(H) \rangle + \langle P_{\mathcal{T}^\perp}(Y), P_{\mathcal{T}^\perp}(H) \rangle$$
+$$\implies \langle UV^\top, P_{\mathcal{T}}(H) \rangle = \langle UV^\top - P_{\mathcal{T}}(Y), P_{\mathcal{T}}(H) \rangle - \langle P_{\mathcal{T}^\perp}(Y), P_{\mathcal{T}^\perp}(H) \rangle.$$
+Substituting this identity into the subgradient inequality gives
+$$\|X_0 + H\|_* - \|X_0\|_* \ge \|P_{\mathcal{T}^\perp}(H)\|_* - \langle P_{\mathcal{T}^\perp}(Y), P_{\mathcal{T}^\perp}(H) \rangle - \langle P_{\mathcal{T}}(Y) - UV^\top, P_{\mathcal{T}}(H) \rangle.$$
+By H\"{o}lder's inequality, 
+$$\langle P_{\mathcal{T}^\perp}(Y), H \rangle \le \|P_{\mathcal{T}^\perp}(Y)\| \|P_{\mathcal{T}^\perp}(H)\|_* \le \beta \|P_{\mathcal{T}^\perp}(H)\|_*.$$
+Using Cauchy-Schwarz gives $\langle P_{\mathcal{T}}(Y) - UV^\top, P_{\mathcal{T}}(H) \rangle \le \alpha \|P_{\mathcal{T}}(H)\|_F$.
+We now apply the Leakage Lemma and obtain
+$\alpha \|P_{\mathcal{T}}(H)\|_F \le \alpha \Cleak \|P_{\mathcal{T}^\perp}(H)\|$.
+Hence,
+$$\|X_0 + H\|_* - \|X_0\|_* \ge (1-\beta) \|P_{\mathcal{T}^\perp}(H)\|_* - \alpha \Cleak \|P_{\mathcal{T}^\perp}(H)\|.$$
+Since $\|P_{\mathcal{T}^\perp}(H)\|_* \ge \|P_{\mathcal{T}^\perp}(H)\|$ for any matrix we get
+$$\|X_0 + H\|_* - \|X_0\|_* \ge (1 - \beta - \alpha \Cleak) \|P_{\mathcal{T}^\perp}(H)\|.$$
+If $\alpha < \frac{1-\beta}{\Cleak}$, the term in the parentheses is strictly positive, which implies that $\|X_0 + H\|_* > \|X_0\|_*$.  
+\end{proof}
+
+\begin{remark}
+The approach we have just outlined using the approximate dual certificate and the Leakage Lemma is essentially a dual-space perspective on the primal-space descent cone geometry that we described in Chapter~\ref{s:descentcone}.
+In the descent cone approach we ask how much the operator $\mathcal{A}$ ``shinks'' vectors that are trying to decrease the nuclear norm. If the smallest conic singular value is large, the operator captures these directions, and they cannot be in the kernel. In the approximate dual certificate approach the leakage constant $\Cleak$ quantifies how much a kernel element $H$ can ``hide'' its energy in the tangent space. A large smallest conic singular value
+$\sigma_{\min}\big(\cA,\mathcal{D}\big)$  corresponds to a small leakage constant $\Cleak$ (but not in a way that allows us to easily convert one into the other).
+\end{remark}
+
+
+
+The reader may wonder whether so far we just have been {\em `kicking the can down the road'}, since we moved from the primal problem to the  dual certificate to the approximate dual certificate to the leakage constant. After all, while Theorem~\ref{th:dualnuclear} proves that a certificate $Y$ allows for recovery, it still does not tell us how to find one. 
+
+Fortunately\footnote{This is not a fortunate coincidence, but rather fortune that favors the prepared mathematician.}, there are now several techniques at our disposal to address this critical issue.
+One such technique is the aforementioned {\em golfing scheme}. It provides an ingenious  algorithm to build $Y \in \range(\mathcal{A}^*)$ by successively projecting the ``residual error'' from the tangent space $\mathcal{T}$ back into the range of the measurement operator.
+The concrete application of Theorem~\ref{th:dualnuclear} and the golfing scheme will depend on the specific nature and setting of the low-rank problem under consideration. In the following we will explore three compelling applications, matrix completion, quantum state tomography, and phase retrieval. 
+
+While the overall proof architecture via approximate dual certificate and golfing scheme is shared across all three applications, the specific mathematical properties of the measurements affects
+key steps in the proofs significantly. The difficulty in each proof lies in how the specific measurement operator $\cA$ interacts with the Tangent Space $\Tn$. 
+
+
+
+\section{Matrix completion}\label{s:matrixcompletion}
+
+Matrix completion is the problem of recovering an unknown matrix from a subset of its entries, under the assumption that the matrix has low rank~\cite{CR08,candes2010power}. Cast in the form of~\eqref{tracemeasures}, this means that the measurement matrices take the form $e_{i} e_{j}^{\ast}$, whence  $\langle  e_i e_j^{\ast}, X \rangle = X_{i,j}$, i.e., the measurements reveal individual entries of the matrix.  We define the sampling operator $\mathcal{P}_\Omega = \sum_{(i,j) \in \Omega} \mathcal{P}_{ij}$, where $\mathcal{P}_{ij}(X) = \langle e_i e_j^\top, X \rangle e_i e_j^\top$, where $\Omega$ is some subset of the complete set of matrix entry indices $[n_1] \times [n_2]$. Thus, in the notation of~\eqref{tracemeasures}, ${\mathcal A}=P_{\Omega}$
+and $({\mathcal A}(X))_{ij} = X_{ij}$.
+
+
+Without further knowledge the problem of recovering $X$ from the entries $\mathcal{P}_\Omega(X)$ is ill-posed and has infinitely many solutions---just fill in the missing entries with arbitrary values. But assuming that  $X$ is a low-rank matrix, can we then fill in the missing entries of $X$ in a unique way and can we do so in a numerically feasible way? This problem arises for example in recommender systems, collaborative filtering (user–item ratings, preferences), crowdsourcing and survey data~\cite{koren2009matrix,WrightMa,agarwal2016statistical,udell2016generalized}.
+
+By counting degrees of freedom of $X$, it is apparent that for low-rank matrix completion we need at least $r(n_1+n_2-r)$ many measurements. But this condition will in general not suffice. Take for example a rank-one matrix whose entries are all zeros, except for, say, its very first entry which we set equal to one. Since a priori we do not know the location of the non-zero entry, in the worst case we would need to take $n_1 n_2$ measurements (equal to the ambient dimension of the matrix) in order to successfully complete all missing matrix entries.
+
+This should not come as a complete surprise, since we have encountered a similar situation in compressive sensing. There, we had to impose some notion of incoherence (e.g., via the RIP or directly via the concept of coherence) in order to develop a non-trivial, compelling theory (and numerics) of sparse recovery. We will need to do something similar for matrix completion.
+In Chapter~\ref{s:coherence} (see equation~\eqref{coherence}) we introduced the concept of the (in)coherence of a set of vectors. For matrices we follow the notion of (in)coherence introduced in~\cite{CR08}. 
+
+\begin{definition}\label{de:matrixcoherence}
+    Let $X \in \mathbb{R}^{n_1 \times n_2}$ be a rank-$r$ matrix with  singular value decomposition $X = U \Sigma V^T$,
+where $U \in \mathbb{R}^{n_1 \times r}$, $V \in \mathbb{R}^{n_2 \times r}$. We say that $X$ satisfies the incoherence condition with parameter $\mu$ if
+$$\max_i \|U^\top e_i\|^2 \le \frac{\mu r}{n_1}, \quad \max_j \|V^\top e_j\|^2 \le \frac{\mu r}{n_2}, \,\text{and}\,\,\,
+\|UV^\top\|_\infty \le \sqrt{\frac{\mu r}{n_1 n_2}}.$$
+\end{definition}
+Incoherence requires the energy of singular vectors to be spread across coordinates. This prevents ``spiky'' singular vectors, which would make recovery from few entries impossible.
+The smallest coherence is 1, achieved if $U$ and $V$ are spanned by vectors whose entries all have magnitude 
+$1/\sqrt{n_1}$ and $1/\sqrt{n_2}$, respectively.
+The largest possible value for $\mu$ is $\max(n_1,n_2)/r$, 
+which would correspond to any $U$ or $V$ that contains a standard basis element.
+
+
+
+
+
+
+
+We will now apply Theorem~\ref{th:dualnuclear} and the golfing scheme to solve the matrix completion problem, see also~\cite{CR08,gross2011recovering}
+
+
+
+\begin{theorem}\label{th:matrixcompletion}
+Assume $X_0 \in \mathbb{R}^{n_1 \times n_2}$ is a rank-$r$ matrix and let $X_0$ be $\mu$-incoherent.  
+Suppose we observe $m$ entries of $X_0$ with locations sampled uniformly with replacement. 
+Then there exists a constant $C$ such that if
+$$m \ge C \mu n r \log^2 n,$$
+where $n = \max(n_1, n_2)$,
+then  $X_0$ is the unique minimizer of the nuclear norm minimization problem
+$$\min \|X\|_* \quad \text{subject to} \quad \mathcal{P}_\Omega(X) = \mathcal{P}_\Omega(M),$$
+with probability at least $1-n^{-3}$.
+\end{theorem}
+
+In the proof of Theorem~\ref{th:matrixcompletion} we will make use of the following notation. We denote the
+normalized sampling operator by $\mathcal{R} := \frac{1}{p} \mathcal{P}_\Omega$, where $p = m/(n_1 n_2)$, and the
+associated subspace projections by
+$\mathcal{R}_{\mathcal{T}}  := \mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}$ and 
+$\mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp}  := \mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}^\perp}$. Note  that $\mathcal{P}_{\mathcal{T}}$  acts as identity on $\Tn$.
+
+We will employ the following two lemmata. The first one establishes injectivity of the sampling operator on $\Tn$m the second one provides a bound on the leakage constant.
+
+\begin{lemma}\label{le:matrixinjectivity} Given the assumptions of Theorem~\ref{th:matrixcompletion}, for $m \ge C \mu n r \log n$, we have
+$$\|\mathcal{R}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}}\| \le \delta < 1,$$
+ with probability at least $1 - 2n^{-3}$
+\end{lemma}
+
+
+
+
+\begin{proof}
+We define the centered random operator $\mathcal{S} = \mathcal{R}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}}$. This can be written as a sum of $m$ independent, zero-mean operators $\mathcal{Z}_k$
+$$\mathcal{S} = \sum_{k=1}^m \mathcal{Z}_k, \quad \text{where } \mathcal{Z}_k = \frac{1}{m} \left( \frac{1}{p} \mathcal{P}_{\mathcal{T}} \mathcal{P}_{ij} \mathcal{P}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}} \right)$$
+We have 
+\begin{align*}
+\|\mathcal{Z}_k\|  &\le \|\mathcal{P}_{\mathcal{T}} \mathcal{P}_{ij} \mathcal{P}_{\mathcal{T}}\| + \|\mathcal{P}_{\mathcal{T}}\| 
+=
+\Big\| \sqrt{\frac{n^2}{m}} \mathcal{P}_{\mathcal{T}}(e_i e_j^\top) \Big\|_F^2 + \frac{1}{m} \\ &
+= \frac{n^2}{m} \|\mathcal{P}_{\mathcal{T}}(e_i e_j^\top)\|_F^2 + \frac{1}{m} \le \frac{n^2}{m}\frac{2\mu r}{n} + \frac{1}{m}\le \frac{3\mu r n}{m},
+\end{align*}
+where we have used the incoherence assumption in the last step. For the variance $\sigma^2$ we have $\sigma^2 = \| \sum \mathbb{E}[\mathcal{Z}_k^* \mathcal{Z}_k] \| \le \frac{2\mu n r}{m}$.
+
+The matrix Bernstein inequality of Theorem~\ref{thm:4:MatrixBernstein} reads in our setting
+\begin{equation}\label{eq:Bernstein4}
+\mathbb{P}(\|\mathcal{S}\| \ge \delta) \le 2nr \exp \left( \frac{-\delta^2}{2\sigma^2 + 2R\delta/3} \right).\end{equation}
+Substituting the computed bounds for $\|\mathcal{Z}_k\|$ (the $R$ in~\eqref{eq:Bernstein4}) and $\sigma^2$ into the exponent of the right-hand side of~\eqref{eq:Bernstein4} gives for the exponent
+$$\frac{-\delta^2}{\frac{4\mu n r}{m} + \frac{6\mu n r}{m} \frac{\delta}{3}} = \frac{-\delta^2  m}{2\mu n r (2 + \delta)}.$$
+To ensure the probability is less than a small failure tolerance $\eta$ (in this lemma we use $\eta = n^{-3}$), we set
+$$2nr \exp \left( \frac{-\delta^2 m}{2 \mu n r (2 + \delta)} \right) \le \eta$$
+We take the logarithm, rearrange for $m$, and get
+$$m \ge \frac{2 \mu n r (2 + \delta)}{\delta^2} \log\left(\frac{2nr}{\eta}\right).$$
+If we treat $\delta$ as a fixed constant (such as e.g., $\delta = 1/2$), the term $\frac{2(2 + \delta)}{\delta^2}$ becomes a constant $C_1$. Since $\log(2nr/\eta) = \log(2r n^4) = C_2 \log n$, we get (by absorbing both constants into $C$)
+\begin{equation}\label{eq:m_bound}
+m \ge C \mu n r \log n.
+\end{equation}
+ 
+\end{proof}
+We point out that the particular choice of $\delta \in (0,1)$ only affects the constant $C$ in~\eqref{eq:m_bound}.
+
+\begin{lemma}\label{le:leakagecompletion}
+Given the assumptions of Theorem~\ref{th:matrixcompletion}, 
+suppose the number of measurements satisfies $m \ge C \mu n r \log n$.  Then with probability at least $1 - 2n^{-3}$ for every $H \in \ker(\mathcal{P}_\Omega)$ 
+$$\|P_{\mathcal{T}}(H)\|_F \le \Cleak \|P_{\mathcal{T}^\perp}(H)\|$$
+with leakage constant $\Cleak \le 4 \sqrt{\frac{nr \log n}{m}}$.
+\end{lemma}
+
+\begin{proof}
+Let $H \in \ker(\mathcal{P}_\Omega)$. As meanwhile usual, we decompose $H$ into $H_{\mathcal{T}} + H_{\mathcal{T}^\perp}$ where $H_{\mathcal{T}} = P_{\mathcal{T}}(H)$.
+A simple calculation gives 
+\if 0
+$$\mathcal{R}(H_{\mathcal{T}} + H_{\mathcal{T}^\perp}) = 0 \implies \mathcal{R}(H_{\mathcal{T}}) = -\mathcal{R}(H_{\mathcal{T}^\perp})$$
+Projecting both sides onto the subspace $\mathcal{T}$ via $\mathcal{P}_{\mathcal{T}}$
+$$\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}(H_{\mathcal{T}}) = -\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}^\perp}(H_{\mathcal{T}^\perp})$$
+Using the restricted operators $\mathcal{R}_{\mathcal{T}}$ and $\mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp}$
+$$H_{\mathcal{T}} = -(\mathcal{R}_{\mathcal{T}})^{-1} \mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp} (H_{\mathcal{T}^\perp})$$
+Taking the Frobenius norm
+\fi
+\begin{equation}\label{eq:Hbound1}
+\|H_{\mathcal{T}}\|_F \le \|(\mathcal{R}_{\mathcal{T}})^{-1}\| \cdot \|\mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp}\|_{\text{op} \to \text{F}} \cdot \|H_{\mathcal{T}^\perp}\|.
+\end{equation}
+
+Define the event $\mathcal{E}_1 = \{ \|\mathcal{R}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}}\| \le 1/2 \}$.
+We aim to apply the matrix Bernstein inequality to the sum of operators $\mathcal{Z}_k = \frac{1}{m} (\frac{1}{p} \mathcal{P}_{\mathcal{T}} \mathcal{P}_{ij} \mathcal{P}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}})$. We compute
+$R = \|\mathcal{Z}_k\| \le \frac{n^2}{m} \frac{2\mu r}{n} = \frac{2\mu n r}{m}$. And $\sigma^2 \le \frac{2\mu n r}{m}$. Hence, by matrix Bernstein, if $m \ge C \mu n r \log n$, then $\mathbb{P}(\mathcal{E}_1^c) \le n^{-3}$.
+On $\mathcal{E}_1$, the minimum eigenvalue $\lambda_{\min}(\mathcal{R}_{\mathcal{T}}) \ge 1 - 1/2 = 1/2$. Thus
+$$\|(\mathcal{R}_{\mathcal{T}})^{-1}\| = \frac{1}{\lambda_{\min}(\mathcal{R}_{\mathcal{T}})} \le 2.$$
+
+We define the event $\mathcal{E}_2 = \{ \|\mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp}\|_{\text{op} \to \text{F}} \le \epsilon \}$.
+Consider the operator $X \mapsto \mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}^\perp}(X)$. This is a sum of $m$ independent operators $\mathcal{Y}_k(X) := \frac{n^2}{m} \langle e_i e_j^\top, X \rangle \mathcal{P}_{\mathcal{T}}(e_i e_j^\top)$, restricted to $X \in \mathcal{T}^\perp$.
+Note that the induced norm $\|\cdot\|_{\text{op} \to \text{F}}$ of a rank-1 map $\langle A, \cdot \rangle B$ is $\|A\|_* \|B\|_F$. Hence
+$$\|\mathcal{Y}_k\|_{\text{op} \to \text{F}} = \frac{n^2}{m} \underbrace{\|e_i e_j^\top\|_*}_{=1} \underbrace{\|\mathcal{P}_{\mathcal{T}}(e_i e_j^\top)\|_F}_{\le \sqrt{2\mu r/n}} \le \frac{n \sqrt{2\mu n r}}{m} =: R$$
+For the variance $\sigma^2$ of $\mathcal{Y}_k$ we compute
+$$\sigma^2 = m \cdot \mathbb{E} \left[ \left(\frac{n^2}{m}\right)^2 (1)^2 \|\mathcal{P}_{\mathcal{T}}(e_i e_j^\top)\|_F^2 \right] = \frac{n^2}{m} \sum_{i,j} \frac{1}{n^2} \|\mathcal{P}_{\mathcal{T}}(e_i e_j^\top)\|_F^2$$
+Since $\sum_{i,j} \|\mathcal{P}_{\mathcal{T}}(e_i e_j^\top)\|_F^2 = \text{dim}(\mathcal{T}) = r(n_1 + n_2 - r) \le 2nr$ we get $\sigma^2 \le \frac{2nr}{m}$.
+Applying matrix Bernstein gives for $\delta = \sqrt{\frac{4nr \log n}{m}}$, the probability $\mathbb{P}(\mathcal{E}_2^c) \le 2n \exp(\frac{-\delta^2/2}{\sigma^2 + L\delta/3}) \le n^{-3}$.
+
+On the event $\mathcal{E}_1 \cap \mathcal{E}_2$:
+$\|(\mathcal{R}_{\mathcal{T}})^{-1}\| \le 2$
+$\|\mathcal{R}_{\mathcal{T}, \mathcal{T}^\perp}\|_{\text{op} \to \text{F}} \le \sqrt{\frac{4nr \log n}{m}}$
+We substitute these into the inequality~\eqref{eq:Hbound1} and obtain
+$$\|H_{\mathcal{T}}\|_F \le 4 \sqrt{\frac{nr \log n}{m}}  \|H_{\mathcal{T}^\perp}\|.$$
+By the union bound, $\mathbb{P}(\mathcal{E}_1 \cap \mathcal{E}_2) \ge 1 - 2n^{-3}$. 
+   
+\end{proof}
+
+
+With these two lemmata in place, we are now ready to prove Theorem~\ref{th:dualnuclear}.
+
+
+\begin{proof}[Proof of Theorem~\ref{th:matrixcompletion}]
+In the proof $C$ denotes a constant that may change throughout  the derivations.
+By Theorem~\ref{th:dualnuclear}, $X_0$ is the unique minimizer if $\alpha < \frac{1-\beta}{\Cleak}$, and 
+by Lemma~\ref{le:leakagecompletion} we have
+$\Cleak \le  4\sqrt{\frac{ n r \log n}{m}}$.
+
+We will now construct an $(\alpha,\beta)$-approximate dual certificate iteratively via the golfing scheme. To that end we divide the sampling set $\Omega$ into $k$ independent batches $\Omega_1, \Omega_2, \dots, \Omega_k$ of about equal size $m/k$. 
+On the one hand, the size of the batches will have
+to be chosen large enough to allow for the application of
+the matrix-valued concentration of measure bounds tailored for independent
+random variables. On the other hand, the batch size $m/k$ cannot be too large, since the speed of convergence is exponential in $k$.
+We will determine the proper value of $k$ later.
+
+Let $\mathcal{R}_j$ be the normalized sampling operator for batch $j$.
+While taking $Y=UV^T$ as the dual certificate does not work since the dual certificate must live in the range of the sampling operator, it still serves as good first initial guess. The idea of the golfing scheme is to iteratively refine this initial guess until condition~\eqref{eq:dualalpha} is fulfilled.
+We proceed as follows:
+\begin{enumerate}
+\item Initialization: $Q_0 := UV^\top$
+\item Iteration: $Y_j := \mathcal{R}_j Q_{j-1}$ and $Q_j := Q_{j-1} - \mathcal{P}_{\mathcal{T}} Y_j$, \quad for $j=1,\dots, k$
+\item Final approximate certificate: $Y = \sum_{j=1}^k Y_j$
+\end{enumerate}
+By expanding the recursion, it is easy to see that $Y$ satisfies
+$$\mathcal{P}_{\mathcal{T}} Y = UV^\top - Q_k.$$
+We want to show that $P_{\mathcal{T}}Y$ is sufficiently close to $UV^\top$, which is equivalent to showing that $Q_k$ is sufficiently small.
+From Lemma~\ref{le:matrixinjectivity}, we know that for each batch
+$$\|\mathcal{P}_{\mathcal{T}} - \mathcal{R}_j \mathcal{P}_{\mathcal{T}}\| \le \delta$$
+with high probability. Therefore,
+$$\|Q_j\|_F = \|(\mathcal{P}_{\mathcal{T}} - \mathcal{R}_j \mathcal{P}_{\mathcal{T}}) Q_{j-1}\|_F \le \delta \|Q_{j-1}\|_F.$$
+Iterating this $k$ times gives
+$$\|Q_k\|_F \le \delta^k \|Q_0\|_F = \delta^k \sqrt{r}.$$
+To make $\alpha = \|Q_k\|_F \le n^{-2}$, we set $\delta = 1/2$ and $k \approx \log(n^2 \sqrt{r}) \approx \log n$.
+
+We must also ensure that the ``leakage'' of the approximate certificate into the orthogonal space $\mathcal{T}^\perp$ remains small, i.e., we want $\beta = \|P_{\mathcal{T}^\perp} Y\| < 1/2$.
+Expanding $Y$ gives
+$$P_{\mathcal{T}^\perp} Y = \sum_{j=1}^k \mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j Q_{j-1}.$$
+Each term $W_j = \mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j Q_{j-1}$ is a random matrix. 
+ By  induced norms,
+$$\|W_j\| \le \|\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}\|_{F \to \text{op}} \|Q_{j-1}\|_F.$$
+
+We can expand $\|\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}$ into a sum of independent random rank-1 operators and apply the (rectangular) matrix Bernstein inequality. A  standard calculation, that is left to the reader, yields
+$$\mathbb{P} \left( \|\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}\|_{F \to \text{op}} \ge \gamma \right) \le 2n \exp \left( \frac{-\gamma^2 / 2}{\sigma^2 + R\gamma / 3} \right),$$
+where $R  \le \frac{n^2}{m_j}$ and $\sigma^2 \le \frac{C \mu n r}{m_j}$.
+We solve for $\gamma$ with $m_j \ge C \mu n r \log n$ and get
+$$\gamma \le C \sqrt{\frac{\mu n r \log n}{m_j}}.$$
+Summing the geometric series gives
+$$\|{\mathcal P}_{{\mathcal T}^\perp} Y\| \le \sum_{j=1}^k \|W_j\| \le  \gamma \sum_{j=1}^k \|Q_{j-1}\|_F \le \gamma  \sqrt{r} \frac{1}{1-\delta},$$
+with high probability.
+Since $\delta = 1/2$ and using our $\gamma$ bound we get
+$$\beta \le C\sqrt{\frac{\mu n r^2 \log n}{m_j}} < 1.$$
+Choosing  $m \ge C \mu n r \log^2 n$ and using the incoherence assumption implies that $\beta \le 1/2$, and also that
+$1-\beta > \alpha \Cleak$. This means all conditions for the approximate dual certificate in Theorem~\ref{th:dualnuclear} are met with high probability, and the nuclear norm minimizer is unique and equal to $X_0$. 
+
+\end{proof}
+
+The extra $\log n$ factor in the number of measurements $m$ (compared to the $\log n$ in standard concentration) arises from the number of iterations $k$ in the golfing scheme needed to make the error $\alpha$ sufficiently small.
+
+
+One can find many variations and refinements of Theorem~\ref{th:dualnuclear} in the literature, see e.g.~\cite{candes2010matrix,candes2010power,keshavan2010matrix,candes2011robust,fuchs2022proof,WrightMa,gandy2011tensor,liu2012tensor} for a small sample. For instance, recent work~\cite{chen2015incoherence} has shown that the joint coherence condition 
+$\|UV^\top\|_\infty \le \sqrt{\frac{\mu r}{n_1 n_2}}$
+is not necessary, just the standard incoherence conditions (small row and column coherence) suffice. Moreover,  is not difficult to extend Theorem~\ref{th:matrixcompletion} to the case of noisy measurements. The reader will find various such extensions in the aforementioned literature on matrix completion.
+
+\section{Quantum state tomography}\label{s:quantum}
+
+In quantum mechanics, the state of a system is described by a density matrix $\rho \in \mathbb{C}^{d \times d}$, cf.~\cite{nielsen2010quantum}. Standard Quantum State Tomography (QST) aims to reconstruct this matrix by performing a series of measurements. However, as the number of qubits $q$ increases, the dimension of the Hilbert space $d = 2^q$ grows exponentially, making traditional reconstruction methods computationally and physically prohibitive~\cite{paris2004quantum}.
+
+Low-rank matrix recovery offers a powerful solution to this ``curse of dimensionality'' when the underlying quantum state is pure or nearly pure~\cite{gross2010quantum}.
+
+A pure quantum state is represented by a unit vector $|\psi\rangle$. Its corresponding density matrix is\footnote{In Bra-ket notation we can write the density matrix  as $\rho = |\psi\rangle \langle \psi|$, which is standard in physics. Here, we stick with the linear algebra notation.}
+$$\rho = \psi \psi^{\ast}.$$
+A state density matrix is Hermitian, positive-semidefinite, and has unit-trace. Pure states correspond to rank-one density matrices. In many practical settings---quantum optics, trapped ions, superconducting qubits---the prepared quantum state is either pure or nearly pure. Even in the presence of environmental noise or decoherence, many physical systems exist in ``mixed states'' that are dominated by a few principal components, making $\rho$ effectively low-rank. This observation places quantum state tomography squarely within the scope of low-rank matrix recovery.
+
+
+This structural property allows us to apply the principles of compressive sensing: we can reconstruct $\rho$ using far fewer measurements than the $d^2$ required by classical linear inversion~\cite{gross2010quantum}.
+
+In QST, measurements are typically performed using an observable $A$. The expectation value of the measurement is given by the Born rule
+$$y = \text{Tr}(A\rho).$$
+To recover the state, we collect a set of measurement results $y_1, y_2, \dots, y_m$ from different observables $\{A_i\}_{i=1}^m$. This can be modeled as a linear operator $\mathcal{A}(\rho) = y$.
+We thus formulate the QST reconstruction problem as a convex optimization problem
+\begin{align}\label{eq:quantumtomo}
+\begin{split}
+\text{minimize} & \quad  \|\rho\|_*  \\
+\text{subject to} & \quad \mathcal{A}(\rho) = y \\
+& \quad \rho \succeq 0.
+\end{split}
+\end{align}
+Since $\rho \succeq 0$, the nuclear norm $\|\rho\|_*$ is simply the trace $\text{Tr}(\rho)$. Given that the trace is fixed to 1 for any valid density matrix, the nuclear norm minimization problem~\eqref{eq:quantumtomo} effectively collapses into a feasibility problem, namely the search for a PSD matrix that satisfies the measurement constraints. Surprisingly however, from a theoretical point of view, the feasibility problem is not easier to analyze than the nuclear norm minimization problem.
+
+ A standard choice for QST  are {\em Pauli measurements}, which  are not only theoretically appealing, but also provide a very practical way to extract information from a quantum processor because they align with how quantum hardware is physically built and controlled~\cite{altepeter2005photonic}.
+
+
+\medskip
+\noindent
+\textbf{Pauli measurements:} For a single qubit, define the Pauli matrices~\cite{nielsen2010quantum,gross2011recovering}
+$$
+\sigma_0 = I =
+\begin{bmatrix}
+1 & 0\\
+0 & 1
+\end{bmatrix},\quad
+\sigma_x =
+\begin{bmatrix}
+0 & 1\\
+1 & 0
+\end{bmatrix},\quad
+\sigma_y =
+\begin{bmatrix}
+0 & -i\\
+i & 0
+\end{bmatrix},\quad
+\sigma_z =
+\begin{bmatrix}
+1 & 0\\
+0 & -1
+\end{bmatrix}.
+$$
+For a $q$-qubit system $(d = 2^q)$, the Pauli group
+$$
+\mathcal{P}_n = \big\{ \sigma_{a_1} \otimes \cdots \otimes \sigma_{a_q} : a_k \in \{0,x,y,z\} \big\}
+$$
+forms a basis of $\mathbb{C}^{d\times d}$ with cardinality $d^2$ (see Exercise~\ref{ex:pauli}).
+We define the normalized Pauli operators by
+$$
+P_i := \frac{1}{\sqrt{d}} \sigma_{i_1} \otimes \cdots \otimes \sigma_{i_q}.
+$$
+These operators satisfy
+$$
+\operatorname{tr}(P_i^\ast P_j) = \delta_{ij},
+$$
+thus $\{P_i\}_{i=1}^{d^2}$ is an orthonormal basis for the Hilbert–Schmidt inner product (see Exercise~\ref{ex:pauli}).
+Therefore, any density matrix admits the expansion
+$$
+\rho = \sum_{i=1}^{d^2} \langle P_i, \rho \rangle P_i,
+\quad
+\langle P_i, \rho \rangle = \operatorname{tr}(P_i \rho).
+$$
+
+In the noisefree case one measures expectation values of Pauli observables
+$$
+y_i = \operatorname{tr}(P_{i} \rho),
+\quad i=1,\dots,m,
+$$
+where the $P_i$ are drawn uniformly at random from the Pauli group (and then normalized). Define the sampling operator
+$$
+\mathcal{A}(\rho)_i := \operatorname{tr}(P_{i} \rho).
+$$
+This defines a random linear measurement ensemble.
+
+
+
+\begin{theorem}\label{th:QST}
+Let $\rho \in \mathbb{C}^{d \times d}$ be a density operator of rank $r$, where $d=2^q$. Let $\mathcal{A}: \mathbb{C}^{d \times d} \to \mathbb{R}^m$ be a measurement operator that samples $m$ Pauli observables $\{P_i\}_{i=1}^m$ uniformly at random from the complete Pauli basis (excluding the identity). If
+$$m \ge C rd \log^2 d,$$
+then with high probability, $\rho$ is the unique minimizer of the nuclear norm minimization problem
+$$\min \|X\|_* \quad \text{subject to} \quad \mathcal{A}(X) = \mathcal{A}(\rho).$$    
+\end{theorem}
+
+\medskip
+\noindent
+\textbf{\em Proof sketch.}
+%\begin{proof}
+The proof follows overall the same architecture as the proof of Theorem~\ref{th:matrixcompletion}. Therefore, instead of giving a detailed proof that would duplicate many derivations of the proof of Theorem~\ref{th:matrixcompletion}, it is more instructive to give a proof sketch which highlights the key differences.
+
+We start with a trivial, but still useful observation.
+For a rank-$r$ state $\rho$ with singular value decomposition $U \Sigma V^*$, we have $V=U$, since $\rho$ is Hermitian. Hence, the tangent space $\mathcal{T}$ is defined by the span of matrices $\{Uz^*, wU^*\}$.
+
+Because Pauli matrices are unitary and perfectly ``spread out'' in the Hilbert-Schmidt sense, the incoherence $\mu$ is effectively constant ($\mu = 1$). Specifically, for any Pauli matrix $P$
+$$\|\mathcal{P}_{\mathcal{T}}(P)\|_F^2 \le \frac{2rd}{d^2}  \|P\|_F^2 = 2r.$$
+This replaces the $\frac{\mu nr}{m}$ scaling in matrix completion with a much more favorable $r/d$ relative scaling.
+
+
+We define the sampling operator $\mathcal{R}: \mathbb{C}^{d \times d} \to \mathbb{C}^{d \times d}$ as
+$$\mathcal{R}(X) = \frac{d}{m} \sum_{k=1}^m \langle P_k, X \rangle P_k.$$
+Note the normalization factor $d/m$ arises because 
+$$\mathbb{E}[\langle P, X \rangle P] = \frac{1}{d^2-1} \sum \langle P, X \rangle P \approx \frac{1}{d} X.$$
+
+Using the matrix Bernstein inequality as before, the variance $\sigma^2$ is bounded by the incoherence. Since $\|P\|=1$, we find that for $m \ge C r d \log^2 d$
+$$\|\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}}\| \le \delta$$
+with high probability.
+
+The most critical technical change appears in the derivation of the leakage constant $\Cleak$. In matrix completion, $\Cleak$ grew as $\sqrt{n}$.
+In QST, the Pauli basis elements $P_i$ are unitaries.
+When we compute $\|\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}^\perp}\|_{\text{op} \to F}$, we look at the variance
+$$\sigma^2 = \left\| \sum \mathbb{E} [ \mathcal{L}_k^* \mathcal{L}_k ] \right\| \approx \frac{d^2}{m^2} \sum_{P \in \Omega} |\langle P, H \rangle|^2  \|\mathcal{P}_{\mathcal{T}}(P)\|_F^2.$$
+Since $\|\mathcal{P}_{\mathcal{T}}(P)\|_F^2 \le 2r$, and $\sum |\langle P, H \rangle|^2 \le d \|H\|_F^2 \le d^2 \|H\|^2$ we have
+$$\sigma^2 \le \frac{dr}{m}  \|H\|^2$$
+Thus, $\Cleak \approx \sqrt{\frac{d r \log d}{m}}$. Plugging in $m = C d r \log^2 d$, we find
+$$\Cleak \approx \sqrt{\frac{dr \log d}{C dr \log^2 d}} \approx C.$$
+
+The key difference is that unlike the entry-wise case in matrix completion, for Pauli measurements, the leakage constant is independent of the dimension $d$ (up to log-factors, which we did hide in the constant).
+
+To construct $Y$ via the golfing scheme, we initialize $Q_0 = U U^{\ast}$ and iterate $Q_j = Q_{j-1} - \mathcal{P}_{\mathcal{T}} \mathcal{R}_j Q_{j-1}$. The key properties of the approximate dual certificate we need to fulfill are:
+\begin{itemize}
+\item Alignment on $\Tn$  (bound for $\alpha$): After $k = \log d$ steps, $\|Q_k\|_F \le d^{-2}$. 
+\item Constraint on $\Tn^\perp$  (bound for $\beta$): We need $\|\mathcal{P}_{\mathcal{T}^\perp} \sum \mathcal{R}_j Q_{j-1}\| < 1/2$. The term $\|\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}\|_{F \to \text{op}}$ scales as $\sqrt{\frac{d r \log d}{m/k}}$.
+With $m \sim d r \log^2 d$, each batch gives $\gamma \approx \frac{1}{\sqrt{r}}$, so $\beta \le \sum \gamma \delta^j \sqrt{r} \approx 1$.
+\end{itemize}
+
+Applying the same line of argument as in the matrix completion proof we conclude 
+$$\|\rho+H\|_* - \|\rho\|_* \ge (1 - \beta) \|\mathcal{P}_{\mathcal{T}^\perp}H\|_* - \alpha \Cleak \|\mathcal{P}_{\mathcal{T}^\perp}H\|.$$
+Because $\Cleak$ is constant and $\alpha \le d^{-2}$, the positivity of $(1-\beta)$ dominates for any $H \in \ker(\mathcal{R})$, which completes our proof sketch. \qed
+%\end{proof}
+
+\medskip
+
+\begin{remark}
+The semidefinite program in Theorem~\ref{th:QST} differs from the semidefinite program in~\eqref{eq:quantumtomo} insofar as it does not include the PSD and trace constraints. So, why did we not make use of them in Theorem~\ref{th:QST}?
+While including those constraints would make the optimization problem perhaps easier to solve numerically, it does not change the sample complexity $m$ required for unique recovery in the noiseless case. In a nutshell, the bottleneck for recovery is not the ``shape'' of the set (PSD vs.\ general), but the nullspace of the sampling operator ${\mathcal R}$.
+\end{remark}
+
+
+
+
+
+\section{Phase retrieval}
+
+Phase retrieval---the problem of recovering a function from the squared
+magnitude of its Fourier transform---arises in numerous applications such as X-ray crystallography~\cite{Mil90,Har93}, diffraction imaging~\cite{GS72}, optics~\cite{Walther_phaseretrievaloptics}, fiber optic communications~\cite{chou2022phase}, quantum mechanics~\cite{Cor06}, astronomy~\cite{DF87},
+and biomedical imaging~\cite{dierolf2010ptychographic}.
+This problem has confounded engineers, physicists, and mathematicians for over a century. 
+Recently, phase retrieval has seen a resurgence in research activity, ignited by new imaging modalities~\cite{neutze2000potential,chapman2007femtosecond} and novel mathematical concepts~\cite{CESV2013,FS2020}. 
+
+There are many ways in which one can pose the phase-retrieval problem,
+for instance depending upon whether one assumes a continuous or
+discrete-space model for the signal. Here, we consider finite
+length signals (one-dimensional or multi-dimensional) for simplicity,
+and because numerical algorithms ultimately operate with digital data.
+To fix ideas, suppose we have a 1D signal
+$x = (x_0, x_1,$ $\ldots, x_{n-1}) \in \C^n$ and write its Fourier transform as
+\begin{equation}
+  \label{eq:fourier}
+  {\hat x}(\omega) =
+  \frac{1}{\sqrt{n}} \sum_{t=0}^{n-1} x_t e^{-2\pi i\omega t/n},
+\quad \omega \in \Omega.
+\end{equation}
+Here, $\Omega$ is a grid of sampled frequencies and an important
+special case is $\Omega = \{0,1, \ldots, n-1\}$ so that the mapping is
+the classical unitary discrete Fourier transform (DFT).   
+ The phase retrieval
+problem consists in finding $x$ from the intensity measurements
+$|{\hat x}(\omega)|^2$, $\omega \in \Omega$.  
+
+Without further information about the
+unknown signal $x$, this problem is ill-posed since there are many
+different signals whose Fourier transforms have the same
+magnitude. Clearly, if $x$ is a solution to the phase retrieval
+problem, then (1) $c x$ for any scalar $c \in \C$ obeying $|c| = 1$ is
+also solution, (2) the ``mirror function'' or time-reversed signal
+$\bar{x}(-t \text{ mod } n)$ where $t = 0,1, \ldots, n-1$ is also
+solution, and (3) the shifted signal $x(t - a \text{ mod } n)$ is also
+a solution. From a physical viewpoint these ``trivial associates'' of
+$x$ are acceptable ambiguities. But in general infinitely many
+solutions can be obtained from $\{|\hat{x}[\omega]|^2 : \omega \in
+\Omega\}$ beyond these trivial associates, making it a rather challenging ill-posed problem. 
+
+
+
+For mathematical purposes, it is convenient to formulate the phase retrieval problem in a more general way as follows:
+Given information about the squared modulus of the inner product
+between the signal $x \in \C^n$ and some vectors $a_k \in \C^n$, namely,
+\begin{equation}
+\label{eq:data}
+y_k = |\langle x,a_k\rangle |^2, \quad k = 1, \ldots, m,
+\end{equation}
+we want to recover $x$ from $\{y_k\}_{k=1}^m$. Here, successful recovery means that we find a solution $x^*$ which differs from $x$ only by a multiplicative constant of modulus 1, i.e., $x^* = cx$, where $c\in\C$ with $|c|=1$.
+
+The key observation is that quadratic measurements can be lifted up and
+interpreted as linear measurements about the rank-one matrix $X = x
+x^*$, see~\cite{balan2009painless,CESV2013}. Indeed,
+\begin{equation}\label{tracemeasurements}
+|\langle a_k, x\rangle |^2 = \trace(x^* a_k a_k^* x) = \trace(a_k a_k^* x x^*) = \trace(A_k X),
+\end{equation}
+where $A_k := a_k a_k^*$.
+Adopting the notational conventions from~\eqref{tracemeasures} and~\eqref{tracemeasureop}, one can
+express the data collection $y_k = |\langle x, a_k\rangle |^2 =\trace(A_k X)$, $k=1,\dots,m$ as
+\begin{equation}
+y = \mathcal{A}(x x^*).
+\end{equation}
+
+
+
+
+
+Hence, the phase retrieval problem can be cast as low-rank matrix recovery problem~\cite{CSV2013,CESV2013}
+\begin{equation}\label{eq:phaserank}
+  \begin{array}{ll}
+    \text{minimize}   & \quad \rank(X)\\
+    \text{subject to} & \quad  \cA(X) = y \\
+& \quad X \succeq 0.
+\end{array}
+\end{equation}
+Indeed, we know that a rank-one solution exists so the optimal $X$ has
+rank one. We then factorize the solution as $x x^*$ in order
+to obtain solutions to the phase-retrieval problem. This gives $x$ up
+to multiplication by a unit-normed scalar.
+
+
+As the reader will expect at this point, the idea is now  to solve~\eqref{eq:phaserank} via a convex relaxation. 
+Thus,  we solve
+\begin{equation}
+\label{eq:tracemin}
+ \begin{array}{ll}
+    \text{minimize}   & \quad \trace(X)\\
+    \text{subject to} & \quad  \cA(X) = y\\
+& \quad X \succeq 0.
+\end{array}
+\end{equation}
+The program \eqref{eq:tracemin} is a semidefinite program  in
+standard form.
+If the solution has rank one, we factorize it as above to recover our
+signal $x$ (up to a global constant of magnitude 1).
+This method which lifts the problem of vector recovery from
+quadratic constraints up into that of recovering a rank-one matrix from
+affine constraints via semidefinite programming is known under the
+name {\em PhaseLift} \cite{CSV2013,CESV2013}.
+
+The phase retrieval problem, when rephrased as rank-one matrix recovery problem, bears many similarities with QST for pure states\footnote{There are of course important and fundamental limitations to this similarity. Phase retrieval is a signal reconstruction problem with algebraic ambiguity, whereas quantum state tomography is a physical inference problem constrained by quantum mechanics. Quantum tomography imposes physical admissibility constraints, involves structured and hardware-limited measurements, admits higher-rank states, and is governed by fundamentally different noise models. These differences necessitate distinct algorithmic and theoretical treatments despite the shared convex-analytic framework.}. But there is a crucial difference, which prevents us to simply incorporate the theoretical treatment of phase retrieval in  Theorem~\ref{th:QST}.
+Unlike Pauli measurements which are unitary, the measurement matrices $a_j a_j^*$ are ``spiky'' in the spectral domain (their only eigenvalue is $\|a_j\| \approx n)$. This complicates matters in the theoretical analysis, as we will see below.
+
+
+In it not difficult to see that we can recover $x$ from $m=n^2$ many measurements (for properly chosen $a_k$). Yet, this is neither interesting nor practical, since $x$ has only $n$ unknowns. It has been shown that for $x \in \C^n$ about $4n$ measurements are necessary in general to recover $x$ \cite{balan2006signal,bandeira2014saving}. But this does not mean that this can be done in a numerically feasible way. In the next theorem will show that under mild conditions  PhaseLift can recover $x$ exactly (up to a global phase factor) with high probability, provided that the number of measurements is on the order of $n \log n$.
+
+
+
+
+\begin{theorem}\cite{CSV2013}
+\label{th:phaselift}
+Consider an arbitrary signal $x$ in $\RR^d$ or $\C^d$. Let the measurement vectors $a_k$  be sampled independently and uniformly at
+random on the unit sphere, and suppose that the number of measurements obeys $m \ge C \, d \log^2 d$, where
+$C$ is a sufficiently large constant. Then with high probability the solution to the trace-minimization program is exact
+with high probability in the sense that \eqref{eq:tracemin} has a
+unique solution obeying
+\begin{equation}
+  \hat X = x x^\ast.
+\end{equation}
+\end{theorem}
+
+Before we proceed to the proof of this theorem, a few remarks are in order.
+At first glance, the phase retrieval problem with Gaussian measurement vectors $a_k$ appears strikingly similar to the generic low rank matrix recovery problem we studied in Chapter~\ref{ss:matrixrecoverygaussian} successfully via descent cone analysis. However, there is a crucial difference. Here, each measurement matrix $A_k = a_k a_k^*$ is a rank-one matrix, which is far from a generic random matrix (for example a matrix with
+standard normal entries is almost surely never rank-deficient).
+While a descent-cone based proof is still possible under appropriate assumptions~\cite{fuchs2022proof}, it is considerably more involved than the dual certificate approach.
+
+The original proof of Theorem~\ref{th:phaselift} in~\cite{CSV2013} constructs an approximate dual certificate in a clever way without resorting to the golfing scheme.  However, this construction is rather technical and beyond the scope of our discussion here. We will instead pursue a proof that involves the by now familiar golfing scheme.
+In~\cite{candes2014solving} the sampling complexity $m \ge C \, d \log^2 n$ has been improved to the information-theoretic optimum (modulo the constant) $m \ge C \, m$.
+
+
+
+Before proceeding to the proof of Theorem~\ref{th:phaselift}, we need some preparation.
+We will make use of the following approximate $\ell_1$-isometry bound on the measurement operator $\cA$.
+
+\begin{lemma}[Lemma 3.1 in~\cite{CSV2013}]\label{le:A1}
+Fix any $\delta$ in $(0,1/2)$ and assume $m \ge 20 \delta^{-2} \,
+  d$. Then for all unit vectors $u$,
+\begin{equation}
+\label{eq:A1}
+(1-\delta) \le \frac{1}{m} \|\cA(uu^*)\|_* \le (1+\delta)
+\end{equation}
+on an event $E_\delta$ of probability at least $1-2e^{-m
+  \epsilon^2/2}$, where $\delta/4 = \epsilon^2 + \epsilon$. On the
+same event,
+$$
+(1-\delta) \|X\|_* \le \frac{1}{m} \|\cA(X)\|_* \le (1+\delta) \|X\|_*
+$$
+for all positive semidefinite matrices. The right inequality holds for
+all Hermitian matrices.
+\end{lemma}
+\begin{proof}  Let $Z^*$ be the $n \times
+  m$ matrix with the measurement vectors $a_i$'s as columns. Then
+$$
+\|\cA(uu^*)\|_* = \sum_i |\langle a_i, u\rangle|^2 = \|Z u\|^2
+$$
+so that 
+$$
+\sigma^2_{\text{min}}(Z) \le \|\cA(uu^*)\|_* \le
+\sigma^2_{\text{max}}(Z). 
+$$
+The claim is a consequence of deviations bounds concerning
+the singular values of Gaussian random matrices which we explored in Chapter~\ref{c:probability-matrixconcentration},
+namely,
+\begin{align*}
+\P\left(\sigma_{\text{max}} (Z) > \sqrt{m} + \sqrt{d} + t\right)  & \le e^{- t^2/2}\\
+\P\left(\sigma_{\text{min}}(Z) < \sqrt{m} - \sqrt{d} - t\right)  & \le e^{- t^2/2}.
+\end{align*}
+The conclusion follows from taking $m \ge \epsilon^{-2} \, n$ and $t =
+\sqrt{m} \epsilon$ (and from $\epsilon^2 \geq \delta^2/20$ for $0 <
+\delta \le 1/2$). For the second part of the lemma, observe that $X
+= \sum_j \lambda_j u_j u_j^*$ with nonnegative eigenvalues
+$\lambda_j$ so that
+\[
+\|\cA(X)\|_* = \sum_j \sum_i \lambda_j |\langle u_j,a_i\rangle|^2 = \sum_j
+\lambda_j \|\cA(u_j u_j^*)\|_*.
+\]
+The claim follows from \eqref{eq:A1}. The last claim is a consequence
+of $\|\cA(X)\|_* \le \sum_j \sum_i |\lambda_j| |\langle u_j,a_i\rangle|^2$
+together with $\sum_j |\lambda_j| = \|X\|_*$. 
+\end{proof}
+
+
+
+We will also need a bound on the leakage constant $\Cleak$, which is provided by the following lemma.
+\begin{lemma}\label{le:phaseleakage}
+Let $\mathcal{A}$ be as defined in Theorem~\ref{th:phaselift} and let $\mathcal{T}$ be the tangent space at a rank-1 matrix $X=xx^*$. For $m \ge C d \log^2 d$, the leakage constant $\Cleak$ satisfies
+$$\Cleak := \frac{\|\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp} \|_{op \to F}}{\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}})} \lesssim \sqrt{d}$$
+with high probability.
+\end{lemma}
+
+
+\begin{proof}
+To bound the minimum eigenvalue, we use Jensen's inequality~\eqref{Jensen},
+$$\langle M, \mathcal{A}^* \mathcal{A} M \rangle = \frac{1}{m} \sum_{k=1}^m (a_k^* M a_k)^2 \ge \Big( \frac{1}{m} \sum_{k=1}^m |a_k^* M a_k| \Big)^2.$$
+Applying Lemma~\ref{le:A1} gives
+$$\langle M, \mathcal{A}^* \mathcal{A} M \rangle \ge (c_0 \|M\|_*)^2.$$
+Since $\|M\|_* \ge \|M\|_F$ for any matrix, for a unit-Frobenius matrix $M \in \mathcal{T}$ ($\|M\|_F=1$), we have
+$$\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}}) \ge c_0^2 > 0.$$
+This establishes that the denominator is bounded below by a constant independent of $d$.
+
+
+The numerator $\|\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} \mathcal{P}_{\mathcal{T}^\perp} \|_{op \to F}$ requires bounding the Frobenius norm of $Z = \mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} W$ for $W \in \mathcal{T}^\perp$ with $\|W\|=1$.
+Let $\{B_i\}_{i=1}^{2d-1}$ be an orthonormal basis for $\mathcal{T}$. We have:
+$$\|Z\|_F^2 = \sum_{i=1}^{2d} |\langle B_i, \mathcal{A}^* \mathcal{A} W \rangle|^2.$$
+Each term in this sum is $Y_i := \frac{1}{m} \sum_k (a_k^* B_i a_k)(a_k^* W a_k)$. Since $B_i \perp W$, the expectation is $\mathbb{E}[Y_i] = \langle B_i, W \rangle = 0$.
+The variance of $Y_i$ is determined by the 4th moments of the Gaussian vectors. For rank-one measurements we have
+\begin{equation}\label{eq:Yvar}
+\Var(Y_i) \approx \frac{1}{m} \|B_i\|_F^2 \|W\|_F^2.
+\end{equation}
+For $W \in \mathcal{T}^\perp$ with $\|W\|=1$, the Frobenius norm $\|W\|_F$ can be as large as $\sqrt{d-1} \approx \sqrt{d}$.
+
+Substituting $\|B_i\|_F=1$ and $\|W\|_F \approx \sqrt{d}$ into~\eqref{eq:Yvar} gives
+$$\|Z\|_F^2 \approx \sum_{i=1}^{2d} \frac{d}{m} = \frac{2d^2}{m}.$$
+Taking the square root and applying an $\epsilon$-net argument, we get the numerator scaling
+$$\|\mathcal{P}_{\mathcal{T}} \mathcal{A}^* \mathcal{A} W\|_{\text{op}\to F} \approx \frac{d}{\sqrt{m}}.$$
+
+We combine the constant denominator  and the numerator scaling and obtain
+$\Cleak \lesssim \frac{d / \sqrt{m}}{c_0^2} \approx \frac{d}{\sqrt{m}}$. For the regime $m = C d \log^2 d$ this yields 
+$$\Cleak \lesssim \frac{d}{\sqrt{d \log^2 d}} = \frac{\sqrt{d}}{\log d} \le C' \sqrt{d}.$$
+    
+\end{proof}
+
+
+\begin{proof}[Proof of Theorem~\ref{th:phaselift}]
+Recall that to apply Theorem~\ref{th:dualnuclear} we need to verify that $(1-\beta) > \alpha \Cleak$. We already have seen that $\Cleak$ scales like $\sqrt{d}$. This means we need to make $\alpha$ sufficiently small and carefully keep track of this goal when applying the golfing scheme.
+
+We first partition $m$ measurements into $k$ independent batches of size $n = m/k$. For each batch $j$, we define the renormalized sampling operator $\mathcal{R}_j$ given by
+$$\mathcal{R}_j(X) = \frac{1}{n} \sum_{i \in \text{Batch } j} \langle a_i a_i^*, X \rangle a_i a_i^*.$$
+
+To recover $X = xx^*$ from $y_j = \text{tr}(a_j a_j^* X)$ using the golfing scheme, we must handle the non-zero mean of the Gaussian measurements.
+To that end, we define the centered operator $\tilde{\mathcal{R}}_j$ as the difference between the random sampling and its expectation
+$$\tilde{\mathcal{R}}_j(X) = \mathcal{R}_j(X) - \mathbb{E}[\mathcal{R}_j(X)].$$
+From the Gaussian moment property $\mathbb{E}[|a^* z|^2 aa^*] = 2zz^* + \|z\|^2 I$, we know
+$$\mathbb{E}[\mathcal{R}_j(X)] = 2X + \text{tr}(X)I.$$
+The centered operator for a single measurement $a$ is\footnote{Note that in~\eqref{eq:centeredoperator1} $\mathcal{I}$ is the ``operator-valued identity $\mathcal{I}(X)=X$.}
+\begin{equation}\label{eq:centeredoperator1}
+X_a(\cdot) = \langle aa^*, \cdot \rangle aa^* - (2{\mathcal I}  + \text{tr}(\cdot)I).
+\end{equation}
+To use the matrix Bernstein inequality, we need the variance of the sum of $n$ independent centered operators: $\sigma^2 = \| \sum_{i=1}^n \mathbb{E}[X_{a,i}^2] \|$.
+Since the measurements are i.i.d., $\sigma^2 = n  \| \mathbb{E}[X_a^2] \|$.
+
+
+To find the variance,  we must compute $\mathbb{E}[X_a^* X_a]$,
+which involves the eighth moments of $a$. To see this, note that the term $\langle a a^*, X \rangle$ is a quadratic form in $a$  and the summand $X_a$ involves $\langle a a^*, X \rangle a a^*$, which is a matrix where each entry involves $a$ raised to the fourth power.
+Multiplying two of these fourth-power terms together results in an expectation involving the eighth power of the Gaussian entries\footnote{If the eighth moment were infinite (as in some heavy-tailed distributions), the operator would not concentrate, and the golfing scheme would fail or one would have to choose the number of measurements much larger.}.
+
+
+
+Since $(\mathbb{E}[X_a])^2$ is a positive semi-definite matrix, subtracting it from $\mathbb{E}[X_a]$ only reduces the eigenvalues. Therefore
+$$\|\mathbb{E}[X_a^2] - (\mathbb{E}[X_a])^2\| \le \|\mathbb{E}[X_a^2]\|.$$
+Therefore it suffices to bound the second moment of the uncentered operator
+$\mathbb{E} \left[ |a^* X a|^2 \|a\|^2 a a^* \right]$.
+
+But we can simplify things further.
+Due to the rotation invariance of the normal distribution, we can assume that $X$ is a diagonal rank-1 matrix with $X = e_1 e_1^*$ (so $\|X\|_F = 1$) and let $v = e_1$. In the next derivations, we denote the individual entries of $a$ by $a(1),\dots, a(d).$
+Hence, the expression under consideration simplifies to
+$$\mathbb{E} \left[ |a(1)|^4 \left( \sum_{k=1}^d |a(k)|^2 \right) |a(1)|^2 \right] = \mathbb{E} \left[ |a(1)|^6 \sum_{k=1}^d |a(k)|^2 \right].$$
+We split the sum into two parts: the term where the index $k$ matches the $X$-index ($k=1$) and the terms where it does not ($k > 1$) and get
+$$\mathbb{E} \left[ |a(1)|^8 \right] + \sum_{k=2}^d \mathbb{E} \left[ |a(1)|^6 |a(k)|^2 \right].$$
+
+Using the fact that for complex Gaussians $\mathbb{E}|a|^2 = 1$ and the univariate moment formula  $(2p-1)!!$ from Lemma~\ref{lemma:gaussianmoments}, we apply Wick's formula (Lemma~\ref{lemma:Wicksformula}) and get: 
+\begin{enumerate}[label=(\roman*)]
+\item Term 1 (The $k=1$ case):
+This is the 8th moment of a single Gaussian.
+$$\mathbb{E}[|a(1)|^8] = 7!! = 105.$$
+There is one such term (and its value is independent of $d$). \\
+\item Term 2 (The $k \neq 1$ cases):
+Because $a(1)$ and $a(k)$ are independent for $k \neq 1$, the expectation factors as
+$$\mathbb{E}[|a(1)|^6 |a(k)|^2] = \mathbb{E}[|a(1)|^6] \cdot \mathbb{E}[|a(k)|^2] = 3!! 1!! = 3,$$
+where we have again applied the Gaussian moment formula. 
+There are $(d-1)$ such terms in the sum.
+\end{enumerate}
+
+
+Adding all terms together 
+and normalizing by $1/n^2$ (from the definition of $\mathcal{R}_j$) gives
+$$\sigma^2 = n  \frac{1}{n^2} (3(d-1) + 105) \approx \frac{3d}{n},$$
+hence $\sigma^2 = \OOO(d/n)$.
+
+\medskip
+We now apply the golfing scheme to construct $Y$ iteratively. We initialize $Q_0 = xx^*/\|x\|^2$ and then iterate $Y_j = \mathcal{R}_j(Q_{j-1})$, 
+$Q_j = Q_{j-1} - \mathcal{P}_{\mathcal{T}} Y_j$ for $j=1$ to $k$. The final approximate dual certificate is $Y = \sum_{j=1}^k Y_j$.
+By construction, the projection onto $\mathcal{T}$ is a telescoping sum
+$\mathcal{P}_{\mathcal{T}} Y = \sum (Q_{j-1} - Q_j) = Q_0 - Q_k$. Hence, if $Q_k \to 0$, then $\mathcal{P}_{\mathcal{T}} Y \to Q_0$.
+
+
+The golfing scheme relies on three critical parameters that govern convergence and certifiability, namely $\alpha, \beta$ and $\Cleak$. 
+
+Recall that the parameter $\alpha \ge \|\mathcal{P}_{\mathcal{T}}(Y) - UV^*\|_F$ tracks how far the certificate is from the ideal subgradient on the tangent space.
+Note that 
+$$Q_j = Q_{j-1} - \mathcal{P}_{\mathcal{T}} \mathcal{R}_j (Q_{j-1})  = (\mathcal{P}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}) Q_{j-1}.$$
+We will now show  that the operator $\mathcal{R}_j$ satisfies
+$$\|\mathcal{P}_{\mathcal{T}} - \mathcal{P}_{\mathcal{T}} \mathcal{R}_j \mathcal{P}_{\mathcal{T}}\| \le \epsilon.$$
+By Lemma~\ref{le:A1} for any $M \in \mathcal{T}$ with $\|M\|_F = 1$ we have
+$$\lambda_{\min}(\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}) = \inf_{\|M\|_F=1} \langle M, \mathcal{R} M \rangle = \frac{1}{m} \sum_{k=1}^m (a_k^* M a_k)^2$$
+By Jensen's Inequality, we have
+$$\frac{1}{m} \sum_{k=1}^m (a_k^* M a_k)^2 \ge \left( \frac{1}{m} \sum_{k=1}^m |a_k^* M a_k| \right)^2 \ge c_0^2$$
+This proves that the eigenvalues of $\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}$ are bounded away from zero by a constant $1 - \delta_{\text{lower}}$.
+
+The upper bound follows from standard sub-exponential concentration. Since $a_k^* M a_k$ are sub-exponential, the sum of their squares concentrates around the mean $\mathbb{E}[\langle M, \mathcal{R} M \rangle] = \langle M, (2 \mathcal{I} + \text{Tr}(\cdot)I) M \rangle$.
+For $m \ge C d \log d$, we obtain
+$$\lambda_{\max}(\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}) \le 1 + \delta_{\text{upper}}.$$
+We thus have established that the eigenvalues of
+ $\mathcal{P}_{\mathcal{T}} \mathcal{R} \mathcal{P}_{\mathcal{T}}$ acting on  $\mathcal{T}$  satisfy
+$$(1-\delta) \le \lambda_i \le (1+\delta)$$
+where $\delta = \max(\delta_{\text{lower}}, \delta_{\text{upper}})$.
+By taking $m_j$ (the size of a single batch) to be a sufficiently large multiple of $d$, we can make $\delta \le \epsilon$, where $\epsilon$ is a desired constant. We set
+$\epsilon = 1/2$. 
+ 
+This gives us the recursive contraction
+\begin{equation}\label{eq:Qbound1}
+\|Q_j\|_F \le \frac{1}{2} \|Q_{j-1}\|_F \implies \|Q_k\|_F \le \left(\frac{1}{2}\right)^k \|Q_0\|_F.
+\end{equation}
+We know that $\|Q_0\|_F = \|UV^*\|_F = \sqrt{r} = 1$ (for rank-1). We need $\alpha \le \frac{1}{4\sqrt{d}}$ and thus $\left(\frac{1}{2}\right)^k \le \frac{1}{4\sqrt{d}}$. We can achieve this by setting
+$$k \gtrsim \log d.$$
+
+The parameter $\beta \ge \|\mathcal{P}_{\mathcal{T}^\perp}(Y)\|$ measures the contribution of the dual certificate in the orthogonal space.  In the orthogonal complement $\mathcal{T}^\perp$, we have
+$$\mathcal{P}_{\mathcal{T}^\perp}(Y) = \sum_{j=1}^k \mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j(Q_{j-1}).$$
+For each batch $j$, $\mathcal{R}_j$ is a random operator. Since $Q_{j-1} \in \mathcal{T}$ and we are projecting onto $\mathcal{T}^\perp$, the expectation $\mathbb{E}[\mathcal{R}_j(Q_{j-1})]$ is zero, i.e.,
+$$\mathbb{E}[\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j(Q_{j-1})] = \mathcal{P}_{\mathcal{T}^\perp} \mathbb{E}[\mathcal{R}_j](Q_{j-1}) = \mathcal{P}_{\mathcal{T}^\perp} (Q_{j-1}) = 0.$$
+To bound the deviation of the expectation from zero, we again use the matrix Bernstein inequality. For rank-one measurements, each batch must satisfy $m_j \ge C d \log d$ to ensure
+$$\|\mathcal{P}_{\mathcal{T}^\perp} \mathcal{R}_j(Q_{j-1})\| \le \delta_j \|Q_{j-1}\|_F.$$
+Summing these deviations over $k$ batches gives
+$$\beta \le \sum_{j=1}^k \delta_j \|Q_{j-1}\|_F \approx \delta \sum_{j=1}^k  \|Q_{j-1}\|_F .$$
+Because $\|Q_j\|_F$ shrinks geometrically (see~\eqref{eq:Qbound1}), this sum is dominated by the first term. By choosing $m_j$ sufficiently large, we ensure $\delta$ is small enough (e.g., $1/4$) so that the total sum $\beta$ never exceeds $1/2$.
+
+
+
+
+The last step of the proof proceeds along a well-traveled path. We need to show that $1-\beta > \alpha \Cleak$ in order to apply Theorem~\ref{th:dualnuclear}. Plugging in our bounds for $\Cleak, \alpha$, and $\beta$ we see that this condition is indeed satisfied and the proof is complete.
+    
+\end{proof}
+
+\begin{remark}
+Because in matrix completion we sample discrete entries, it suffers from the {\em Coupon Collector} problem\footnote{The coupon collector problem asks:
+If there are $n$ distinct coupon types and each draw independently yields a uniformly random coupon, how many draws are needed to collect all $n$ types?
+The answer is $\OOO(n \log n)$. Collecting the last few missing coupons dominates the total time; the process slows dramatically as the collection nears completion.}.
+To ensure every row and column is sampled at least once, we need $\OOO(n \log n)$ measurements. This is why the $\log n$ factors in matrix completion are structurally different from the ``union bound'' $\log n$ factors in phase retrieval. In phase retrieval, the Gaussians are delocalized by default. In matrix completion, we need to use the incoherence property to force the matrix to be delocalized so that random sampling actually works.   
+\end{remark}
+
+
+
+It is clear that the Gaussian sampling vectors in Theorem~\ref{th:phaselift} are not useful in real-world
+applications. But this result can be extended to more practical setting. For example,~\cite{candes2015phase}
+studies a physically realistic setup where one can modulate the signal of interest
+and then collect the intensity of its diffraction pattern, each modulation thereby
+producing a {\em coded diffraction} pattern or {\em random mask}, as suggested in~\cite{CESV2013}. In this setup, a measurement vector $a_k$ is the result of a pointwise multiplication followed by a Fourier transform. 
+
+To be more precise,  let $D_{\ell}$ be a diagonal matrix representing the $\ell$-th random mask (or code) . The entries of $D_{\ell}$ are usually random phases (e.g., $e^{2\pi i \phi}$ where $\phi$ is chosen uniformly from $[0, 1]$).
+A single measurement in the $\ell$-th mask at frequency index $\omega$ is given by
+$$y_{\ell, \omega} = | \langle a_{\ell, \omega}, x \rangle |^2 = \Big| \sum_{j=0}^{d-1} x_j \cdot [D_\ell]_{j,j}  e^{-2\pi i \omega  j / d} \Big|^2.$$
+When moving from Gaussian $a_k$ to coded diffraction Lemmata~\ref{le:A1} and~\ref{le:phaseleakage} still hold, but the constants change. The masks introduce a form of incoherence by ensuring that the signal is spread out in the Fourier domain. One typically needs $L \approx \log^2 d$ or $\log^3 d$ masks, leading to a total $m = L d$ that still scales as $\OOO(d \text{polylog } d)$, see e.g.~\cite{candes2015phase,gross2015partial,huang2025recovery}.
+
+Let us explore this phase retrieval framework in a numerical example. We apply  PhaseLift to a stylized version of a setup one encounters in X-ray
+crystallography or diffraction imaging.  The test image, shown in
+Figure~\ref{fig:goldballs}(a) (magnitude), is a complex-valued image\footnote{Since the original image and the reconstruction are complex-valued, we only display the absolute value of each image.} of size
+$256 \times 256$, whose pixel values correspond to the complex
+transmission coefficients of a collection of gold balls at nanoscale embedded in a
+medium (data courtesy of Stefano Marchesini from Lawrence Berkeley National Laboratory).
+We use four coded diffraction illuminations, where the entries of the diffraction matrices  are either
+$+1$ or $-1$ with equal probability. We use the TFOCS based implementation of PhaseLift from~\cite{CESV2013} with reweighting. 
+
+\begin{figure}
+\begin{center} 
+\subcaptionbox{Original image}{
+\includegraphics[width=50mm,height=50mm]{figures/goldballs_original}}
+\qquad
+\subcaptionbox{Reconstruction via PhaseLift}{
+\includegraphics[width=50mm,height=50mm]{figures/goldballs_phaselift}} 
+\caption{Original goldballs image and reconstructions via PhaseLift, using three coded diffraction illuminations.}
+\label{fig:goldballs}
+\end{center}
+\end{figure}
+
+
+The numerical algorithm to solve~\eqref{eq:tracemin} in the example illustrated in Figure~\ref{fig:goldballs} was implemented in Matlab using TFOCS~\cite{becker2011templates}. That implementation avoids setting up the matrix $X$ explicitly and only keeps an $n\times r$ matrix with $r \ll n$ in memory.
+
+
+
+
+\section{First-order and non-convex methods for low-rank models}
+\label{s:nonconvexmodels}
+
+The impressive achievements of convex relaxation based methods has also inspired a significant body of research on
+non-convex algorithms for low-rank matrix recovery with rigorous performance guarantees.
+While SDP based methods provide strong theoretical guarantees, first-order and non-convex algorithms are often preferred in practice because they are more memory-efficient and faster for large-scale data.
+
+The core idea behind most non-convex methods for low-rank recovery is to move from the space of full matrices $X \in \mathbb{R}^{n_1 \times n_2}$ to the space of low-rank factors.
+The {\em Burer-Monteiro Factorization}~\cite{burer2003nonlinear} is the most common foundation for non-convex methods in this case. Instead of optimizing over a large matrix $X$, we represent it as the product of two much smaller, thin matrices $X = UV^T$
+where $U \in \mathbb{R}^{n_1 \times r}$ and $V \in \mathbb{R}^{n_2 \times r}$. If the rank $r$ of $X$ is small, one only needs to store $(n_1 + n_2)r$ parameters instead of $n_1 \times n_2$. However, this factorization comes with a significant trade-off: While the original problem in $X$ was convex, the product $UV^T$ introduces non-convexity.
+
+{\em Alternating minimization} is one of the standard techniques used in such a setting~\cite{jain2013low,keshavan2010matrix}.  Since the objective is non-convex in $(U, V)$ together but convex in each factor individually, the algorithm alternates between the two steps:
+\begin{enumerate}
+\setlength{\itemsep}{0.8pt}
+\item  Fix $V$: Solve for $U$ (usually a standard least-squares problem).
+\item Fix $U$: Solve for $V$.
+\end{enumerate}
+This method is appealingly simple (although developing rigorous recovery guarantees is far from simple) and was used in early implementations of the Netflix Prize recommendation engine~\cite{zhou2008large}.
+
+{\em Riemannian optimization on fixed-rank manifolds}~\cite{vandereycken2013low,absil2008optimization}
+is another common technique. Here, instead of treating $U$ and $V$ as independent variables, we treat the set of all rank-$r$ matrices as a Riemannian manifold.
+We perform gradient descent, but after each step, ``project'' the result back onto the manifold of rank-$r$ matrices (often using a truncated SVD).
+The updates are restricted to the tangent space $\Tn_{X_0}$ to ensure we stay close to the low-rank structure.
+
+
+A related (but distinct) idea is {\em Iterative Hard Thresholding} (IHT)~\cite{recht2010guaranteed},
+which keeps the problem in the $X$-space but enforces the rank constraint at every step. For example, the core steps of Iterative Hard Thresholding are
+\begin{enumerate}
+\setlength{\itemsep}{0.8pt}
+\item  Gradient step: $\tilde{X}^{(k)} = X^{(k-1)} - \eta \nabla f(X^{(k-1)})$
+\item Hard Thresholding: $X^{(k)} = P_r(\tilde{X}^{(k)})$, 
+\end{enumerate}
+where $P_r$ is the projection operator that keeps only the top $r$ singular values and sets the remaining singular values to zero. 
+
+While Iterative Hard Thresholding and Riemannian manifold-based algorithms  share the same goal of maintaining a low-rank structure, they are fundamentally different in how they treat the geometry of the problem.
+Iterative Hard Thresholding takes a step in the ``ambient'' space (the space of all matrices, regardless of rank) and then pulls the result back to the low-rank set. It treats the rank-$r$ constraint as a set to project onto. In contrast, Riemannian algorithms never leave the manifold. The gradient itself is projected onto the tangent space $\Tn_{X_k}$first. The update moves along a ``geodesic'' that follows the curvature of the rank-$r$ surface.
+
+{\em Proximal methods} like {\em Iterative Soft-Thresholding Algorithm} (ISTA,~\cite{cai2010singular}) are also very effective for nuclear minimization problems, or more generally for non-smooth optimization where the objective can be split into a smooth part  $g(X)$ and a non-smooth part $h(X)$. For nuclear norm minimization the proximal method is applied to the objective $f(X) = \frac{1}{2}\|\cA(X)-y\|^2 + \lambda \|X\|_*$). Instead of taking a subgradient step on the whole function, we take a gradient step on the smooth part (i.e.,  $g(X)=\frac{1}{2}\|\cA(X)-y\|^2 $) and then apply a {\em proximal operator} to handle the non-smooth part (i.e., $h(X)=\lambda \|X\|_*$).  How does the proximal operator look like in this case? For a matrix $Y$ and a parameter $\tau > 0$, the proximal operator of the nuclear norm $h(X) = \tau \|X\|_*$ is defined as the solution to
+$$\text{prox}_{\tau \|\cdot\|_*}(Y) = \arg\min_X \left( \tau \|X\|_* + \frac{1}{2}\|X - Y\|_F^2 \right).$$
+The closed-form solution is obtained by performing an SVD of $Y$ and applying soft-thresholding to its singular values. If the SVD of $Y$ is $U \Sigma V^T$, then
+$$\text{prox}_{\tau \|\cdot\|_*}(Y) = U \Sigma_\tau V^T$$
+where $\Sigma_\tau$ is a diagonal matrix whose entries are $(\sigma_i - \tau)_+ = \max(\sigma_i - \tau, 0)$.
+
+
+While a hard thresholding operator cuts singular values abruptly, a proximal operator shrinks singular values continuously (soft thresholding), see also Figure~\ref{fig:thresholding}.
+
+\begin{figure}[h]
+\begin{center}
+    \includegraphics[width=.7\textwidth]{figures/softhardthresholding}
+    \caption{Soft thresholding vs.\ hard thresholding.}
+    \label{fig:thresholding}
+\end{center}
+\end{figure}
+
+In both ISTA and IHT, the most computationally expensive step is the full SVD required to find the singular values and vectors. As the matrix dimensions grow, a full SVD becomes a massive bottleneck. For very large-scale matrices, the randomized SVD algorithm of Chapter~\ref{s:RSVD} or Krylov subspace based methods~\cite{Golub_MatrixComputations} provide an effective way to overcome this bottleneck,
+especially when we know the target rank is much smaller than the matrix dimensions.
+
+
+
+
+
+
+
+
+{\em Spectral initialization}~\cite{candes2015wirtinger,Jain:matrixcompletion_altmin_13} has turned out to be an important ingredient in many non-convex iterative methods. To construct a good initializer, one sets
+$$X^{(0)}= P_{r}(\cA^{*}y).$$
+Under appropriate conditions (such as having a large enough number of random measurements) one can show that this initialization ensures
+$$\|X^{(0} - X_0\| \le c \|X_0\|$$
+(for some appropriate constant $c>0$) with high probability.
+Once an approximation is within this $c$-ball, the objective function behaves locally like a strongly convex function, allowing methods like gradient descent to converge at a linear rate to the global optimum.
+
+A notable development in the last decade~\cite{bhojanapalli2016global,ge2017no,WrightMa} was that for many low-rank problems (like matrix completion or phase retrieval), the non-convex landscape is ``benign'', which means that under certain conditions (like RIP) there are no spurious local minima (every local minimum is also a global minimum) and all other critical points are ``strict saddles,'' meaning there is always a direction of descent to escape them.
+
+We refer the reader to~\cite{WrightMa} for an in-depth analysis of convex and nonconvex methods and a detailed discussion of further interesting applications of low-rank matrix recovery.
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}
+Let $A$ be a matrix with singular values $\sigma_1, \sigma_2, \dots, \sigma_r > 0$.
+Prove that the nuclear norm $\|A\|_*$ is the convex envelope of $\text{rank}(A)$ on the set $\{A : \|A\| \leq 1\}$.
+\end{myexercise}
+
+
+\begin{myexercise}
+A linear map $\mathcal{A}: \mathbb{R}^{m \times n} \to \mathbb{R}^p$ satisfies the matrix-RIP with constant $\delta_r$ if for all matrices $X$ of rank at most $r$
+$$(1-\delta_r)\|X\|_F^2 \leq \|\mathcal{A}(X)\|^2 \leq (1+\delta_r)\|X\|_F^2.$$
+If $\delta_{2r} < 1$, prove that there is at most one matrix of rank $r$ that satisfies $\mathcal{A}(X) = b$.
+\end{myexercise}
+
+\begin{myexercise}
+Let $C \subset \mathbb{R}^n$ be a {\em closed convex cone}. The {\em statistical dimension} of $C$, denoted $\delta(C)$, is defined as:
+$$
+\delta(C) := \mathbb{E}\big[ |\Pi_C(g)|_2^2 \big],
+$$
+where $g \sim \mathcal{N}(0, I_n)$ is a standard Gaussian vector in $\mathbb{R}^n$ and $\Pi_C(g)$ denotes the Euclidean projection of $g$ onto $C$. Intuitively,
+$\delta(C)$ measures the ``effective dimension'' of $C$ in $\mathbb{R}^n$ in a probabilistic sense, analogous to the dimension of a subspace. \\
+(a) Prove that for a subspace $L \subset \mathbb{R}^n$ of dimension $d$, $\delta(L) = d$.
+\\
+(b) Let $w$ denote the Gaussian width introduced in Definition~\ref{def:gaussianwidth}. Prove that for a convex cone $C$ we have
+$$
+w^2(C \cap S^{n-1}) \le \delta(C) \le w^2(C \cap S^{n-1}) + 1.
+$$
+So the statistical dimension is essentially the squared Gaussian width of the intersection of the cone with the unit sphere.
+\end{myexercise}
+
+\begin{myexercise}
+Let $M_1, M_2 \in \R^{n_1\times n_2}$ be two matrices, and
+let $M=[M_1, M_2]$ be their concatenation. Show that \\
+(a) $\|M\|_* \le \|M_1\|_* + \|M_2\|_*$. \\
+(b) $\|M\|_* = \|M_1\|_* + \|M_2\|_*$ if $M_1^{T} M_2 = 0$.
+\end{myexercise}
+
+\begin{myexercise}
+Let $A$ and $B$ be matrices of the same dimensions. Prove the following:
+If $A B^T = 0$ and $A^T B = 0$ then 
+$\|A+B\|_* = \|A\|_* +\|B\|_*$.
+\end{myexercise}
+
+\begin{myexercise}\label{ex:nuclear_SDP}
+Show that the nuclear norm minimization problem
+$$\min_X \|X\|_* \quad \text{subject to} \quad \mathcal{A}(X) = b$$
+can be rewritten  as
+$$\min_{X, W_1, W_2} \frac{1}{2}\left(\operatorname{tr}(W_1) + \operatorname{tr}(W_2)\right)$$
+$$\text{subject to} \quad \begin{pmatrix} W_1 & X \\ X^\top & W_2 \end{pmatrix} \succeq 0, \quad \mathcal{A}(X) = b,$$
+which is a standard SDP in the variables $(X, W_1, W_2)$. \\ (Note: At first glance, the objective $\frac{1}{2}\left(\operatorname{tr}(W_1) + \operatorname{tr}(W_2)\right)$ does not seem to involve $X$, but  the Schur complement of $\begin{pmatrix} W_1 & X \\ X^\top & W_2 \end{pmatrix}$
+reveals that $X$ appears implicitly in the objective.)
+\end{myexercise}
+
+
+
+\begin{myexercise} (Schoenberg's Theorem)
+Given $n$ points $x_1,\dots,x_n \in \R^d$,
+the {\em Euclidean distance matrix} 
+$D = [d_{ij}] \in \mathbb{R}^{n \times n}$ is defined by
+$$
+d_{ij} := \|x_i - x_j\|^2
+\qquad \text{for $i,j = 1,\dots,n$}.
+$$
+(Note that the distances are squared in the definition of $D$.)\\
+(a) Show that $D \in \mathbb{R}^{n \times n}$  is a Euclidean distance matrix if and only if $D=D^T$ and
+$H D H^{\ast} \preceq 0$, where $H = I_n - \frac{1}{n}\mathbf{1}\mathbf{1}^T$ is the {\em centering matrix} and
+$\mathbf{1}$ is the vector whose entries are all ones.
+\\
+(b) Show that $\rank(H D H^{\ast}) \le d$.
+(This condition implies that $D$ is a low-rank matrix if $d \ll n$).
+\end{myexercise}
+
+
+
+\begin{myexercise}
+Let $X = [x_1, x_2, \dots, x_n]^T \in \mathbb{R}^{n \times d}$ be a matrix where each row $x_i \sim \mathcal{N}(0, I_d)$ is an independent Gaussian random vector in $d=3$ dimensions. We consider $n=200$ points. The full squared Euclidean distance matrix $D$ is defined as
+$$D_{ij} = \|x_i - x_j\|^2.$$
+The squared distance matrix $D$ can be expressed as
+$$D = \mathbf{1}z^T + z\mathbf{1}^T - 2XX^T,$$
+where $z$ is a vector containing the squared norms of the rows of $X$. 
+\begin{enumerate}[label=(\alph*)]
+\item
+Based on this decomposition, what is the exact rank of $D$ when $d=3$ and $n=200$?
+\item We randomly delete a total of 3000 entries of $D$ (note that entries should be deleted in a symmetric manner since if we do not know the distance from $x_i$ to $x_j$, we also do not know the distance from $x_j$ to $x_i$). Use the convex solver of your choice to reconstruct the missing entries of $D$. 
+\item Once you completed the missing entries of the Euclidean distance matrix $D$ you recover the points via a method called {\em multidimensional scaling} which we sketch here: Form the Gram matrix $G=-\frac{1}{2}J D J$,  where $J$ is the centering matrix defined as  $J = I-\frac{1}{n} {\textbf 1} {\textbf 1}^T$, then do an eigenvalue decomposition on $G$. Work out and implement the details of this procedure.
+\item This time we delete the 3000 largest entries of $D$ (again, in a symmetric manner). This models the case where a sensor can only measure local distances.
+Use again the solver you used in (b) to reconstruct the missing entries of $D$. 
+\item How many measurements can you delete on average in each case until the algorithm can no longer accurately (say, up to a relative error of $10^{-2}$ reconstruct the missing entries)?
+Compare the performance of the solver in these two settings described in (b) and (d).
+\end{enumerate}
+
+\end{myexercise}
+
+\begin{myexercise}\label{ex:pauli}
+(a) Show that the Pauli group
+$$
+\mathcal{P}_{n} = \big\{ 
+\sigma_{a_1} \otimes \cdots \otimes \sigma_{a_n} : a_k \in \{0,x,y,z\} \big\}
+$$
+forms a basis of $\mathbb{C}^{d\times d}$ with cardinality $d^2$. \\
+(b) Prove that the normalized Pauli operators satisfy
+$$
+\operatorname{tr}(P_\alpha^\ast P_\beta) = \delta_{\alpha\beta},
+$$
+hence $\{P_\alpha\}_{\alpha=1}^{d^2}$ is an orthonormal basis for the Hilbert–Schmidt inner product.
+\end{myexercise}
+
+
+\begin{myexercise}
+Low-Rank Quantum State Tomography:
+Consider a 5-qubit system ($n=5$).  Assume the quantum system is prepared in a state $\rho$ that is pure. The density matrix $\rho$ is an $32 \times 32$ complex matrix.
+You are given the expectation values of $m$ randomly sampled Pauli observables $\{A_k\}_{k=1}^m$. In the noise-free case each measurement $y_k$ is given by
+$$y_k = \text{Tr}(A_k \rho).$$
+The observables $A_k$ are chosen from the set of 5-qubit Pauli strings $\{I, X, Y, Z\}^{\otimes 5}$.
+Since $\rho$ is known to be PSD and has a trace of 1, we use the following convex optimization problem to recover $\rho$ from the measurements $y$:
+\begin{align*}
+\min_{\hat{\rho}} & \quad \sum_{k=1}^m |\text{Tr}(A_k \hat{\rho}) - y_k|^2 + \lambda \|\hat{\rho}\|_* \\ \text{s.t.} & \quad \hat{\rho} \succeq 0 \quad \text{and} \quad \text{Tr}(\hat{\rho}) = 1.
+\end{align*}
+(Note that because $\rho$ is PSD, the nuclear norm is simply the trace: $\|\rho\|_* = \text{Tr}(\rho)$. Since we already constrain $\text{Tr}(\rho) = 1$, the nuclear norm is constant. The ``low-rank'' promotion actually comes from the PSD constraint combined with the objective function.)
+
+\begin{enumerate}[label=(\alph*)]
+\item Sample only $m = 250$ random Pauli measurements (note that a full basis requires $4^5 = 1024$ measurements) and use a Semidefinite Programming  solver (like CVX or SCS) to recover $\hat{\rho}$.
+\item Calculate the {\em quantum fidelity} $F(\rho, \hat{\rho}) = \left( \text{Tr} \sqrt{\sqrt{\rho} \hat{\rho} \sqrt{\rho}} \right)^2$. How close is your recovery to the true state?
+\item Repeat the experiment with a reduced the number of measurements $m$. How small can you make $m$ so that recovery of $\rho$ is numerically still possible in your simulations?
+\end{enumerate}
+\end{myexercise}
+
+
+\begin{myexercise}
+Consider the phase retrieval problem where we want to reconstruct a signal $x\in \C^n$ from intensity measurements of the form $\{|\langle x,a_k \rangle|^2\}_{k=1}^m$.
+\begin{enumerate}[label=(\alph*)]
+\item Assume the measurement vectors $\{a_k\}_{k=1}^m$ form an equiangular tight frame for $\C^n$ with $m=n^2$. 
+Let $X=x x^\top$. Show that in this case the solution takes on the very simple form
+\begin{equation}\label{eq:phaseequiframe}
+X = \frac{n+1}{n} \sum_{k=1}^{n^2} |\langle x,a_k \rangle|^2 a_k a_k^\top - \|x\|^2 I_n.
+\end{equation}
+\item In this reconstruction formula, how can we address the issue that we do not know $\|x\|$?
+\item How does the reconstruction formula~\eqref{eq:phaseequiframe}
+change if instead of an equiangular tight frame $\{a_k\}_{k=1}^{n^2}$ we use a mutually unbiased basis with a total of $n^2+n$ elements?
+\end{enumerate}
+
+\end{myexercise}
+
+    
+
+
+    
+
+    

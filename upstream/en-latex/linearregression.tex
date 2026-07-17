@@ -1,0 +1,1449 @@
+\chapter{Linear Regression and Regularization}
+\label{c:linreg_ls}
+
+\newcommand{\regpar}{\theta}
+
+
+
+It is dawn at Mavericks, California. The swell forecast reads 10 meters at 18 seconds---a 
+massive storm system has sent energy across thousands of miles of Pacific Ocean. 
+For big wave surfers, these are exciting conditions! But they also come with all the dangers of a wipeout.
+
+The {\em hold-down}---the time a surfer is trapped beneath the surface after a 
+wipeout---is one of the most critical variables in a big-wave wipeout.
+Professional big wave surfers can hold their breath for four to five minutes under controlled 
+conditions, but after the physical exertion of paddling into a 12-meter wave, that 
+window shrinks dramatically. Add the disorientation of being tumbled by thousands of tons of water, and you have maybe roughly 20-30 seconds before panic sets in, and perhaps 60-90 seconds before blackout.
+This motivates a practical and (for some readers) urgent question: Given ocean conditions and wave characteristics, can we predict how long is a surfer likely to be held underwater?
+
+Imagine we have collected data from 50 big wave sessions at various locations 
+(Mavericks, Nazaré, Jaws, Teahupo'o,...) using underwater cameras and GPS trackers on  professional surfers. For each wipeout, we have recorded hold-down time (seconds) $y$,  wave height (meter, measured face) $x_1$,
+wave period (seconds between waves) $x_2$,
+ water depth at impact zone (meter) $x_3$, and
+ wind speed (knots) $x_4$.
+Tomorrow, a massive northwest swell is forecast with 
+wave height 15m, period 20s, depth 12m, and wind 18 kts.
+How long should we expect the hold-down to be? 
+
+While the true physics is nonlinear (involving fluid dynamics, buoyancy, and 
+turbulent flow), a linear approximation may capture the first-order effects within the  range of observed conditions. We thus postulate that hold-down time is approximately a linear function of the 
+wave characteristics
+\begin{equation*}
+  y = \regpar_0 + \regpar_1 x_1 + \regpar_2 x_2 + \regpar_3 x_3 + \regpar_4 x_4 + \epsilon,
+\end{equation*}
+where $\regpar_0$ is the baseline hold-down time,
+$\regpar_1$ is the increase in hold-down per meter of wave height, $\regpar_2$ is the effect of wave period, $\regpar_3$ is the effect of water depth (deeper water means shorter hold-downs), $\regpar_4$ is the effect of wind, and $\epsilon$ represents random variation (wave shape, surfer position, etc.)
+
+
+With our 50 observations, we can write the model in matrix form
+$$y = X \regpar + \eps$$
+where $y \in \R^{50}$ is the vector of observed hold-down times, 
+$X \in \R^{50 \times 5}$ contains the wave characteristics (with a column of 1's 
+for the intercept), and $\regpar \in \R^5$ are the unknown coefficients we wish to estimate. Once we have found $\hat{\regpar}$, we can predict tomorrow's expected hold-down.
+
+But how do we find the ``best'' estimate $\hat{\regpar}$? Is our estimator optimal in some sense? How accurate are our predictions?  Should we include all variables, or is simpler better? Linear regression and least squares will provide answers to these questions.
+
+\medskip
+This chapter studies linear regression and least squares from four complementary viewpoints. 
+After introducing the basic idea of linear regression, we first show that least squares is an orthogonal projection problem. Second, we show that it arises naturally from Gaussian noise and conditional-mean prediction. Third, we analyze its bias, variance, and prediction risk. Finally, we show how ridge regression stabilizes least squares by shrinking low-information directions, and we reinterpret this shrinkage as Wiener filtering.
+
+
+\section{Linear regression}
+
+
+
+
+Linear regression is the foundational {\em supervised} learning model in data science, statistics, and applied mathematics~\cite{hastieelements,LVanderberghe_SBoyd_book,Golub_MatrixComputations}.
+While it is often motivated by statistical inference, its mathematical core is a geometric problem: finding the ``best'' projection of a target vector onto the subspace spanned by the predictors.
+
+
+
+
+Let us formulate the linear regression problem in greater generality.
+Consider a dataset consisting of $n$ observations and $p$ features $x_1,\dots,x_p$, represented by the matrix $X \in \mathbb{R}^{n \times p}$ (often called the design matrix), and a vector of responses $y \in \mathbb{R}^n$. Now we introduce a {\em rather strong assumption} on the underlying data model: we {\em assume a linear relationship}
+$y = X\regpar + \epsilon$,
+where, as in the previous example, $\regpar \in \mathbb{R}^p$ is the vector of unknown coefficients and $\epsilon$ represents noise. The goal is now to find the best estimate $\hat{\regpar}$ of $\regpar$.
+
+
+
+
+\smallskip
+Linear regression serves two primary purposes:
+\begin{enumerate}
+\item Prediction: Given a new predictor $x_{\text{new}}$, we wish to predict 
+the corresponding response $y_{\text{new}}$. Our postulated linear model suggests the prediction
+$\hat{y}_{\text{new}} = x_{\text{new}}^\top \hat{\regpar}$
+where $\hat{\regpar}$ is an estimate of $\regpar$.
+\item Inference: We wish to understand the relationship between predictors and 
+response, quantified by $\regpar$, such as: Which predictors are important?  How does changing $x_j$ affect $y$? 
+What is the uncertainty in our estimates? 
+\end{enumerate}
+
+But how can we find an estimate $\hat{\regpar}$ in the first place? 
+Because of noise, we do not expect to recover $\regpar$ exactly from finite data, nor do we expect $y$to lie exactly in the column space of $X$.
+So, which error function (or {\em loss function} in the terminology of data science, statistics, and machine learning) shall we use to quantify a good (or even optimal) fit? 
+
+We propose to compute the $\hat{\regpar}$ that minimizes the sum of squared residuals
+\begin{equation}\label{eq:l2reg}
+f(\regpar) = \|y - X\regpar\|^2.   
+\end{equation}
+
+This proposal immediately raises the question, why did we use the least-squares error in~\eqref{eq:l2reg} and not some other measure of fit?
+After all, we could consider many alternatives, such as for instance the sum of absolute errors $\sum_{i=1}^n |y_i -x_i^\top\regpar|$, or the maximum absolute error $\max_{i=1,\ldots,n} |y_i - x_i^\top\regpar|$. 
+
+The choice of the squared loss \eqref{eq:l2reg} is not arbitrary. It emerges from multiple 
+complementary perspectives: geometric interpretation, 
+computational tractability, and statistical optimality. We examine each justification in turn\footnote{The dominance of the least squares approach is also deeply rooted in the history of astronomy and the development of the normal distribution.
+While Adrien-Marie Legendre was the first to publish the method in 1805 (as a purely algebraic way to fit curves to planetary data), Carl Friedrich Gauss published his version in 1809 and famously claimed he had been using it since 1795~\cite{stigler1981gauss}. Gauss provided the first probabilistic justification for the method, effectively inventing the field of statistical inference as we know it today~\cite{stigler1990history}.}.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.55\textwidth]{figures/linear_regression}
+\caption{Least squares regression line fitted to a set of observations. Dashed lines indicate the residuals $r_i =  y_i - \hat{y}_i$. We seek the linear
+function that minimizes the sum of squared residuals.}
+\label{fig:linearregression}
+\end{figure}
+
+
+\medskip
+It is helpful to keep in mind the fundamental differences between linear regression and PCA (discussed in Chapter~\ref{s:PCA}).
+While linear regression and PCA both involve fitting a linear structure to data, they have fundamentally different goals, and assumptions. Linear regression is a {\em supervised method}. The goal is to model the relationship between a set of predictor variables 
+$X$ and a response variable $y$. It assumes the $X$ values are known perfectly\footnote{{\em Total Least Squares}, a generalization of least squares, is a regression technique that assumes errors exist in {\em both} $X$ and $y$, see e.g.~\cite{Golub_MatrixComputations}. The total least squares solution is equivalent to finding the first principal component of the combined matrix $[X \, y]$.} and all noise is in $y$. In contrast, PCA is an {\em unsupervised method} that does not involve a response variable. Instead, it seeks a low-dimensional linear structure that captures as much variation in the given data $X$ as possible. In a nutshell,
+regression asks: ``How well can $X$ explain $y$?'' while PCA asks: ``What is the most efficient way to represent $X$?''
+
+
+
+
+
+
+\section{Geometry, existence, and uniqueness of least squares}
+
+The least squares loss has some appealing geometric interpretations that are not shared by other loss functions, which we collect below (and the verification of which is left as exercises).
+
+
+Let $S \subset \mathbb{R}^n$ be a linear subspace. For every $y \in \mathbb{R}^n$, there exists a unique decomposition
+\begin{equation}
+  \label{th:orthoproj}
+y = s + r, \quad
+\text{such that
+$s \in S$, and $r \in S^\perp$.}
+\end{equation}
+Furthemore, $s$ is the unique minimizer of
+$$
+\min_{u \in S} \|y - u\|^2.
+$$
+
+
+
+
+Let $\Col(X)$ denote the column space of $X$ and
+$\Pcol$ the orthogonal projection onto $\Col(X)$.
+Applying the subspace decomposition above to the case  $S = \Col(X)$ implies that
+for any $y \in \mathbb{R}^n$, there exists $\hat \regpar \in \mathbb{R}^p$ such that
+$$
+X\hat \regpar = \Pcol y.
+$$
+Moreover, we have
+$$
+\hat \regpar \in \arg\min_{\regpar \in \mathbb{R}^p} \|y - X\regpar\|^2.
+$$
+In the hold-down example, the fitted vector $X \hat{\regpar}$
+is the orthogonal projection of the observed hold-down times onto the subspace spanned by the measured wave features.
+
+
+
+Let $X \in \mathbb{R}^{n \times p}$ and $y \in \mathbb{R}^n$. 
+A vector $\hat \regpar \in \R^p$ minimizes
+$$\|y - X\regpar\|^2$$
+if and only if
+$$
+X^\top (y - X\hat \regpar) = 0.
+$$
+Equivalently,
+\begin{equation}
+\label{eq:normalequations}    
+X^\top X \hat \regpar = X^\top y,
+\end{equation}
+which are also referred to as the {\em normal equations}.
+
+
+
+Furthermore, if $X$ has full column rank ($\mathrm{rank}(X)=p$), then $X^T X$ is invertible and the normal equations have as unique solution
+the least squares estimator given by 
+\begin{equation}\label{eq:ols_standard}
+  \hat{\regpar}_{\text{LS}} = (X^\top X)^{-1}X^\top y.
+\end{equation}
+
+
+
+
+However, this approach has both practical and theoretical limitations: (i)~Computing $X^\top X$ squares the condition 
+number, amplifying rounding errors. This is not a big deal when the condition number of $X$ is small (say, $\kappa(X) = \OOO(1)$), but becomes a major concern when $X$ is not well conditioned. (ii)~When $\rank(X) < p$, the matrix $X^\top X$ is singular and cannot be inverted; (iii)~When $p > n$, the system is underdetermined.
+
+
+The SVD provides an elegant solution that avoids forming 
+$X^\top X$ explicitly and handles all cases (full rank, rank deficient, underdetermined) in a unified framework\footnote{The SVD may be computationally too expensive for large-scale problems. Conjugate gradient based iterative solvers are often the algorithms of choice in that case~\cite{Golub_MatrixComputations,hanke2017conjugate}. See also the randomized SVD in Chapter~\ref{s:RSVD} as a way to reduce the computational complexity of the SVD at the cost of reduced accuracy.}.
+
+
+\begin{theorem} \label{th:ls_svd}
+Let $X \in \R^{n \times p}$ have the SVD $X = U\Sigma V^\top$ with $\rank X = r$.
+Then the minimum 2-norm least squares solution to $X\theta = y$ is
+\begin{equation}\label{eq:ols_svd_solution}
+\hat{\regpar} = V\Sigma^+U^\top y = \sum_{i=1}^r \frac{1}{\sigma_i}(u_i^\top y)v_i
+\end{equation}
+where $\Sigma^+$ is the Moore-Penrose pseudoinverse of $\Sigma$:
+\begin{equation}\label{eq:pseudoinverse}
+  \Sigma^+ = \begin{bmatrix}
+    \diag(1/\sigma_1, \ldots, 1/\sigma_r) & 0 \\
+    0 & 0
+  \end{bmatrix} \in \R^{p \times n}.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+We seek to minimize $\|y - X\regpar\|^2$. We substitute the SVD $X = U\Sigma V^\top$ and obtain
+$$\|y - X\regpar\|^2 = \|y - U\Sigma V^\top\regpar\|^2.$$
+Since $U$ is orthogonal, $\|U^\top z\| = \|z\|$ for any vector $z$. 
+Thus
+$$\|y - U\Sigma V^\top\regpar\|^2 = \|U^\top y - \Sigma V^\top\regpar\|^2.$$
+Define $\tilde{y} = U^\top y \in \R^n$ and $\alpha = V^\top\regpar \in \R^p$. 
+The problem becomes
+\begin{equation}\label{eq:pinv_alpha}
+\min_{\alpha} \|\tilde{y} - \Sigma\alpha\|^2.
+\end{equation}
+
+We partition $\Sigma$, $\tilde{y}$, and $\alpha$ as follows:
+$$\Sigma = \begin{bmatrix} \Sigma_r & 0 \\ 0 & 0 \end{bmatrix}, \quad
+\alpha = \begin{bmatrix} \alpha_r \\ \alpha_{\perp} \end{bmatrix}, \quad
+\tilde{y} = \begin{bmatrix} \tilde{y}_r \\ \tilde{y}_{\perp} \end{bmatrix},$$
+where $\Sigma_r = \diag(\sigma_1, \ldots, \sigma_r) \in \R^{r \times r}$.
+
+Then
+\begin{align*}
+  \|\tilde{y} - \Sigma\alpha\|^2
+  &= \left\|\begin{bmatrix} \tilde{y}_r - \Sigma_r\alpha_r \\ \tilde{y}_{\perp} \end{bmatrix}\right\|^2\\
+  &= \|\tilde{y}_r - \Sigma_r\alpha_r\|^2 + \|\tilde{y}_{\perp}\|^2.
+\end{align*}
+
+The second term is independent of $\alpha$. To minimize the first term,
+$$\Sigma_r\alpha_r = \tilde{y}_r \quad \Rightarrow \quad 
+\alpha_r = \Sigma_r^{-1}\tilde{y}_r 
+= \begin{bmatrix} \tilde{y}_1/\sigma_1 \\ \vdots \\ \tilde{y}_r/\sigma_r \end{bmatrix}.$$
+
+For now the component $\alpha_{\perp}$ is undetermined. We note that setting 
+$\alpha_{\perp} = 0$ gives the minimum norm solution to~\eqref{eq:pinv_alpha}.
+
+Transforming back gives
+$$
+ \regpar = V\alpha = \begin{bmatrix} V_r & V_{\perp} \end{bmatrix} \begin{bmatrix} \Sigma_r^{-1}\tilde{y}_r \\ \alpha_{\perp}  \end{bmatrix}  =  V_r \Sigma_r^{-1}\tilde{y}_r + V_{\perp} \alpha_{\perp}.
+$$  
+Since $V$ is orthogonal, by Pythagoras the 2-norm of $\regpar$ is minimized
+if $V_{\perp} \alpha_{\perp}$ is zero, i.e., if $\alpha_{\perp} =0$.
+With this choice we obtain
+$$
+ \regpar =  V_r \Sigma_r^{-1}\tilde{y}_r  
+  = V\Sigma^+U^\top y
+  = \sum_{i=1}^r v_i \cdot \frac{1}{\sigma_i} \cdot (u_i^\top y)
+  = \sum_{i=1}^r \frac{1}{\sigma_i}(u_i^\top y)v_i.
+  $$
+
+
+\end{proof}
+
+The SVD solution has an appealing geometric interpretation: We project $y$ onto each left singular vector $u_i^\top y$, then scale by $1/\sigma_i$, weight the result by the corresponding right singular vector $v_i$, and sum over all positive singular values. This explicitly constructs the solution as a linear combination of the right singular  vectors, with coefficients determined by the singular values and projections of $y$.
+
+
+
+\begin{remark}[\textbf{Minimum 2-norm solution}]
+When $\rank(X) = r < p$, the matrix $X^\top X$ is singular and the normal equations have infinitely many solutions. We have seen in Theorem~\ref{th:ls_svd}  that the SVD handles this gracefully. Indeed,  when $\rank(X) = r < p$, the set of least squares solutions is
+$$\mathcal{S} = \left\{\regpar \in \R^p : \|y - X\regpar\|^2 = \min_{\regpar} 
+\|y - X\regpar\|^2\right\}.$$
+An inspection of the proof of Theorem~\ref{th:ls_svd} reveals (namely, setting
+$\alpha_{\perp} = 0$) that among all $\regpar \in \mathcal{S}$, 
+the SVD solution $\hat{\regpar} = V\Sigma^+U^\top y$ 
+has the smallest Euclidean norm, i.e.,
+$$\|\hat{\regpar}\| = \min_{\regpar \in \mathcal{S}} \|\regpar\|.$$ 
+The minimum-norm solution is not just a mathematical convenience it is often the state that nature itself selects. This reflects a fundamental tendency in physics: among all configurations consistent with the governing constraints, systems gravitate toward states of minimum energy. In this light, the pseudoinverse is not merely a matrix operator, but a mathematical expression of physical equilibrium.
+\end{remark}
+
+For dense full-rank least-squares problems, QR factorization is usually the standard method because it is numerically stable and significantly cheaper than the SVD~\cite{Golub_MatrixComputations}. The SVD is more robust, especially when the matrix is ill-conditioned or rank-deficient, because it reveals the numerical rank and naturally produces minimum-norm solutions.
+
+
+
+
+
+
+
+
+\section{Statistical properties of least squares}
+
+Before exploring the benefits of using the least squares error function from a statistical viewpoint, we will first impose the following {\em standard assumptions} on our linear model $y= X\theta+\eps$, which we will make throughout this section unless otherwise noted:
+
+
+\begin{enumerate}
+\item[] (A1) Exogeneity: $\E[\eps | X] = 0$.
+\item[] (A2) Homoscedasticity: $\Var(\epsilon | X) = \sigma^2 I$.
+\item[] (A3) Full rank: $\rank(X) = p$ (assumes $n \geq p$).
+\end{enumerate}
+
+It is instructive to explain the role of each of these assumptions.
+
+Exogeneity is the most important statistical assumption. 
+It stipulates that the errors are uncorrelated with the predictors.
+Exogeneity would mean, for instance, that the unmodeled part of the hold-down time in our surfing example is not systematically correlated with the recorded wave height, period, depth, or wind speed.
+It also means there is no ``omitted variable bias'', i.e., we have not left out important confounders. Thus, exogeneity is required for unbiasedness and consistency of the least squares solution, as well as for a causal interpretation of coefficients\footnote{Here, a causal interpretation 
+means if we were to intervene and change $x_j$ 
+while holding other relevant factors fixed, $y$
+would change by $\regpar_j$ (on average).}.
+
+
+Homoscedasticity means the errors have constant variance, i.e.,  the  ``variability'' of the errors around  the regression line is the same for all values of the predictors\footnote{This is clearly a very idealized assumption. A more realistic assumption is heteroscedasticity. For example, homoscedasticity would imply that the variance of income is the same for people with 4 years of education as for people with 16 years. In contrast, heteroscedasticity would indicate that the income variance increases with education level, which is a much more realistic viewpoint since in general highly educated people have more diverse career outcomes.}.
+Without homoscedasticity, the least squares estimator may still be unbiased but can be inefficient and produce misleading standard errors.
+
+We already encountered the full rank assumption in the previous section, and have seen that it ensures invertibility of $X^T X$ and uniqueness of the solution. While non-invertibility is not a ``deal-breaker'', enforcing uniqueness of the solution would require additional assumptions and regularization (for instance we can replace the inverse with the Moore-Penrose pseudo-inverse, as previously shown), which we will discuss in more detail in Chapter~\ref{ss:predictionrisk}.
+
+\medskip
+The most compelling statistical justification of the least squares error function~\eqref{eq:l2reg} arguably comes from {\em maximum likelihood theory}. 
+
+Let us recall the concept of the likelihood function.
+Assume we have a set of i.i.d.\ observations $\mathcal{D} = \{x_1, x_2, \dots, x_n\}$ drawn from a probability density (or mass) function $f(x | \regpar)$. The joint probability of the entire dataset is the product of the individual probabilities
+$\P(\mathcal{D} | \regpar) = \prod_{i=1}^n f(x_i | \regpar).$
+When we treat the data $\mathcal{D}$ as fixed and the parameter $\regpar$ as a variable, this function is called the {\em likelihood function}, denoted as $\mathcal{L}(\regpar)$,
+$$\mathcal{L}(\regpar; x_1, \dots, x_n) = \prod_{i=1}^n f(x_i | \regpar).$$
+The Maximum Likelihood Estimator (MLE) $\hat{\regpar}_{MLE}$ is defined as the argument that maximizes the likelihood function, i.e., 
+$$\hat{\regpar}_{MLE} := \argmax_{\regpar \in \Theta} \mathcal{L}(\regpar),$$
+where $\Theta$ denotes a parameter space.
+
+
+Under suitable regularity conditions (identifiability, correct model specification, and mild technical assumptions), one can show (using e.g.\ the Uniform Law of Large Numbers and the Argmax Theorem) that the maximum likelihood estimator is {\em consistent}~\cite{wald1949note,van2000asymptotic}, i.e.
+$$
+\hat{\theta}_n \xrightarrow{P} \theta_0 \quad \text{as } n \to \infty,
+$$
+where $\theta_0$ is the true parameter and 
+$\hat{\theta}_n$ is the  MLE based on $n$ samples.
+
+\smallskip
+Notice that to actually compute the MLE numerically, one usually considers the
+{\em log-likelihood function} $\ell(\regpar) = \log \mathcal{L}(\regpar)$.
+Since the natural logarithm is a monotonically increasing function, the value of $\regpar$ that maximizes $\mathcal{L}(\regpar)$ also maximizes the log-likelihood
+$$\ell(\regpar) = \sum_{i=1}^n \log f(x_i | \regpar),$$
+which has numerically much more stable properties.
+The {\em score} is the gradient of the log-likelihood function with respect to $\regpar$.
+To find the MLE, we typically solve the {\em score equation} by setting the gradient of the log-likelihood to zero,
+$$\nabla_\regpar \ell(\regpar) = 0.$$
+
+
+
+
+
+Except for a few cases (like least squares, see also Theorem~\ref{th:mle} below) the MLE typically lacks a closed-form solution. While many standard models (like logistic regression, see Chapter~\ref{s:logisticregression}) remain computationally tractable due to convexity, more complex models result in non-convex optimization problems where finding the global MLE is often computationally intractable.
+
+
+
+
+
+When we add a distributional assumption on the errors, we can show that
+the least squares estimator is actually the maximum likelihood estimator.
+
+\begin{theorem}[Least squares as Maximum Likelihood Estimator]\label{th:mle}
+Suppose the errors are i.i.d.\ Gaussian, i.e,
+$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$, for $i = 1, \ldots, n$. Under the standard assumptions (A1)--(A3), the maximum likelihood 
+estimator (MLE) of $\regpar$ is
+$$\hat{\regpar}_{\text{MLE}} = \hat{\regpar}_{\text{LS}} = (X^\top X)^{-1}X^\top y,$$
+and the MLE of $\sigma^2$ is
+$$\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n}\|y - X\hat{\regpar}_{\text{LS}}\|^2.$$
+\end{theorem}
+
+\begin{proof}
+The likelihood function is:
+\begin{align*}
+  L(\regpar, \sigma^2 | y, X)
+  &= \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}}\exp\left(-\frac{(y_i - x_i^\top\regpar)^2}{2\sigma^2}\right)\\
+  &= (2\pi\sigma^2)^{-n/2}\exp\left(-\frac{1}{2\sigma^2}\|y - X\regpar\|^2\right).
+\end{align*}
+
+The log-likelihood is:
+$$\ell(\regpar, \sigma^2) = -\frac{n}{2}\log(2\pi) - \frac{n}{2}\log(\sigma^2) - \frac{1}{2\sigma^2}\|y - X\regpar\|^2.$$
+
+For fixed $\sigma^2$, maximizing $\ell$ with respect to $\regpar$ is equivalent to 
+minimizing $\|y - X\regpar\|^2$, which yields $\hat{\regpar}_{\text{LS}}$.
+
+Substituting $\hat{\regpar}_{\text{LS}}$ and maximizing with respect to $\sigma^2$:
+$$\frac{\partial\ell}{\partial\sigma^2} = -\frac{n}{2\sigma^2} + \frac{1}{2(\sigma^2)^2}\|y - X\hat{\regpar}_{\text{LS}}\|^2 = 0$$
+gives
+\begin{equation}\label{eq:biasedMSE}
+\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n}\|y - X\hat{\regpar}_{\text{LS}}\|^2,
+\end{equation}
+and the proof is complete.
+
+
+\end{proof}
+
+Note that the MLE~\eqref{eq:biasedMSE} is biased; the unbiased estimator uses $n-p$ instead of $n$ in the denominator (see also Exercise~\ref{ex:mse_unbiased}).
+
+
+
+
+\begin{remark}
+The Gaussian assumption is often reasonable for errors 
+that arise from the sum of many small independent sources (by the Central Limit Theorem).
+But what if the error $\eps$ is not Gaussian? If the error follows a different distribution, the MLE leads to a different loss function.
+For example for Laplace errors ($\epsilon_i \sim \text{Laplace}(0, b)$) this results in minimizing $\sum_i |y_i - x_i^\top\regpar|$, known as $\ell_1$ regression. And for uniform errors ($\epsilon_i \sim \text{Uniform}(-a, a)$), we minimize $\max_i |y_i - x_i^\top\regpar|$, also referred to as Chebyshev regression.
+\end{remark}
+
+
+
+\begin{theorem}\label{th:squared_optimal}
+Suppose $Y$ is a random variable and we wish to predict $Y$ with a constant $c \in \R$. 
+Among all possible choices of $c$, the minimizer of the expected squared error is:
+$$c^* = \argmin_{c \in \R} \E[(Y - c)^2] = \E[Y].$$
+
+More generally, for conditional prediction given $x$, the function that minimizes 
+expected squared error is:
+$$f^*(x) = \argmin_{f} \E[(Y - f(x))^2 | x] = \E[Y | x].$$
+\end{theorem}
+
+\begin{proof}
+For the unconditional case we compute
+\begin{align*}
+  \E[(Y - c)^2]
+  &= \E[(Y - \E[Y] + \E[Y] - c)^2]\\
+  &= \E[(Y - \E[Y])^2] + 2\E[(Y - \E[Y])](\E[Y] - c) + (\E[Y] - c)^2\\
+  &= \Var(Y) + 0 + (\E[Y] - c)^2.
+\end{align*}
+The last expression is minimized when $c = \E[Y]$.
+
+For the conditional case, the proof is identical but conditioning on $x$ throughout.
+
+\end{proof}
+
+Theorem~\ref{th:squared_optimal} tells us that if we believe $\E[Y | x] = x^\top\regpar$, 
+then minimizing the squared error is the natural way to estimate $\regpar$; we are finding the 
+linear function that best approximates the conditional mean. We leave it to the reader to verify that using instead the sum of absolute errors estimates the conditional median.
+ 
+
+
+
+
+\begin{theorem}\label{th:ols_properties}
+Under the standard assumptions (A1)--(A3), the least squares estimator $\hat{\regpar}_{\text{LS}}$ satisfies
+\begin{enumerate}
+  \item[(i)] {\em Unbiasedness:} $\E[\hat{\regpar}_{\text{LS}} | X] = \regpar$.
+  \item[(ii)] {\em Covariance:} $\Var(\hat{\regpar}_{\text{LS}} | X) = \sigma^2(X^\top X)^{-1}$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+To prove the unbiasedness condition, we compute
+\begin{align*}
+  \E[\hat{\regpar}_{\text{LS}} | X]
+  &= \E[(X^\top X)^{-1}X^\top y | X]\\
+  &= (X^\top X)^{-1}X^\top\E[y | X]\\
+  &= (X^\top X)^{-1}X^\top X\regpar\\
+  &= \regpar.
+\end{align*}
+
+The covariance property follows from the following calculation:
+\begin{align*}
+  \Var(\hat{\regpar}_{\text{LS}} | X)
+  &= \Var((X^\top X)^{-1}X^\top y | X)\\
+  &= (X^\top X)^{-1}X^\top \Var(y | X) X(X^\top X)^{-1}\\
+  &= (X^\top X)^{-1}X^\top (\sigma^2I_n) X(X^\top X)^{-1}\\
+  &= \sigma^2(X^\top X)^{-1}X^\top X(X^\top X)^{-1}\\
+  &= \sigma^2(X^\top X)^{-1}.
+\end{align*}
+
+\end{proof}
+
+A natural question is whether the least squares estimator is optimal among all \emph{unbiased} linear estimators?
+
+\begin{definition}[Linear Estimator]\label{def:linear_estimator}
+An estimator $\tilde{\regpar}$ is \emph{linear} if it can be written as $\tilde{\regpar} = B y$
+for some matrix $B \in \R^{p \times n}$ that may depend on $X$ but not on $y$.
+\end{definition}
+
+
+
+\begin{theorem}[Gauss-Markov Theorem]\label{th:gauss_markov}
+Under the standard assumptions (A1)--(A3), the least squares estimator $\hat{\regpar}_{\text{LS}}$ is the 
+{\em Best Linear Unbiased Estimator} (BLUE). That is, among all linear unbiased 
+estimators $\tilde{\regpar} = By$, the least squares estimator has the smallest 
+covariance matrix
+$$\Var(\tilde{\regpar} | X ) - \Var(\hat{\regpar}_{\text{LS}} | X ) \succeq 0$$
+for any linear unbiased estimator $\tilde{\regpar}$.
+
+Equivalently, for any linear combination $a^\top\regpar$, the least squares-based estimator 
+$a^\top\hat{\regpar}_{\text{LS}}$ has the smallest variance among all linear unbiased 
+estimators of $a^\top\regpar$.
+\end{theorem}
+
+\begin{proof}
+Let $\tilde{\regpar} = By$ be any linear unbiased estimator. Unbiasedness requires:
+$$\E[\tilde{\regpar} | X ] = B\E[y | X ] = BX \regpar = \regpar$$
+for all $\regpar \in \R^p$. This implies $BX  = I_p$.
+
+The covariance of $\tilde{\regpar}$ is
+\begin{align*}
+  \Var(\tilde{\regpar} | X )
+  &= B\Var(y | X )B^\top\\
+  &= \sigma^2BB^\top.
+\end{align*}
+
+Decompose $B$ as
+$$B = (X^\top X )^{-1}X^\top + C$$
+where $C = B - (X^\top X)^{-1} X ^\top$.
+
+The constraint $B X  = I_p$ implies:
+$$C X  = B X  - ( X^\top X )^{-1} X^\top X = I_p - I_p = 0.$$
+
+Now compute
+\begin{align*}
+  \Var(\tilde{\regpar} | X)
+  &= \sigma^2[(X^\top X)^{-1}X^\top + C][(X^\top X)^{-1}X^\top + C]^\top\\
+  &= \sigma^2[(X^\top X)^{-1} 
+     + (X^\top X)^{-1}X^\top C^\top 
+     + CX(X^\top X)^{-1} 
+     + CC^\top]\\
+  &= \sigma^2[(X^\top X)^{-1} + CC^\top]\\
+  &= \Var(\hat{\regpar}_{\text{LS}} | X) + \sigma^2 CC^\top.
+\end{align*}
+
+Since $CC^\top \succeq 0$ (positive semi-definite), we have:
+$$\Var(\tilde{\regpar} | X) \succeq \Var(\hat{\regpar}_{\text{LS}} | X)$$
+with equality if and only if $C = 0$, i.e., $\tilde{\regpar} = \hat{\regpar}_{\text{LS}}$.
+
+\end{proof}
+
+
+
+
+\section{Bias, variance, and risk}
+\label{ss:predictionrisk}
+
+
+A fundamental tension in statistical estimation is the bias-variance tradeoff: 
+reducing variance often increases bias, and vice versa.
+In fact, the bias–variance tradeoff is a fundamental identity of squared-error prediction and randomness in estimation, and not specific to linear models. It arises from basic properties of expectations and variance.
+
+
+\begin{definition}[Mean Squared Error]\label{def:mse}
+For an estimator $\hat{\regpar}$ of $\regpar$, the \emph{mean squared error (MSE)} is defined as
+$$\MSE(\hat{\regpar}) = \E[\|\hat{\regpar} - \regpar\|^2].$$
+\end{definition}
+
+Also recall that 
+$\Bias(\hat{\theta}) = \E[\hat{\theta}] - \theta$ and 
+$\Cov(\hat{\theta}) = \E\left[ (\hat{\theta} - \E[\hat{\theta}])(\hat{\theta} - \E[\hat{\theta}])^T \right]$.
+
+
+\smallskip
+
+
+
+
+
+\begin{theorem}[Bias-variance decomposition for parameter estimation]\label{th:bias_variance}
+Let $\theta \in \mathbb{R}^p$ be a fixed, unknown parameter vector. Let $\hat{\theta}$ be an estimator of $\theta$, which is a random variable depending on the training data $\mathcal{D}$. Assume that 
+$\E [ \|\hat{\theta}\|^2 ] < \infty$. Then
+\begin{equation}\label{eq:bias_variance_param}
+\MSE(\hat{\theta}) = \|\Bias(\hat{\theta})\|_2^2 + \tr(\Cov(\hat{\theta})).
+\end{equation}
+
+\end{theorem}
+
+
+
+\begin{proof}
+Let $\bar{\theta} = \E[\hat{\theta}]$ denote the expected value of the estimator. We compute
+\begin{align*}
+\MSE(\hat{\theta}) & = \E \left[ \| (\hat{\theta} - \bar{\theta}) + (\bar{\theta} - \theta) \|_2^2 \right] \\ & = \E \left[ \|\hat{\theta} - \bar{\theta}\|_2^2 + \|\bar{\theta} - \theta\|_2^2 + 2(\hat{\theta} - \bar{\theta})^T (\bar{\theta} - \theta) \right]\\
+ & = \E [ \|\hat{\theta} - \bar{\theta}\|_2^2 ] + \E [ \|\bar{\theta} - \theta\|_2^2 ] + 2\E [ (\hat{\theta} - \bar{\theta})^T (\bar{\theta} - \theta) ].
+\end{align*}
+We first consider the variance term $\E [ \|\hat{\theta} - \bar{\theta}\|_2^2 ]$.
+By the property of the trace and the definition of the covariance matrix we get
+$$\E [ \|\hat{\theta} - \bar{\theta}\|_2^2 ] = \E [ \tr((\hat{\theta} - \bar{\theta})(\hat{\theta} - \bar{\theta})^T) ] = \tr(\E [ (\hat{\theta} - \bar{\theta})(\hat{\theta} - \bar{\theta})^T ]) = \tr(\Cov(\hat{\theta})).$$
+
+
+We now proceed to the bias term $\E [ \|\bar{\theta} - \theta\|_2^2 ]$.
+Since both $\bar{\theta}$ and $\theta$ are deterministic, the expectation is simply the value itself, i.e.,
+$$E [ \|\bar{\theta} - \theta\|_2^2 ] = \|\bar{\theta} - \theta\|_2^2 = \|\Bias(\hat{\theta})\|_2^2.$$
+
+Regarding the cross term $2\E [ (\hat{\theta} - \bar{\theta})^T (\bar{\theta} - \theta) ]$ we note that since $(\bar{\theta} - \theta)$ is a constant vector, we can pull it out of the expectation and get
+$$2\E [ \hat{\theta} - \bar{\theta} ]^T (\bar{\theta} - \theta) = 2(\E[\hat{\theta}] - \bar{\theta})^T (\bar{\theta} - \theta).$$
+Since $\E[\hat{\theta}] = \bar{\theta}$, the term $\E[\hat{\theta}] - \bar{\theta} = 0$. Thus, the cross-term vanishes.
+Summing the remaining terms yields the desired decomposition
+$$\MSE(\hat{\theta}) = \|\Bias(\hat{\theta})\|_2^2 + \tr(\Cov(\hat{\theta})).$$
+
+To complete the proof we note that our assumption ensures that $\hat{\regpar}$ has finite first and second moments, 
+so all expectations are well-defined and finite.
+\end{proof}
+
+
+We point out that Theorem~\ref{th:bias_variance} does allow for {\em heteroscedasticity} and for {\em correlated errors}, Moreover, it does not impose 
+any distributional assumptions beyond zero-mean and finite second moments. Thus, the decomposition holds for \emph{any} estimator under very mild conditions. This 
+generality makes it a fundamental result in statistical learning theory.
+
+
+While Theorem~\ref{th:bias_variance} concerns estimating the parameter vector $\regpar$, 
+in practice we often care about \emph{predicting} new observations. The bias-variance 
+decomposition for prediction includes an additional irreducible error term.
+
+\begin{corollary}[Bias-variance decomposition for prediction]\label{cor:bias_variance_prediction}
+Assume we are given a training set $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^n$ where $y_i = f(x_i) + \epsilon$ is the target variable, $f$ is the true (but unknown) deterministic function, and $\epsilon$ is random noise  with $\E[\epsilon] = 0$ and $\Var(\epsilon) = \sigma^2$. Assume that $\epsilon$ is independent of the training data.
+Let $\hat{f}(x; \mathcal{D})$ be an estimator (a model) trained on $\mathcal{D}$. Then,
+expected squared error of the estimator at a fixed point $x$, taken over the distribution of all possible datasets $\mathcal{D}$, is given by
+\begin{equation}\label{eq:prediction_mse}
+\E_\mathcal{D} \left[ (y - \hat{f}(x; \mathcal{D}))^2 \right] = \Bias[\hat{f}(x)]^2 + \Var[\hat{f}(x)] + \sigma^2.
+\end{equation}
+
+\end{corollary}
+
+\begin{proof}
+To simplify notation, let $y = f + \epsilon$, $\hat{f} = \hat{f}(x; \mathcal{D})$, and $\bar{f} = \E_\mathcal{D}[\hat{f}]$. Note that $f$ is deterministic, so $\E_\mathcal{D}[f] = f$.
+
+The objective is $\E_\mathcal{D}[(y - \hat{f})^2]$. Substituting $y = f + \epsilon$ we obtain
+
+\begin{align*}
+\E_\mathcal{D}[(f + \epsilon - \hat{f})^2] & = \E_\mathcal{D}[((f - \hat{f}) + \epsilon)^2] \\
+& = \E_\mathcal{D}[(f - \hat{f})^2 + 2\epsilon(f - \hat{f}) + \epsilon^2] \\
+& = \E_\mathcal{D}[(f - \hat{f})^2] + 2\E_\mathcal{D}[\epsilon(f - \hat{f})] + \E_\mathcal{D}[\epsilon^2].
+\end{align*}
+
+Since the noise $\epsilon$ is independent of the training data $\mathcal{D}$ it is also independent of $\hat{f}$). Hence,
+$$\E_\mathcal{D}[\epsilon(f - \hat{f})] = \E[\epsilon] \cdot \E_\mathcal{D}[f - \hat{f}] = 0 \cdot (f - \bar{f}) = 0$$
+Also, $\E_\mathcal{D}[\epsilon^2] = \Var(\epsilon) = \sigma^2$. Thus, our expression simplifies to
+\begin{equation}\label{eq:biasvar5}
+\E_\mathcal{D}[(y - \hat{f})^2] = \E_\mathcal{D}[(f - \hat{f})^2] + \sigma^2.
+\end{equation}
+
+
+Now we focus on $\E_\mathcal{D}[(f - \hat{f})^2]$. We have 
+
+$$\E_\mathcal{D}[(f - \hat{f})^2] = \E_\mathcal{D}[(f - \bar{f} + \bar{f} - \hat{f})^2]= \E_\mathcal{D}[(f - \bar{f})^2 + 2(f - \bar{f})(\bar{f} - \hat{f}) + (\bar{f} - \hat{f})^2].$$
+
+Note that 
+$$\E_\mathcal{D}[(f - \bar{f})^2] = (f - \bar{f})^2 = \Bias^2.$$
+Also, 
+$$\E_\mathcal{D}[2(f - \bar{f})(\bar{f} - \hat{f})] = 2(f - \bar{f}) \E_\mathcal{D}[\bar{f} - \hat{f}] = 0,$$ 
+since $\E_\mathcal{D}[\bar{f} - \hat{f}] = \bar{f} - \E_\mathcal{D}[\hat{f}] = \bar{f} - \bar{f} = 0$.
+
+Finally, 
+$$\E_\mathcal{D}[(\bar{f} - \hat{f})^2] = \Var [\hat{f}(x)]$$.
+
+Substituting these back into~\eqref{eq:biasvar5} yields
+$$\E_\mathcal{D}[(y - \hat{f})^2] = (f - \bar{f})^2 + \E_\mathcal{D}[(\bar{f} - \hat{f})^2] + \sigma^2,$$
+which proves our claim.
+\end{proof}
+
+
+
+The decomposition~\eqref{eq:prediction_mse} in Corollary~\ref{cor:bias_variance_prediction} reveals three sources of prediction error:
+\begin{enumerate}
+  \item Bias:
+    Systematic error from using a biased estimator or misspecified model. For least squares, 
+    this is zero since $\E[\hat{\regpar}_{\text{LS}}] = \regpar$. For ridge regression (discussed below), this 
+    is nonzero but can be outweighed by variance reduction.
+   \item Variance:
+    Random error from the particular training sample. Predictions vary across 
+    different training datasets. This term is larger when
+  $x_{\text{new}}$ is far from the training data (extrapolation), the design matrix $X$ is ill-conditioned, or the sample size $n$ is small relative to dimension $p$.
+    \item Irreducible error:
+    Fundamental noise in the response variable that cannot be eliminated by any 
+    estimator. This represents the intrinsic randomness in $y$ that cannot be 
+    explained by $x$, even with infinite data.
+\end{enumerate}
+
+The bias-variance tradeoff refers to the tension between the first two terms. This brings up the question whether we can accept some bias to achieve 
+substantial variance reduction to achieve lower total prediction error? This is indeed possible and can be accomplished via proper {\em regularization}.
+
+For example, for the case of linear regression, when the matrix $X$ is ill-conditioned, the least squares solution remains unbiased but can have extremely high variance.  Historically, the focus was on unbiasedness, because datasets often had rather small values of $p$ compared to $n$, making ill-conditionedness of $X$ a much less common scenario. The ill-conditionedness of $X$
+happens typically more often when the number of variables $p$ is comparable to the sample size $n$ (here, we still assume $p \le n$)\footnote{For example if $X$ is a Gaussian random matrix, we will see in Chapter~\ref{c:probability-gaussiananalysis} that the condition number of $X$ grows quickly as $p \to n$. 
+Indeed, let $\gamma = p/n$, then we have that $\kappa(X) \approx \frac{\sqrt{n}+\sqrt{p}}{\sqrt{n}-\sqrt{p}}$. See~Theorem\ref{thm:Gordon:afterGconcentration} for a precise statement.}. In this regime, minimizing prediction error rather than preserving unbiasedness becomes central, and regularization, such as {\em ridge regression}, improves performance by trading bias for variance reduction.
+We will explore this topic in Chapter~\ref{ss:ridge}. 
+
+\medskip
+
+
+
+Corollary~\ref{cor:bias_variance_prediction} also forms the basis for constructing prediction intervals, see e.g.~\cite{seber2003linear,hastieelements} for  details. Specializing to the case of a linear model $y = X\theta + \eps$, if the model is correctly specified and the estimator is {\em unbiased}, then
+under Gaussian errors a $(1-\alpha)$ prediction interval for $y_{\text{new}}$ is
+\begin{equation}\label{eq:predictioninterval}   \hat{y}_{\text{new}} \pm t_{1-\alpha/2, n-p} \cdot \sqrt{\hat{\sigma}^2 + \hat{\sigma}^2 \, x_{\text{new}}^\top(X^\top X)^{-1}x_{\text{new}}},
+\end{equation}
+where $\hat{\sigma}^2 = \frac{1}{n-p}\|y - X\hat{\regpar}\|^2$ and $t_{1-\alpha/2, n-p}$ is the critical value of the $t$-distribution.
+Note that the first term under the square root
+in~\eqref{eq:predictioninterval} accounts for
+the irreducible error and the second term for parameter uncertainty.
+We emphasize that the probability is in the
+{\em procedure}, not in a {\em single realization}. Namely, if we repeatedly collect a training dataset, fit a model (with the same method), construct a prediction interval, and
+observe a new data point, then on average, 
+$(1-\alpha) \times 100\%$ of these intervals will contain the new observation. 
+We emphasize that for a biased estimator (such as ridge regression or lasso) constructing prediction intervals is more involved~\cite{efron1994introduction,hastieelements}.
+
+\medskip
+\noindent
+\textbf{Generalization gap.}
+In statistical learning theory, the bias-variance tradeoff tells us how the components of {\em risk} behave as model complexity changes. Let us recall the notion of  risk, which represents the average cost incurred by a predictive model when applied to the entire population of possible data points. Formally, we define risk as follows:
+\begin{definition}\label{de:risk}
+Let $\mathcal{X}$ be the input space and $\mathcal{Y}$ the output space. Let $P$ be a joint probability distribution over $\mathcal{X} \times \mathcal{Y}$. Given a decision function (or hypothesis) $f: \mathcal{X} \to \mathcal{Y}$ and a measurable loss function $L: \mathcal{Y} \times \mathcal{Y} \to \mathbb{R}_{\geq 0}$, the Risk $R(f)$ is defined as the expectation of the loss,
+$$R(f) = \mathbb{E}_{(X, Y) \sim P} [L(Y, f(X))].$$
+\end{definition}
+
+Using the definition of expectation, the risk can be written as the integral over the joint distribution
+$$R(f) = \int_{\mathcal{X} \times \mathcal{Y}} L(y, f(x)) \, dP(x, y).$$
+
+In data science, the distribution $P$ is almost always unknown. This leads to the distinction that is central to learning theory:
+\begin{itemize}
+\item Theoretical Risk ($R(f)$): This is the risk we {\em want to minimize} but cannot calculate in practice (also known as {\em True Risk} or {\em Population Risk}). 
+\item Empirical Risk ($\hat{R}_n(f)$): This is what we {\em actually minimize} using a training set of size $n$; it is given by
+$$\hat{R}_n(f) = \frac{1}{n} \sum_{i=1}^n L(y_i, f(x_i)).$$
+\end{itemize}
+
+The {\em generalization gap} is the difference between these two, $|R(f) - \hat{R}_n(f)|$. An important part of theory in data science and machine learning is dedicated to bounding this gap to ensure that a model that performs well on training data will also perform well ``in the wild''.
+
+Sometimes it is stated in the literature that the generalization gap is the difference between test error and training error. However, the test error  is only an estimator of the true risk. Hence, while the test error minus training error is a standard proxy, the true generalization gap is defined against the population risk, and conflating the two can obscure the effects of test set noise, data reuse, and distribution shift.
+
+
+\medskip
+\noindent
+\textbf{Model mismatch, underfitting, overfitting:}
+In reality, the prediction error decomposition~\eqref{eq:prediction_mse} is almost always wrong, since the true data-generating process does rarely perfectly fit the chosen model. For instance in case of linear regression,  
+when the underlying data is generated by a process that is more complex than a linear model (as is  the case with the surfing/hold-down time example used in the beginning of this chapter), we encounter {\em model mismatch}, also known as {\em specification error} or {\em structural bias}. 
+
+
+Model mismatch is closely related to the issue of underfitting/overfitting, but they are not identical.
+Model mismatch is a {\em design-time issue}: the chosen model class does not contain a function capable of representing the true relationship in the data. Even with infinite data, the best possible predictor within the model class cannot recover the true signal.
+
+Underfitting, in contrast, is a {\em run-time phenomenon}: the fitted model fails to capture the structure of the data. This may occur because the model class is too restrictive (model mismatch), for example fitting a line to a quadratic relationship. But it can also arise when the estimation procedure overly constrains the parameters, for example through strong regularization or insufficient training. Underfitting typically corresponds to large approximation bias.
+Overfitting occurs when the model class is too flexible, and thus the estimator fits noise in finite samples. Examples include using a high-degree polynomial or  linear regression when $p > n$ without regularization (see Chapter~\ref{ss:ridge}).
+Overfitting manifests as large variance. 
+
+
+
+
+
+
+
+
+\section{Regularization and ridge regression}\label{ss:ridge}
+
+Assume we want to predict the optimal drug dosage for a patient using the expression levels of thousands of genes. In such problems the number of features (genes) can be far larger than the number of patients in the study, leading to a high-dimensional regression problem with $p \gg n$.
+
+This problem falls into the area of  {\em high-dimensional linear regression} (assuming one considers the underlying model to be linear). More generally, high-dimensional linear regression refers broadly to regimes where $p$ is comparable to or larger than $n$. This includes the cases $p > n$, $p \gg n$, and $p/n \to \gamma > 0$.
+
+Standard least squares works well when the number of predictors $p$ is  small relative to the sample size $n$ and the design matrix $X$ is well-conditioned. 
+However, when predictors are highly correlated or $p$ approaches $n$, least squares becomes 
+unstable, since small changes in the data can lead to large changes in coefficient estimates. 
+In the  case $p > n$, % the inverse formula   since
+$X^\top X$ is singular, and the minimizer is not unique.
+
+\smallskip
+
+{\em Ridge regression}\footnote{The term was introduced by Hoerl and Kennard in 1970, who used the word ``ridge'' specifically to refer to this flat elongated trough in the least squares objective surface that arises under multi-collinearity. They called their technique ridge regression because it was designed to deal with that ridge.} addresses these problems by adding a penalty term that shrinks coefficients toward zero, trading a small amount of bias for a potentially substantial variance 
+reduction~\cite{hoerl1970ridge,hastieelements}. In numerical analysis and optimization ridge regression is also known as {\em Tikhonov regularization} (named for Andrey Tikhonov~\cite{tikhonov1963solution}).
+
+\begin{definition}[Ridge Regression]\label{def:ridge}
+Given observations $\{(x_i, y_i)\}_{i=1}^n$, the \emph{ridge regression estimator} 
+with regularization parameter $\lambda \geq 0$ is
+\begin{equation}\label{eq:ridge_def}
+  \hat{\regpar}_{\text{ridge}}(\lambda) = \argmin_{\regpar \in \R^p} 
+  \left\{\|y - X\regpar\|^2 + \lambda\|\regpar\|^2\right\}.
+\end{equation}
+\end{definition}
+
+The ridge objective balances two competing goals:
+\begin{itemize}
+  \item {\em Fit the data:} Minimize $\|y - X\regpar\|^2$,
+  \item {\em Keep coefficients small:} Minimize $\|\regpar\|^2$ (regularization).
+\end{itemize}
+The {\em regularization parameter} $\lambda$ controls the trade-off between these two goals.
+
+Unlike many regularized methods, ridge regression has an explicit solution.
+
+\begin{theorem}[Ridge Regression Solution]\label{thm:ridge_solution}
+The ridge regression estimator has the closed-form solution:
+\begin{equation}\label{eq:ridge_normal}
+  \hat{\regpar}_{\text{ridge}}(\lambda) = (X^\top X + \lambda I_p)^{-1}X^\top y.
+\end{equation}
+Furthermore, $X^\top X + \lambda I_p$ is invertible for any $\lambda > 0$, 
+even when $X^\top X$ is singular (i.e., when $p > n$ or when $X$ has 
+collinear columns).
+\end{theorem}
+
+\begin{proof}
+The objective function is
+$$f(\regpar) = \|y - X\regpar\|^2 + \lambda\|\regpar\|^2 
+= (y - X\regpar)^\top(y - X\regpar) + \lambda\regpar^\top\regpar.$$
+
+Expanding this expression gives
+$$f(\regpar) = y^\top y - 2\regpar^\top X^\top y + \regpar^\top X^\top X\regpar + \lambda\regpar^\top\regpar.$$
+We take the gradient 
+$$\nabla_{\regpar} f(\regpar) = -2X^\top y + 2X^\top X\regpar + 2\lambda\regpar 
+= 2(X^\top X + \lambda I_p)\regpar - 2X^\top y,$$
+and set it to zero,
+$$(X^\top X + \lambda I_p)\regpar = X^\top y.$$
+For $\lambda > 0$, the matrix $X^\top X + \lambda I_p$ is positive definite, i.e.,
+$$\langle \regpar, (X^\top X + \lambda I_p)\regpar \rangle = \|X\regpar\|^2 + \lambda\|\regpar\|^2 > 0$$
+for all $\regpar \neq 0$. Hence, we can compute 
+$$\hat{\regpar}_{\text{ridge}}(\lambda) = (X^\top X + \lambda I_p)^{-1}X^\top y.$$
+The Hessian $\nabla^2 f(\regpar) = 2(X^\top X + \lambda I_p) \succ 0$ , which confirms that $\hat{\regpar}_{\text{ridge}}(\lambda)$ is indeed a minimum.
+\end{proof}
+
+
+When $X$ has full column rank, the least squares solution is given by
+$\hat{\regpar}_{\text{LS}} = (X^\top X)^{-1}X^\top y$.
+Ridge regression modifies this by adding $\lambda I_p$ to $X^\top X$, which stabilizes the inversion when eigenvalues of $X^\top X$ are small and ensures invertibility even when $X^\top X$ is singular.
+
+The SVD provides deep insight into how ridge regression works.
+
+\begin{theorem}[Ridge Regression via SVD]\label{thm:ridge_svd}
+Let $X = U\Sigma V^\top$ be the SVD of $X \in \R^{n \times p}$ 
+with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_r > 0$ where 
+$r = \rank(X)$. Write $U = [u_1, \ldots, u_n]$ and 
+$V = [v_1, \ldots, v_p]$.
+Then,
+\begin{equation}\label{eq:ridge_svd}
+  \hat{\regpar}_{\text{ridge}}(\lambda) = \sum_{i=1}^r \frac{\sigma_i}{\sigma_i^2 + \lambda}
+  (u_i^\top y)v_i
+  = VD_\lambda U^\top y,
+\end{equation}
+where $D_\lambda = \diag\left(\frac{\sigma_1}{\sigma_1^2 + \lambda}, \ldots, 
+\frac{\sigma_r}{\sigma_r^2 + \lambda}\right)$.
+\end{theorem}
+
+
+
+\begin{proof}
+Starting from the ridge solution $\hat{\regpar}_{\text{ridge}} = (X^\top X + \lambda I_p)^{-1}X^\top y$ we have
+\begin{align}
+  \hat{\regpar}_{\text{ridge}}(\lambda)
+  &= (V\Sigma^\top\Sigma V^\top + \lambda I_p)^{-1}V\Sigma^\top U^\top y \notag\\
+  &= V(\Sigma^\top\Sigma + \lambda I_p)^{-1}\Sigma^\top U^\top y.\label{eq:ridgeSVD1}
+\end{align}
+
+Since $\Sigma^\top\Sigma = \diag(\sigma_1^2, \ldots, \sigma_r^2, 0, \ldots, 0)$, it follows that
+$$\Sigma^\top\Sigma + \lambda I_p = 
+\diag(\sigma_1^2 + \lambda, \ldots, \sigma_r^2 + \lambda, \lambda, \ldots, \lambda).$$
+
+Therefore,
+$$(\Sigma^\top\Sigma + \lambda I_p)^{-1}\Sigma^\top
+= \diag\left(\frac{\sigma_1}{\sigma_1^2 + \lambda}, \ldots, 
+\frac{\sigma_r}{\sigma_r^2 + \lambda}, 0, \ldots, 0\right).$$
+
+Substituting this expression into~\eqref{eq:ridgeSVD1} gives
+\begin{equation}\label{eq:ridgeSVD2}
+\hat{\regpar}_{\text{ridge}}(\lambda) = VD_\lambda U^\top y
+= \sum_{i=1}^r \frac{\sigma_i}{\sigma_i^2 + \lambda}(u_i^\top y)v_i.
+\end{equation}
+
+
+\end{proof}
+
+It is instructive to compare~\eqref{eq:ridgeSVD2} with the least squares solution (when $r = p$):
+\begin{equation}\label{eq:LS_svd}
+  \hat{\regpar}_{\text{LS}} = \sum_{i=1}^p \frac{1}{\sigma_i}(u_i^\top y)v_i.
+\end{equation}
+ In the surfing exmaple, if wave height and wave period are highly correlated in the dataset, ridge regression prevents the fitted coefficients from becoming unstable by shrinking poorly determined combinations of features.
+
+
+So, how does ridge regression fare with respect to the bias-variance tradeoff? The following result is straightforward (the proof is left to the reader as Exercise~\ref{ex:ridge_bias}).
+
+\begin{proposition}\label{prop:ridge_bias}
+Under the assumptions (A1) and (A2), the ridge regression estimator $\hat{\regpar}_{\text{ridge}}(\lambda)$ has the following properties:
+\begin{align*}
+\Bias(\hat{\regpar}_{\text{ridge}}(\lambda)) &  = \left[(X^\top X + \lambda I)^{-1}X^\top X - I\right]\theta, \\
+\tr(\Cov(\hat{\regpar}_{\text{ridge}}(\lambda))) & = \tr\big((X^\top X + \lambda I)^{-1}X^\top \cdot \sigma^2 I \cdot X(X^\top X + \lambda I)^{-1}\big).
+%\\
+% \sigma^2 \tr\big((X^\top X + \lambda I)^{-1} X^\top X (X^\top X + \lambda I)^{-1}\big) \\
+  %  \sigma^2\sum_{i=1}^r \frac{\sigma_i^2}{(\sigma_i^2+\lambda)^2}.
+\end{align*}
+Furthermore, let the SVD of $X$ be $X=U \Sigma V^\top$ with $\rank X = r$, and write  $\tilde\theta = V^\top\theta$, then the MSE of the estimator $\hat{\regpar}_{\text{ridge}}(\lambda)$ is given by 
+$$\text{MSE}(\hat{\regpar}_{\text{ridge}}(\lambda)) = \underbrace{\lambda^2\sum_{i=1}^r \frac{\tilde\theta_i^2}{(\sigma_i^2+\lambda)^2}}_{\text{bias}^2} + \underbrace{\sigma^2\sum_{i=1}^r \frac{\sigma_i^2}{(\sigma_i^2+\lambda)^2}}_{\text{variance}}.$$
+
+\end{proposition}
+
+Unlike in Theorem~\ref{th:ols_properties}, we do not require that $X$ has full rank (assumption (A3)), since being able to handle the rank-deficient case is exactly a key motivation for introducing ridge regression in the first place.
+
+
+
+\medskip
+\noindent
+\textbf{Choosing the regularization parameter:}
+Proposition~\ref{prop:ridge_bias} suggests that by 
+choosing an appropriate value for the regularization parameter $\lambda$ we can achieve a good balance between overfitting and underfitting of the solution.
+See Figure~\ref{fig:biasvariance} for an illustration of this bias-variance tradeoff for the prediction error and the interplay between regularization and over/underfitting.
+The optimal choice for $\lambda$ via the minimum of the MSE, indicated in Figure~\ref{fig:biasvariance}, is unfortunately not computable in practice, since it would require access to the true solution $\theta$. This begs the question 
+how to find $\lambda$ in practice.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.85\textwidth]{figures/biasvariance}
+\caption{ The bias-variance tradeoff of the prediction error as a function of model complexity
+(equivalently, decreasing regularization strength $\lambda^{-1}$).
+The MSE (black) decomposes as $\mathrm{MSE} = \mathrm{Bias}^2(\hat\theta)
+                + \mathrm{Var}(\hat\theta) + \sigma^2$,
+where $\sigma^2$ is the irreducible noise floor (dashed).
+The squared bias (blue) decreases monotonically with complexity;
+the variance (red) increases monotonically. The optimal regularization $\lambda^*$  is located at the \emph{minimum of the MSE curve}, which occurs where $-d\,\mathrm{Bias}^2/d\lambda = d\,\mathrm{Var}/d\lambda$ (the slopes cancel).}
+\label{fig:biasvariance}
+\end{figure}
+
+
+
+
+
+{\em Cross-validation}, a widely used technique in data science and machine learning for hyperparameter selection, is a standard way to determine a good choice for $\lambda$. We describe the cross-validation approach in the context of ridge regression, but it should be understood that this technique is more broadly applicable.
+
+
+
+\begin{definition}[$K$-fold cross-validation for ridge regression]\label{def:cv_ridge}
+To select $\lambda$:
+\begin{enumerate}
+  \item Partition the data into $K$ folds $\mathcal{F}_1, \ldots, \mathcal{F}_K$ 
+        (typically $K = 5$ or $10$) by generating a random permutation of all indices, and then dividing the permuted indices into $K$ contiguous, disjoint blocks. Each block becomes one fold.
+  \item For each candidate value $\lambda \in \{\lambda_1, \ldots, \lambda_m\}$ 
+        and each fold $k=1,\dots,K$:
+    \begin{itemize}
+      \item[(i)] Train ridge regression on all data except fold $k$
+      \item[(ii)] Compute the prediction error on fold $k$: 
+            $$\text{MSE}_k(\lambda) = \frac{1}{|\mathcal{F}_k|}\sum_{i \in \mathcal{F}_k}(y_i - \hat{y}_i(\lambda))^2.$$
+    \end{itemize}
+  \item Average over folds: $\text{CV}(\lambda) = \frac{1}{K}\sum_{k=1}^K \text{MSE}_k(\lambda)$
+  \item Choose: $\lambda^* = \argmin_{\lambda} \text{CV}(\lambda)$
+\end{enumerate}
+\end{definition}
+
+\medskip
+
+If we know that the noise is Gaussian and we have a good estimate for the noise variance $\sigma^2$, instead of the rather expensive cross validation we can use  Stein’s unbiased risk estimate (SURE). SURE  provides an analytic estimate of prediction risk under Gaussian noise~\cite{stein1981estimation}
+and can therefore be used to select hyperparameters such as the ridge penalty or the lasso regularization parameter (see~\eqref{eq:lasso1}) by minimizing the SURE value. 
+While SURE often has lower variance than cross-validation and uses the full dataset, it relies on stronger assumptions---besides assuming Gaussian noise and knowledge of the noise variance, it imposes  a certain smoothness condition (weak differentiability) on the estimator.  Cross-validation, though computationally heavier, is thus more broadly applicable.
+
+
+The work of Donoho and Johnstone~\cite{donoho1995adapting} was 
+instrumental in moving SURE from a theoretical result in statistics into a cornerstone of signal and image processing, in particular for data denoising (see also~\cite{blu2007sure}).
+
+
+
+Stein's SURE has its roots in his earlier work~\cite{stein1956inadmissibility,james1961estimation}. In fact, while the Gauss-Markov theorem states that the least squares estimator is the best linear unbiased estimator, Charles Stein proved  in a seminal paper~\cite{stein1956inadmissibility} the startling result that in dimensions $p\ge 3$, the least squares estimator is ``inadmissible''. This result, also known as {\em Stein's Paradox}, means there exists a biased ``shrinkage'' estimator---the James-Stein estimator~\cite{james1961estimation}---that achieves a lower MSE for any true parameter value by pulling individual estimates toward a common average or the origin~\cite{gruber2017improving}.
+
+
+
+
+\medskip
+\noindent
+\textbf{Linear regression and sparsity:}
+In many applications in high-dimensional settings---such as in financial econometrics and risk management, natural language processing, recommender systems, neuroimaging, or cheminformatics---it is often believed that only a small subset of variables truly influence the process we try to model. Consequently, it is desirable to construct estimators that set many coefficients exactly to zero. Such sparse models can improve predictive performance by reducing variance, and they also lead to models that are much easier to interpret. 
+
+This motivation leads to the lasso (least absolute shrinkage and selection operator)~\cite{Tib96,hastieelements}, which replaces the $\ell_2$-penalty with an $\ell_1$-penalty, namely we consider the regularized regression problem
+\begin{equation}\label{eq:lasso1}
+\min_{\regpar} \, \, \|y - X\regpar\|^2 + \lambda \|\regpar\|_1,
+\end{equation}
+for some $\lambda > 0$.
+Unlike ridge regression, the $\ell_1$-penalty encourages coefficients to be exactly zero, thereby performing variable selection as part of the estimation procedure.
+We will discuss the reason why the $\ell_1$-penalty promotes sparsity, associated theoretical guarantees, and numerical considerations extensively in Chapter~\ref{c:cs} in connection with {\em compressive sensing}.
+
+\medskip
+\noindent
+\textbf{Outliers:}
+An important consideration in linear regression (or in any data science task for that matter) is how different error functions handle {\em outliers}, i.e., data points that deviate significantly from the pattern exhibited by the majority of observations.
+The least squares solution is sensitive to outliers, since a single observation with large error  $(y_i - x_i^\top\regpar)$ contributes quadratically to the objective, potentially  dominating the fit. In contrast, the solution of the $\ell_1$ objective (also called $\ell_1$-regression or least absolute deviations regression) given by
+$$
+\min_{\regpar} \, \, \|y - X\regpar\|_1,
+$$
+is more robust, since outliers contribute only linearly. However, one downside of the $\ell_1$ loss function is its lack of smoothness, since the function $f(x)=|x|$ is not differentiable at the origin. Also, $\ell_1$ estimators are typically less statistically efficient compared to $\ell_2$ estimators when the noise is Gaussian.
+
+A good compromise is provided by the 
+ {\em Huber method}~\cite{huber1992robust}. The Huber loss is defined as
+$$L_\delta(r_i) = \begin{cases}
+\frac{1}{2}r_i^2 & \text{if } |r_i| \leq \delta, \\
+\delta |r_i| - \frac{1}{2}\delta^2 & \text{if } |r_i| > \delta,
+\end{cases}$$
+where $r_i = y_i - x_i^\top \regpar$ is the $i$-th residual and 
+$\delta > 0$ is a tuning parameter (see also Figure~\ref{fig:outliers}(b)).
+Because the derivative is continuous everywhere (including the transition points at $\pm \delta$), the Huber loss is $C^1$-continuous. This ensures that gradient-based optimization algorithms (like gradient descent, see Chapter~\ref{s:grad}) converge reliably.
+
+Figure~\ref{fig:outliers} shows a comparison of the $\ell_2$-loss, the $\ell_1$-loss, and the Huber loss for a linear regression example with a few outliers (left panel), together with the associated loss functions (right panel). It is evident that the solution of the $\ell_2$ objective is affected most by the few
+outliers. The solutions associated with $\ell_1$-loss and with Huber loss, respectively (which are almost identical in this case) are only marginally affected by the outliers.
+
+
+\begin{figure}[h]
+\begin{center}
+ \subcaptionbox{Linear regression with outliers}{\includegraphics[width = 52mm,height=38.6mm]{figures/outlier_comploss}}
+ \,
+ \subcaptionbox{Loss function landscape}{
+\includegraphics[width = 60mm,height=38.6mm]{figures/lossfunctions}}
+\caption{The performance of linear regression using different loss functions. The solution computed via the $\ell_2$-loss is pulled toward the outliers.
+The solutions associated with $\ell_1$-loss and with Huber loss, respectively, are almost identical.
+The $\ell_1$-loss is robust in the presence of outliers, but not smooth, while Huber loss combines robustness of the $\ell_1$-loss with the smoothness of the $\ell_2$-loss.}
+\label{fig:outliers}
+\end{center}
+\end{figure}
+
+\section{Wiener filtering}\label{s:wiener}
+
+In classical linear regression, we often treat the data as a collection of fixed points to be ``fit.'' However, in the presence of noise, a more powerful perspective is to treat the measurement as a corrupted signal. This leads us to the {\em Wiener Filter}, the mathematically optimal way to extract a signal from noise via a linear estimator by balancing experimental evidence against prior knowledge~\cite{wiener1949extrapolation,kailath2000linear}.
+
+
+In this section we will show that ridge regression is simultaneously a
+maximum a posteriori (MAP) estimator under a Gaussian prior, the solution to a
+properly normalized loss function whose two terms have direct statistical
+interpretations, and a componentwise Wiener filter applied in the SVD basis of the design matrix.  The unifying object is the
+signal-to-noise ratio (SNR), which controls how strongly the estimator trusts
+the data relative to the prior.
+We will see that ridge regression acts as a component-wise Wiener filter in the SVD basis.
+
+%\subsection{The Wiener filter}
+
+\medskip
+
+The Wiener filter addresses a fundamental question: Given a noisy measurement $y = s + n$, how much should we trust $y$ to estimate the true signal $s$?
+Let us first gain some intuition for the scalar case.
+If we assume the signal $s$ and noise $n$ are independent, zero-mean scalar random variables with finite variances $\sigma_s^2$ and $\sigma_n^2$, the optimal linear estimate $\hat{s} = Gy$ is found by minimizing the MSE
+\begin{equation}\label{eq:wiener1}
+\min_{G} \, \E[(s - Gy)^2].
+\end{equation}
+
+To find the minimum mean squared error (MMSE) estimator, we expand the cost function~\eqref{eq:wiener1}, use the fact the signal and the noise are uncorrelated, and set the
+derivative of~\eqref{eq:wiener1} with respect to $G$ to zero. We arrive at the solution, also called {\em Wiener Gain},
+$$G = \frac{\sigma_s^2}{\sigma_s^2 + \sigma_n^2} = \frac{1}{1 + \frac{1}{\text{SNR}}},$$
+where $\text{SNR} = \sigma_s^2 / \sigma_n^2$
+represents the {\em signal-to-noise ratio}\footnote{Because many signals have a very wide dynamic range, signals are often expressed using the logarithmic decibel scale. Thus, in practice the SNR is often expressed in decibels as
+$\text{SNR}_{\text{dB}} =10\log_{10}(\text{SNR})$.}.
+For high SNR, i.e., if the signal is much stronger than the noise, $G \approx 1$, we trust the measurement. For low SNR, i.e., if the noise dominates, $G \approx 0$, we ignore the measurement to avoid a high-variance error, relying instead on our prior knowledge (that the signal is centered at zero).
+
+We can now generalize this logic to the multivariate case.
+Consider the linear model
+\begin{equation}
+  \label{eq:linear_model}
+  y = X\theta + \varepsilon,
+  \qquad
+  \varepsilon \sim \mathcal{N}(0, \sigma^2 I_n),
+\end{equation}
+where $y \in \mathbb{R}^n$ is the measurement vector, $X \in \mathbb{R}^{n \times p}$
+is the design matrix, $\theta \in \mathbb{R}^p$ is the unknown parameter vector,
+and $\varepsilon$ is Gaussian noise with known variance $\sigma^2 > 0$.  The
+likelihood of $\theta$ given the observations is therefore
+\begin{equation}
+  \label{eq:wiener2}
+  p(y \mid \theta)
+  = (2\pi\sigma^2)^{-n/2}
+    \exp \Big(-\frac{1}{2\sigma^2}\|y - X\theta\|^2\Big).
+\end{equation}
+We place a zero-mean isotropic Gaussian prior on $\theta$:
+\begin{equation}
+  \label{eq:prior}
+  \theta \sim \mathcal{N}(0, \tau^2 I_p),
+\end{equation}
+where $\tau^2 > 0$ is the prior variance. 
+
+By Bayes' theorem the posterior is
+$p(\theta | y) \propto p(y | \theta)\,p(\theta)$.
+Taking the negative log-posterior and dropping terms that do not depend on
+$\theta$, the MAP estimate is the minimizer of
+\begin{equation} \label{eq:normalised_loss} 
+\mathcal{L}(\theta)
+  = \frac{1}{2\sigma^2}\|y - X\theta\|^2
+  + \frac{1}{2\tau^2}\|\theta\|^2.
+\end{equation}
+This is the \emph{normalized} loss function.  The first term is the
+\emph{data-fidelity term}: it measures how well $\theta$ explains the
+observations, weighted by the inverse noise variance $1/\sigma^2$.  The second
+term is the \emph{regularization term}: it penalizes large coefficients,
+weighted by the inverse prior variance $1/\tau^2$.  Both terms now have
+identical units (nats of log-probability), making the trade-off between them
+dimensionally consistent.
+
+\begin{remark}[Connection to standard ridge regression]
+Multiplying $\mathcal{L}(\theta)$ by $2\sigma^2$ gives the standard
+ridge objective $\|y - X\theta\|^2 + \lambda\|\theta\|^2$ with regularization
+parameter
+\begin{equation}
+  \label{eq:lambda_sigma_tau}
+  \lambda = \frac{\sigma^2}{\tau^2}.
+\end{equation}
+The standard formulation obscures the individual roles of $\sigma^2$ and
+$\tau^2$ by collapsing them into the single scalar $\lambda$.  The normalized
+form~\eqref{eq:normalised_loss} keeps them explicit and makes the probabilistic
+interpretation transparent.
+\end{remark}
+
+
+
+Consider~\eqref{eq:normalised_loss} and
+set $\nabla_\theta \mathcal{L}(\theta) = 0$; this gives
+\begin{equation}
+  \label{eq:gradient}
+  -\frac{1}{\sigma^2}X^\top(y - X\theta) + \frac{1}{\tau^2}\theta = 0.
+\end{equation}
+Rearranging terms and multiplying  by $\sigma^2$ yields
+\begin{equation}
+  \label{eq:ridge_normal1}
+  \left(X^\top X + \lambda I_p\right)\hat\theta = X^\top y,
+  \qquad \lambda = \frac{\sigma^2}{\tau^2}.
+\end{equation}
+Since $X^\top X \succeq 0$ and $\lambda > 0$, the matrix
+$X^\top X + \lambda I_p \succ 0$ is strictly positive definite for every
+$\lambda > 0$, regardless of the rank of $X$.  The unique MAP (and ridge)
+estimate is therefore
+\begin{equation}
+  \label{eq:ridge_estimate}
+  \hat\theta_{\mathrm{MAP}}
+  = \hat\theta_{\mathrm{ridge}}
+  = \left(X^\top X + \lambda I_p\right)^{-1}X^\top y.
+\end{equation}
+We already confirmed earlier that this gives a strict global minimum.
+
+Because both the likelihood~\eqref{eq:wiener2} and the
+prior~\eqref{eq:prior} are Gaussian, the posterior is also Gaussian:
+\begin{equation}
+  \label{eq:posterior}
+  \theta \mid y
+  \;\sim\;
+  \mathcal{N}\!\left(
+    \hat\theta_{\mathrm{MAP}},\;
+    \sigma^2\left(X^\top X + \lambda I_p\right)^{-1}
+  \right).
+\end{equation}
+
+\medskip
+
+It is instructive to revisit the componentwise structure of the ridge estimator by using the
+SVD of the design matrix, $X=U \Sigma V^\top$, which we derived in~\eqref{eq:ridgeSVD2}. The ridge estimate takes the form
+\begin{equation}
+  \label{eq:ridge_svd1}
+  \hat\theta_{\mathrm{ridge}}
+  = V(\Sigma^2 + \lambda I_p)^{-1}\Sigma U^\top y
+  = \sum_{i=1}^p
+    \frac{\sigma_i}{\sigma_i^2 + \lambda}
+    (u_i^\top y)\, v_i.
+\end{equation}
+Now we apply the rotations
+\begin{equation}
+  \label{eq:rotated_coords}
+  \tilde\theta = V^\top\theta \in \mathbb{R}^p,
+  \qquad
+  \tilde y = U^\top y \in \mathbb{R}^p.
+\end{equation}
+In these coordinates the model~\eqref{eq:linear_model} becomes
+$\tilde y_i = \sigma_i \tilde\theta_i + \tilde\varepsilon_i$ with
+$\tilde\varepsilon_i \sim \mathcal{N}(0, \sigma^2)$ i.i.d., and the ridge
+estimate~\eqref{eq:ridge_svd1} decouples into $p$ independent scalar problems:
+\begin{equation}
+  \label{eq:ridge_component}
+  \hat{\tilde\theta}_i
+  = \frac{\sigma_i}{\sigma_i^2 + \lambda}\,\tilde y_i
+  = \frac{1}{\sigma_i}\cdot\frac{\sigma_i^2}{\sigma_i^2 + \lambda}\,\tilde y_i,
+  \qquad i = 1, \ldots, p.
+\end{equation}
+
+We now introduce the \emph{per-component signal-to-noise ratio}.  Under the
+prior \eqref{eq:prior}, the $i$-th rotated coefficient satisfies
+$\tilde\theta_i \sim \mathcal{N}(0, \tau^2)$, so the signal component
+$\sigma_i\tilde\theta_i$ has variance $\sigma_i^2\tau^2$.  The corresponding
+observation $\tilde y_i = \sigma_i\tilde\theta_i + \tilde\varepsilon_i$ has
+noise variance $\sigma^2$.  The SNR in the $i$-th  direction is
+therefore
+\begin{equation}
+  \label{eq:snr_def}
+  \mathrm{SNR}_i
+  = \frac{\sigma_i^2\,\tau^2}{\sigma^2}.
+\end{equation}
+Substituting $\lambda = \sigma^2/\tau^2$, note that
+\begin{equation}
+  \label{eq:lambda_snr}
+  \frac{\lambda}{\sigma_i^2}
+  = \frac{\sigma^2/\tau^2}{\sigma_i^2}
+  = \frac{1}{\mathrm{SNR}_i},
+\end{equation}
+so the shrinkage factor in~\eqref{eq:ridge_component} can be written as
+\begin{equation}
+  \label{eq:shrinkage_snr}
+  \frac{\sigma_i^2}{\sigma_i^2 + \lambda}
+  = \frac{1}{1 + \lambda/\sigma_i^2}
+  = \frac{1}{1 + 1/\mathrm{SNR}_i}
+    = \frac{\mathrm{SNR}_i}{1 + \mathrm{SNR}_i}.
+\end{equation}
+The ridge estimate in the principal-component basis therefore takes the form
+\begin{equation} \label{eq:wiener_form}
+ \hat{\tilde\theta}_i
+  = \underbrace{\frac{1}{\sigma_i}}_{\text{LS inversion}}
+\cdot  \underbrace{\frac{1}{1 + 1/\mathrm{SNR}_i}}_{\text{Wiener filter gain}}
+    \cdot\;
+    \tilde y_i,
+    \qquad i = 1, \ldots, p.
+\end{equation}
+
+
+The connection to Wiener filtering deserves elaboration.  Consider the scalar
+model $\tilde y_i = \sigma_i\tilde\theta_i + \tilde\varepsilon_i$ with
+$\tilde\theta_i \sim \mathcal{N}(0,\tau^2)$ and
+$\tilde\varepsilon_i \sim \mathcal{N}(0,\sigma^2)$ independent.  This is
+exactly the signal-plus-noise model underlying the Wiener filter that we introduced at the beginning of this section: we observe the signal $\sigma_i\tilde\theta_i$
+corrupted by noise $\tilde\varepsilon_i$, and we wish to estimate
+$\tilde\theta_i$.
+
+The linear MMSE estimator of $\tilde\theta_i$ given $\tilde y_i$ is:
+\begin{equation}
+  \label{eq:mmse_component}
+  \mathbb{E}[\tilde\theta_i \mid \tilde y_i]
+  = \frac{\mathrm{Cov}(\tilde\theta_i,\tilde y_i)}{\mathrm{Var}(\tilde y_i)}
+    \,\tilde y_i
+  = \frac{\sigma_i\tau^2}{\sigma_i^2\tau^2 + \sigma^2}
+    \,\tilde y_i
+  = \frac{1}{\sigma_i}\cdot
+    \frac{\sigma_i^2\tau^2}{\sigma_i^2\tau^2 + \sigma^2}
+    \,\tilde y_i.
+\end{equation}
+Dividing numerator and denominator of the second term on the right-hand side of~\eqref{eq:mmse_component} by $\sigma^2$ gives
+\begin{equation}
+  \label{eq:mmse_snr}
+  \mathbb{E}[\tilde\theta_i \mid \tilde y_i]
+  = \frac{1}{\sigma_i}\cdot\frac{\mathrm{SNR}_i}{1 + \mathrm{SNR}_i}
+    \,\tilde y_i
+  = \frac{1}{\sigma_i}\cdot\frac{1}{1 + 1/\mathrm{SNR}_i}
+    \,\tilde y_i,
+\end{equation}
+which is identical to~\eqref{eq:wiener_form}.  Since the model is jointly
+Gaussian, the linear MMSE estimator coincides with the MAP estimator, confirming that
+ridge regression achieves the minimum MSE in each principal direction
+simultaneously.
+
+\medskip
+
+The Wiener filter gain $W_i = \mathrm{SNR}_i/(1+\mathrm{SNR}_i)$ interpolates
+between two extreme regimes of high SNR and low SNR by continuously interpolating between the data and the prior. The fraction of the least squares estimate that is retained is exactly $\mathrm{SNR}_i/(1 + \mathrm{SNR}_i) \in (0,1)$.
+
+\bigskip
+Reflecting on the derivations above, we have shown that the following three problems have identical solutions:
+\begin{enumerate}
+
+  \item \textbf{Regularized least squares (ridge regression).}
+  Minimize the standard ridge objective:
+  \[
+    \hat\theta_{\mathrm{ridge}}
+    = \argmin_\theta\; \|y - X\theta\|^2 + \lambda\|\theta\|^2.
+  \]
+
+  \item \textbf{MAP estimation under a Gaussian prior.}
+  Minimize the normalized probabilistic loss:
+  \[
+    \hat\theta_{\mathrm{MAP}}
+    = \argmin_\theta\;
+      \frac{1}{2\sigma^2}\|y - X\theta\|^2 + \frac{1}{2\tau^2}\|\theta\|^2,
+    \qquad \lambda = \frac{\sigma^2}{\tau^2}.
+  \]
+
+  \item \textbf{Componentwise Wiener filtering in the SVD basis.}
+  Apply the Wiener filter gain to each singular value component:
+  \[
+    \hat{\tilde\theta}_i
+    = \frac{1}{\sigma_i}\cdot\frac{1}{1 + 1/\mathrm{SNR}_i}\cdot\tilde y_i,
+    \qquad
+    \mathrm{SNR}_i = \frac{\sigma_i^2\tau^2}{\sigma^2} = \frac{\sigma_i^2}{\lambda}.
+  \]
+
+\end{enumerate}
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+
+\begin{myexercise}
+ Show that if $x_1,x_2,\ldots, x_n$ are $n$ independent observations of a $p$-dimensional random variable
+$X\in \mathbb{R}^p$, then
+$$\Sigma_n = \frac{1}{n-1}\sum_{i=1}^n (x_i-\mu_n)(x_i-\mu_n)^T,$$
+is an unbiased estimate of $\Sigma = \mathbb{E}(X-\mu)(X-\mu)^T$, where $\mu = \mathbb{E}X$ is the true mean and $\mu_n = \frac{1}{n} \sum_{i=1}^n x_i$ is the sample mean. That is, show $\mathbb{E}(\Sigma_n) = \Sigma$.
+    
+\end{myexercise}
+
+
+
+\begin{myexercise}\label{ex:ols_bias_variance}
+For the  least squares estimator $\hat{\theta}_{\text{LS}} = (X^\top X)^{-1}X^\top y$ show that the
+bias-variance expression~\eqref{eq:bias_variance_param}  takes the form
+$$\MSE(\hat{\theta}_{\text{LS}}) = 0 + \tr(\sigma^2(X^\top X)^{-1}) 
+= \sigma^2\tr((X^\top X)^{-1}).$$
+\end{myexercise}
+
+
+\begin{myexercise}\label{ex:mse_unbiased}
+This exercise relates to Theorem~\ref{th:mle}. Show that
+an unbiased estimator of $\sigma^2$ is given by
+$\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n-p}\|y - X\hat{\theta}_{\text{LS}}\|^2$.
+\end{myexercise}
+
+
+\begin{myexercise}\label{ex:ridge_bias}
+Prove Proposition~\ref{prop:ridge_bias}.
+\end{myexercise}
+
+\begin{myexercise}
+Consider the linear model
+$$y = X\theta + \epsilon$$
+where $X \in \mathbb{R}^{n \times p}$ is a random matrix with entries $X_{ij} \sim \mathcal{N}(0, 1/n)$ and $\epsilon \sim \mathcal{N}(0, \sigma^2 I_n)$. Assume $n > p$ so that $X$ is full rank almost surely.
+\begin{enumerate}
+\item 
+Write the log-likelihood function $L(\theta; y, X)$ and show that the MLE $\hat{\theta}_{MLE}$ is identical to the  Least Squares  estimator.
+\item
+Show that conditioned on $X$, the estimator follows a Gaussian distribution
+$$\hat{\theta}_{MLE} | X \sim \mathcal{N}(\theta, \sigma^2 (X^T X)^{-1}).$$
+\item Large sample limit: As $n, p \to \infty$ with $p/n = \gamma \in (0, 1)$, the matrix $X^T X$ converges to the Identity matrix $I_p$ (by the Law of Large Numbers). What is the expected MSE $E[\|\hat{\theta}_{MLE} - \theta\|^2]$ in this limit?
+\end{enumerate}
+
+\end{myexercise}
+
+\begin{myexercise}
+Use the same setup as in the previous exercise. Implement a simulation to verify the theoretical MSE.
+Fix $p = 50$ and vary $n$ from $60$ to $500$.
+For each $n$, generate 100 trials of $X$ and $\epsilon$.
+Compute the average $\| \hat{\theta}_{MLE} - \theta \|^2$ and plot it against the theoretical prediction $\sigma^2 \Tr((X^T X)^{-1})$.
+   
+\end{myexercise}
+
+\begin{myexercise}
+Generate a synthetic dataset with $n=100$ observations and $p=10$ features where only the first 3 features are truly informative (how do you translate this condition 
+``only the first 3 features are truly informative'' into your experimental setup?). Now add Gaussian noise $\epsilon \sim \mathcal{N}(0, 0.5)$ to the observations.
+\begin{enumerate}
+\item  Compute the least squares solution.
+\item Implement Ridge Regression for a range of $\lambda \in [10^{-3}, 10^3]$.
+\item Plot the MSE on a held-out test set as a function of $\lambda$. Identify the ``elbow'' where the bias-variance tradeoff is optimized.
+\end{enumerate}  
+\end{myexercise}
+
+\begin{myexercise}
+Suppose $s$ is a Bernoulli signal taking values $\pm 1$ with equal probability (so $\E[s] = 0$, $\sigma_s^2 = 1$), and $n \sim \mathcal{N}(0, \sigma_n^2)$ independent of $s$. The observation is $y = s + n$. 
+\begin{enumerate}
+\item Compute the best {\em linear} estimator via
+the Wiener filter. 
+\item Show that the true MMSE estimator is the conditional mean
+$$\E[s | y] = \tanh (y/\sigma_n^2).$$
+\end{enumerate}
+This exercise tells us the Wiener filter is the best linear approximation to $\tanh (y/\sigma_n^2)$, but the two (approximately) coincide only at low SNR (where both are approximately linear) and the gap grows as the SNR increases.
+
+\end{myexercise}   
+
+
+
+\begin{myexercise}
+Suppose the true relationship between a feature $x$ and a response $y$ is governed by a quadratic function with additive noise
+$$y = x^2 + \epsilon, \quad \epsilon \sim \mathcal{N}(0, 0.1^2)$$
+We are given a small training set $S$ of $n=5$ points sampled uniformly from $x \in [-1, 1]$.
+\begin{enumerate}
+\item  Underfitting (structural bias):
+Assume a data analyst attempts to model this data using a linear hypothesis class $\mathcal{H}_1 = \{f(x) = w_1x + w_0\}$.
+Explain why, even with an infinite number of training points, the expected prediction error will remain high.
+In the language of risk, does this error stem from the estimation error or the approximation error?
+\item Overfitting (high variance):
+Her colleague decides to ensure the training error is exactly zero. They use a 4th-degree polynomial hypothesis class $\mathcal{H}_4 = \{f(x) = \sum_{i=0}^4 w_ix^i\}$.
+Since we have $n=5$ distinct data points, a 4th-degree polynomial can interpolate the data perfectly (zero empirical risk). Sketch what this fitted curve might look like compared to the true parabola $y = x^2$.
+If we draw a new test point $x_{test}$ from the same distribution, why is the squared error likely to be much larger for the 4th-degree model than for a simple quadratic model?
+\item The generalization gap:
+Let $\hat{R}_S(f)$ be the training error and $R(f)$ be the population risk.
+For which model ($\mathcal{H}_1$ or $\mathcal{H}_4$) do you expect the generalization gap $G(f) = R(f) - \hat{R}_S(f)$ to be larger?
+Provide a brief geometric argument involving the "sensitivity" of the coefficients to small perturbations in the training labels $y$.
+\end{enumerate}   
+\end{myexercise}
+
+\begin{myexercise}
+\textbf{Total Least Squares.} Suppose we wish to fit a linear model $y = X\theta$ where
+$X \in \mathbb{R}^{n \times p}$ is a matrix of predictors, $y \in \mathbb{R}^n$ is a vector of observations $\theta \in \mathbb{R}^p$ is an unknown parameter vector. In standard least squares we assume that the predictor matrix $X$ is known exactly and that only $y$ contains noise.
+
+However, suppose {\em both} $X$ and $y$ are contaminated by measurement errors. Let the true relationship be
+$$
+(y + \delta y) = (X + \Delta X)\theta,
+$$
+where $\Delta X$ and $\delta y$ are unknown perturbations.
+
+\begin{enumerate}
+\item  Explain why ordinary least squares may give biased parameter estimates when the predictor variables are measured with error.
+\item
+Total least squares seeks corrections $\Delta X$ and $\delta y$ that solve
+$$
+(y + \delta y) = (X + \Delta X)\theta,
+$$
+while minimizing the total squared perturbation
+$$
+\|\Delta X\|_F^2 + \|\delta y\|^2.
+$$
+
+Show that this problem can be written as
+$$
+\min_{\Delta A} \|\Delta A\|_F
+\quad 
+\text{subject to} \quad (A + \Delta A)
+\begin{bmatrix}
+\theta \\
+-1
+\end{bmatrix}
+= 0,
+$$
+where $A = [X | y]$ is the augmented data matrix.
+
+\item
+Let the SVD of the augmented matrix be $A = U \Sigma V^T.$
+Show that the TLS solution is obtained from the right singular vector corresponding to the smallest singular value.
+
+\item 
+If $v =[v_1, \dots, v_p, v_{p+1}]^\top$
+is this singular vector, show that
+$$
+\theta_{TLS} = -\frac{1}{v_{p+1}}
+[v_1,\dots, v_p]^\top.
+$$
+\end{enumerate}
+\end{myexercise}
+
+\begin{myexercise} 
+Consider a random variable $X$ with $\E[X] = \mu$ and $\Var(X) = \sigma^2$. Suppose you have $n$ i.i.d.\ observations $x_1, \dots, x_n$. You are considering two estimators for $\mu$:
+\begin{enumerate}
+\item[]  Estimator A (Sample Mean): $\hat{\mu}_A = \frac{1}{n}\sum x_i$
+\item[] Estimator B (Constant): $\hat{\mu}_B = c$, where $c$ is a fixed constant (e.g., $c=0$).
+\end{enumerate}
+
+\begin{enumerate}
+\item  Calculate the bias and variance for both estimators.
+\item  Give the MSE for both.
+\item Under what specific condition (in terms of $n, \sigma^2, \mu,$ and $c$) is the ``dumb'' constant estimator actually better (lower MSE) than the sample mean?
+\end{enumerate}
+\end{myexercise}
+
+
+
+\begin{myexercise} 
+This exercise is about ridge regression and cross-validation.
+Use the following Matlab-type code to generate a synthetic high-dimensional dataset where only a few features are truly informative:
+\begin{Verbatim}[fontsize=\small, frame=single]
+% Set seed for reproducibility
+rng(100);
+n = 500; p = 1000; % High-dimensional setting (p > n)
+X = randn(n, p);
+% Only first 10 features matter
+theta_true = [ones(10, 1); zeros(p-10, 1)]; 
+y = X * theta_true + 0.5 * randn(n, 1); % Additive Gaussian noise
+\end{Verbatim}
+
+
+\begin{enumerate}
+\item 
+Recall that the ridge estimator is given by  $\hat{\theta}_{\lambda} = (X^T X + \lambda I)^{-1} X^T y$.
+Write a function \texttt{myridge(X, y, lambda)} that returns the regression coefficients. 
+Efficiency Hint: Since $p > n$, it is computationally cheaper to use the identity $(X^T X + \lambda I)^{-1} X^T = X^T (XX^T + \lambda I)^{-1}$. Prove this identity in your write-up.
+
+\item 
+Implement a 5-fold cross-validation routine to select the optimal $\lambda$ from an equally spaced grid: \texttt{lambdas = linspace(0.1, 5, 50)}.
+Partition the $n=500$ observations into five  folds of equal size.
+For each $\lambda$ in the grid:
+Apply the ridge estimator to the four folds and calculate the Mean Squared Error (MSE) on the remaining fold.
+Average the MSE across all five folds to get the Cross-Validation Error, $CV(\lambda)$.
+Plot the $CV(\lambda)$ curve against $\log(\lambda)$. Mark the $\lambda^*$ that minimizes the error.
+\item
+The ``One-Standard-Error'' Rule: Often, the $\lambda$ that strictly minimizes $CV(\lambda)$ is too small. Identify the largest $\lambda$ whose error is within one standard error of the minimum. Why might a researcher prefer this ``simpler'' model?
+\item 
+Compute the SVD of $X = U\Sigma V^T$. Explain how $\lambda$ modifies the singular values $\sigma_i$ in the solution. Specifically, what happens to the components of the solution corresponding to very small $\sigma_i$ as $\lambda$ increases?  
+\end{enumerate}
+\end{myexercise}

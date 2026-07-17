@@ -1,0 +1,17 @@
+.DS_Store
+.quarto/
+site/_site/
+site/.quarto/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.idx
+*.ilg
+*.ind
+*.log
+*.out
+*.synctex.gz
+*.toc
+

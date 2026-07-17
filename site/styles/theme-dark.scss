@@ -1,0 +1,30 @@
+/*-- scss:defaults --*/
+$font-family-sans-serif: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", sans-serif;
+$font-family-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+$body-bg: #151a18;
+$body-color: #e2e8e4;
+$primary: #65c7a3;
+$link-color: #7bd4b4;
+$headings-font-family: $font-family-serif;
+$headings-color: #f2f6f3;
+$border-color: #34413c;
+$border-radius: 0.25rem;
+$code-bg: #202824;
+
+/*-- scss:rules --*/
+:root {
+  --mds-accent: #65c7a3;
+  --mds-ink: #f2f6f3;
+  --mds-muted: #aab6b0;
+  --mds-rule: #34413c;
+  --mds-paper: #151a18;
+}
+
+body { letter-spacing: 0; line-height: 1.78; }
+h1, h2, h3, h4 { letter-spacing: 0; font-weight: 650; }
+.navbar { border-bottom: 1px solid var(--mds-rule); background: rgba(21, 26, 24, 0.96); }
+.sidebar { border-right: 1px solid var(--mds-rule); }
+.sidebar-title { font-family: $font-family-serif; font-weight: 700; }
+.chapter-map { border-color: var(--mds-rule); }
+.math.display { overflow-x: auto; overflow-y: hidden; padding-block: 0.5rem; }
+

@@ -1,0 +1,22 @@
+---
+title: "压缩感知与稀疏性"
+description: "稀疏恢复、零空间性质、RIP 与对偶性"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `compressivesensing.tex`，尚待翻译。
+:::
+
+## 稀疏恢复
+
+## 零空间性质与精确恢复
+
+## 限制等距性质
+
+## 对偶性与精确恢复
+
+## 从理论到实践
+
+## 习题 {.unnumbered}
+

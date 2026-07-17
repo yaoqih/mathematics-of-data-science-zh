@@ -1,0 +1,324 @@
+
+\documentclass[twoside]{memoir}
+%\documentclass[11pt]{amsbook}
+%\documentclass[11pt]{memoir}
+
+
+
+%\usepackage{algorithm}
+%\usepackage{algpseudocode}
+%\usepackage{hyperref}
+
+\usepackage{makeidx}         % allows index generation
+\usepackage{graphicx}        % standard LaTeX graphics tool
+                             % when including figure files
+\usepackage{multicol}        % used for the two-column index
+\usepackage[bottom]{footmisc}% places footnotes at page bottom
+
+\usepackage{amsthm,amsfonts,amssymb,amsmath}
+%\usepackage{enumitem}
+\usepackage{xspace}       
+%\usepackage{showidx}      
+\usepackage{stmaryrd}     
+\usepackage{bbm}
+\usepackage{mathrsfs}  
+%\usepackage{subfigure} 
+\usepackage{xurl}
+%\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{ulem}
+\usepackage{multirow}
+\usepackage{makecell}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{fancyvrb}
+
+\usepackage[shortlabels]{enumitem}
+\setlist[itemize]{leftmargin=*} % Automatically calculates indent to keep bullets inside
+\setlist[enumerate]{leftmargin=*}
+
+\setsecnumdepth{subsection}
+
+\newtheorem{theorem}{Theorem}[chapter] % Numbered by chapter (e.g., Theorem 1.1)
+
+
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+
+\theoremstyle{remark} % Switches the style for subsequent definitions
+\newtheorem{remark}{Remark}[chapter]
+\newtheorem{example}{Example}[chapter]
+\newtheorem{conjecture}{Conjecture}[chapter]
+
+\theoremstyle{definition}
+\newtheorem{myexercise}{Exercise}[chapter]
+
+\newtheorem*{hint}{Hint}
+
+\newtheorem{assumption}{Assumption}
+
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\card}{card}
+\DeclareMathOperator{\MSE}{MSE}
+\DeclareMathOperator{\Bias}{Bias}
+\DeclareMathOperator{\Col}{Col}
+%\DeclareMathOperator{\Cov}{Cov}
+
+
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\symS}{\mathbb{S}}
+\newcommand{\Hsp}{\mathbb{H}}
+\newcommand{\Tn}{\mathcal{T}}
+\newcommand{\Hilb}{\mathbb{H}}
+\newcommand{\calX}{\mathcal{X}}
+\newcommand{\gramK}{{G_K}}
+\newcommand{\Pcol}{P_{\Col(X)}}
+\newcommand{\Lag}{\mathcal{L}}
+
+
+\usepackage{mybackref}
+%\usepackage[titletoc]{appendix}  
+
+%\makeindex             
+
+
+\newcommand{\problem}[1]{%
+  \par\noindent\textbf{Problem.} #1\par
+}
+
+%\usepackage{mathptmx}
+%\usepackage{helvet}
+%\usepackage{courier}
+%
+%\usepackage{type1cm}
+%\usepackage{bm}
+%\usepackage{esint}
+
+\include{macros}
+
+
+
+
+%\usepackage{amsbsy}
+%\usepackage{verbatim}
+%\usepackage{eucal}
+%\usepackage[hmargin = 1in,vmargin=.75in]{geometry}
+%\usepackage{amstext}
+\usepackage{enumerate}
+%\usepackage{algorithm}
+%\usepackage{algorithmic}
+
+\usepackage{mathtools}
+\usepackage[chapter]{algorithm}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage[noend]{algpseudocode}
+
+
+%\usepackage[nottoc,notlot,notlof]{tocbibind}
+
+\usepackage{makeidx}         % allows index generation
+                             % when including figure files
+\usepackage{multicol}        % used for the two-column index
+%\usepackage[bottom]{footmisc}% places footnotes at page bottom
+
+%\usepackage{latexsym,cancel}
+
+
+% 3. Stop the capitalization of page headings
+\nouppercaseheads
+
+% 4. Redefine the header fonts to your main text font
+\makeevenhead{headings}{\thepage}{}{\normalfont\leftmark}
+\makeoddhead{headings}{\normalfont\rightmark}{}{\thepage}
+
+\pagestyle{headings}
+
+
+\newcommand{\Rade}{\mathfrak{R}}
+
+\newcommand{\norm}[1]{{\left\lVert{#1}\right\rVert}}
+\newcommand{\brap}[1]{\left( #1 \right)}
+\newcommand{\bras}[1]{\left[ #1 \right]}
+\newcommand{\brac}[1]{\left\{ #1 \right\}}
+\newcommand{\bran}[1]{\left\langle #1 \right\rangle}
+
+\newcommand{\Cleak}{\xi}
+\DeclareMathOperator{\mse}{mse}
+
+\newcommand{\level}{}
+\newcommand{\sep}{}
+
+\newcommand{\DD}{\mathbb{D}}
+
+
+\definecolor{AfonsoBlue}{RGB}{30,65,123}
+\newcommand{\notezerox}[1]{{\texttt{\textbf{#1}}}}
+
+\if 0
+\newcommand{\asb}[1]{\textcolor{orange}{\textbf{[ASB: #1]}}}
+\newcommand{\amit}[1]{\textcolor{magenta}{\textbf{[AS: #1]}}}
+\newcommand{\tos}[1]{\textcolor{red}{\textbf{[TS: #1]}}}
+\newcommand{\ffv}[1]{\textcolor{gray}{[For Future Version: #1]}}
+\fi
+
+%\if 0
+\newcommand{\asb}[1]{}
+\newcommand{\amit}[1]{}
+\newcommand{\tos}[1]{}
+\newcommand{\ffv}[1]{}
+%\fi
+\renewcommand{\chaptermark}[1]{%
+  \markboth{\thechapter.\ #1}{}}
+
+
+%\makeindex             
+
+%\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{1}
+
+\renewcommand{\proofname}{\textbf{Proof}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+
+\thispagestyle{empty}
+\begin{center}
+\includegraphics[width=\textwidth]{figures/bookcover}
+\end{center}
+\newpage
+
+
+\thispagestyle{empty}
+\author{Afonso S. Bandeira (ETH Z\"{u}rich) \\ Amit Singer (Princeton University)\\ Thomas Strohmer (UC Davis)}
+\title{\vspace{1cm}  \textbf{Mathematics of Data Science} \notezerox{\\ \textcolor{white}{.} \hfill\Large{Preprint: version 1.1-}}}
+\maketitle
+\thispagestyle{empty}
+
+\frontmatter%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\include{dedic}
+%\include{foreword}
+%\include{preface}
+%\ine{acknow}
+
+
+\tableofcontents
+
+%\include{acronym}
+
+
+\mainmatter%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\include{notesforus}
+
+
+\setcounter{chapter}{-1}
+
+\chapter{Notes on this Version and Current Status}
+
+\notezerox{
+This is a preprint of a book in preparation by the authors.\\
+}
+
+
+
+\notezerox{ 
+We anticipate the focus and content of this manuscript
+not to change except for the correction of typos and other errors and other minor changes such as including additional homework problems. It can
+ already by used as textbook for a graduate course in Mathematics of Data Science; it has been used as such by the authors at their home institutions.\\
+}
+
+\notezerox{
+We welcome suggestions and comments, and would like to learn about any possible errors and typos.   
+}
+
+\notezerox{
+Please contact the authors at \url{bandeira@math.ethz.ch}, \\\url{strohmer@math.ucdavis.edu}, or \url{amits@math.princeton.edu}. In fact, this version was improved using many suggestions sent from, and typos found by, many students and readers. Thank you! \\
+}
+
+
+\notezerox{
+Thank you,
+}
+
+\notezerox{
+Afonso, Thomas, and Amit.
+}
+
+
+
+%% to remove a chapter from showing up add before it: \addtocounter{chapter}{1} %
+%\addtocounter{chapter}{0} % \include{introduction}
+
+\normalem
+
+\include{introduction} %%% 1 - \label{c:introduction}
+
+\include{surprises}  %%%% 2  - \label{c:surprises}
+
+\include{svdpca}  %%%%. 3 -  \label{c:svd}
+
+\include{linearregression}  %%%%. 4 -  \label{c:linreg_ls}
+
+\include{graphsclustering} %%%%% 5 \label{c:graphs}
+
+\include{diffusionmaps} %%%%% 6 - label is {c:diffusion}
+
+
+\include{dimensionreduction-JL} %% 7 \label{c:johnson}
+
+\include{optimization} %%%%% 8 - label is {c:optimization}
+
+\include{classification} %% 9 \label{c:classification}
+
+\include{deeplearning} %% 10 \label{c:deeplearning}
+
+\include{convergence} %%%%% 11 - label is {c:convergence}
+
+
+\include{communitydetection} %% 12 label is {c:community}
+
+\include{probability-gaussiananalysis} %% 13 label is {c:probability-gaussiananalysis}
+
+\include{probability-matrixconcentration} %% 14 label is {c:probability-matrixconcentration}
+
+\include{compressivesensing} %% 15 \label{c:cs}
+
+\include{lowrankmodels} %% 16 \label{c:lowrank}
+
+
+
+%\include{appendix}
+
+\backmatter%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\printindex
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% spacing between last chapter and references is wrong ...
+\def\refname{}
+\def\bibtitle#1{\def\refname{#1}}
+\bibtitle{{\bf Bibliography}}
+%\bibliography{../bibfiles/mathbook,../bibfiles/afonso,../bibfiles/amit,../bibfiles/thomas}
+%\bibliography{bibfiles/mathbook,bibfiles/afonso,bibfiles/amit,bibfiles/thomas}
+\bibliography{mathbook}
+\bibliographystyle{plain}
+
+%\addcontentsline{toc}{chapter}{Bibliography}
+
+\end{document}
+
+
+
+
+

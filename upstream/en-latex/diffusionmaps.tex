@@ -1,0 +1,1720 @@
+\chapter{Nonlinear Dimension Reduction and Diffusion Maps}
+\label{c:diffusion}
+
+
+
+In Chapter~\ref{c:svd} we discussed dimension reduction via Principal Component Analysis. Many datasets however have low dimensional structure that is not linear. In this chapter we will discuss nonlinear dimension reduction techniques. Just as with spectral clustering in Chapter~\ref{c:graphs} we will focus on graph data while noting that most types of data can be transformed into a weighted graph by means of a similarity kernel (Section~\ref{subs:diffusionmapskernel}). The goal of this chapter is to embed the nodes of a graph in Euclidean space in a way that best preserves the intrinsic geometry of the graph (or the data that gave rise to the graph).
+
+\section{Diffusion maps}
+
+Diffusion maps \cite{RRCoifman_SLafon_2006} will allow us to represent (weighted) graphs $G=(V,E,W)$ in $\RR^d$, i.e. associating, to each node, a point in $\RR^d$. 
+Before presenting diffusion maps, we will introduce a few important notions. The reader may notice the similarities with the objects described in the context of PageRank in Chapter~\ref{c:graphs}, the main difference is that here the connections between graphs have no direction, meaning that the weight matrix $W$ is symmetric\footnote{The goal in the context of PageRank was to do ranking, in which case a directed network is usually best. In this Chapter we will be interested in understanding similarities between data points, in which case it is more common to make use of undirected graphs.}; this will be crucial in the derivations below (as we will see in Section~\ref{sec:MarkovChains} this symmetry can be viewed as corresponding to a certain Markov Chain being \emph{reversible}).
+
+Given $G=(V,E,W)$ we consider a random walk (with independent steps) on the vertices of $V$ with transition probabilities:
+\[
+ \Prob\left\{ X(t+1) = j | X(t) = i  \right\} = \frac{w_{ij}}{\deg(i)},
+\]
+where $\deg(i) = \sum_j w_{ij}$. Let $M$ be the matrix of these probabilities,
+\begin{equation}\label{eq:def:M}
+ M_{ij} = \frac{w_{ij}}{\deg(i)}.
+\end{equation}
+It is easy to see that $M_{ij}\geq 0$ and $M\1 = \1$ (indeed, $M$ is a transition probability matrix). Recalling that $D$ is the diagonal matrix with diagonal entries $D_{ii} = \deg(i)$ we have
+\[
+ M = D^{-1}W.
+\]
+
+If we start a random walker at node $i$ ($X(0)=1$) then the probability that, at step $t$, is at node $j$ is given by
+\[
+ \Prob\left\{ X(t) = j | X(0) = i   \right\} = \left(M^t\right)_{ij}.
+\]
+In other words, the probability cloud of the random walker at point $t$, given that it started at node $i$ is given by the row vector
+\[
+ \Prob\left\{ X(t) | X(0) = i   \right\} = e_i^TM^t = M^t[i,:].
+\]
+
+\begin{remark}\label{remark:2:DMwithoutPhi}
+ A natural representation of the graph would be to associate each vertex to the probability cloud above, meaning
+ \[
+  i \to M^t[i,:].
+ \]
+This would place nodes $i_1$ and $i_2$ for which the random walkers starting at $i_1$ and $i_2$ have, after $t$ steps, very similar distribution of locations. However, this would require $d=n$. In what follows we will construct a similar mapping but for considerably smaller $d$.
+\end{remark}
+
+$M$ is not symmetric, but a matrix similar to M, $S = D^{\frac12} M D^{-\frac12}$ is, indeed $S = D^{-\frac12}WD^{-\frac12}$. We consider the spectral decomposition of $S$
+\begin{equation}\label{eq:SisVlambdaVT}
+S = V\Lambda V^T,
+\end{equation}
+where $V= \left[ v_1,\dots,v_n  \right]$ satisfies $V^TV = I_{n\times n}$ and $\Lambda$ is diagonal with diagonal elements $\Lambda_{kk} = \lambda_k$ (and we organize them as $\lambda_1\geq \lambda_2 \geq \cdots \geq \lambda_n$). Note that $Sv_k = \lambda_k v_k$. Also,
+\[
+M  = D^{-\frac12} S D^{\frac12} = D^{-\frac12} V\Lambda V^T D^{\frac12} = \left( D^{-\frac12} V\right) \Lambda \left( D^{\frac12}  V \right)^T.
+\]
+We define $\Phi = D^{-\frac12} V$ with columns $\Phi = \left[ \varphi_1,\dots,\varphi_n\right]$  and $\Psi = D^{\frac12} V$ with columns $\Psi = \left[ \psi_1,\dots,\psi_n\right]$. Then
+\begin{equation}\label{eq:MisPhiLambdaPsiT}
+M = \Phi \Lambda \Psi^T,
+\end{equation}
+and $\Phi,\, \Psi$ form a biorthogonal system in the sense that $\Phi^T\Psi = I_{n\times n}$ or, equivalently, $\varphi_j^T\psi_k = \delta_{jk}$. Note that $\varphi_k$ and $\psi_k$ are, respectively right and left eigenvectors of $M$, indeed, for all $1\leq k\leq n$:
+\[
+M\varphi_k = \lambda_k \varphi_k \quad \text{ and } \psi_k^T M = \lambda_k \psi_k^T.
+\]
+Also, we can rewrite this decomposition as
+\[
+M = \sum_{k=1}^n \lambda_k \varphi_k \psi_k^T.
+\]
+and it is easy to see that
+\begin{equation}\label{eq:Masrank1withphiandpsi}
+M^t = \sum_{k=1}^n \lambda_k^t \varphi_k \psi_k^T.
+\end{equation}
+
+Let us revisit the embedding suggested on Remark~\ref{remark:2:DMwithoutPhi}. It would correspond to
+\[
+i \to M^t[i,:] = \sum_{k=1}^n \lambda_k^t \varphi_k(i) \psi_k^T,
+\]
+it is written in terms of the basis $\psi_k$. The diffusion map will essentially consist of the representing a node $i$ by the coefficients of the above map
+\begin{equation}\label{eq:2:DM:withcoordinate1}
+i \to %M^t[i,:] =
+ \left[ \begin{array}{c} \lambda_1^t \varphi_1(i) \\ \lambda_2^t \varphi_2(i) \\ \vdots \\ \lambda_n^t \varphi_n(i) \end{array} \right],
+\end{equation}
+Note that $M\1 = \1$, meaning that one of the right eigenvectors $\varphi_k$ is simply a multiple of $\1$ and so it does not distinguish the different nodes of the graph. We will show that this indeed corresponds to the the first eigenvalue.
+
+\begin{proposition}
+All eigenvalues $\lambda_k$ of $M$ satisfy $\left|\lambda_k\right| \leq 1$.
+\end{proposition}
+
+\begin{proof}
+
+Let $\varphi_k$ be a right eigenvector associated with $\lambda_k$ whose largest entry in magnitude is positive $\varphi_k\left(i_{\max}\right)$. Then,
+\[
+\lambda_k \varphi_k\left(i_{\max}\right) = M \varphi_k\left(i_{\max}\right) =  \sum_{j=1}^n M_{i_{\max}, j} \varphi_k\left(j\right).
+\]
+This means, by triangular inequality that, that
+\[
+\left| \lambda_k \right| = \sum_{j=1}^n \left| M_{i_{\max}, j} \right| \frac{\left|\varphi_k\left(j\right)\right|}{\left|\varphi_k\left(i_{\max}\right)\right|} \leq \sum_{j=1}^n \left| M_{i_{\max}, j} \right| = 1.
+\]
+
+\end{proof}
+
+\begin{remark}\label{remark:lazyDMaps}
+It is possible that there are other eigenvalues with magnitude $1$ but only if $G$ is disconnected or if $G$ is bipartite. Provided that $G$ is a connected graph, a natural way to remove potential periodicity issues (like the graph being bipartite) is to make the walk lazy, i.e. to add a certain probability of the walker to stay in the current node. This can be conveniently achieved by taking, e.g.,
+\[
+M' = \frac12 M + \frac12 I.
+\]
+\end{remark}
+
+By the proposition above we can take $\varphi_1 = \1$, meaning that the first coordinate of~\eqref{eq:2:DM:withcoordinate1} does not help differentiate points on the graph. This suggests removing that coordinate:
+
+\begin{definition}[Diffusion Map]
+Given a graph $G=(V,E,W)$ construct $M$ and its decomposition $M = \Phi \Lambda \Psi^T$ as described above. The diffusion map is a map $\Dphi_t: V\to \RR^{n-1}$ given by
+\[
+\Dphi_t\left(v_i\right) =  \left[ \begin{array}{c} \lambda_2^t \varphi_2(i) \\ \lambda_3^t \varphi_3(i) \\ \vdots \\ \lambda_n^t \varphi_n(i) \end{array} \right].
+\]
+\end{definition}
+
+This map is still a map to $n-1$ dimensions. But note now that each coordinate has a factor of $\lambda_k^t$ which, if $\lambda_k$ is small will be rather small for moderate values of $t$. This motivates truncating the diffusion map by taking only the first $d$ coefficients.
+
+\begin{definition}[Truncated Diffusion Map]
+Given a graph $G=(V,E,W)$ and dimension $d$, construct $M$ and its decomposition $M = \Phi \Lambda \Psi^T$ as described above. The diffusion map truncated to $d$ dimensions is a map $\Dphi_t: V\to \RR^{d}$ given by
+\[
+\Dphi_t^{(d)}\left(v_i\right) =  \left[ \begin{array}{c} \lambda_2^t \varphi_2(i) \\ \lambda_3^t \varphi_3(i) \\ \vdots \\ \lambda_{d+1}^t \varphi_{d+1}(i) \end{array} \right].
+\]
+\end{definition}
+
+We note that the truncated diffusion map without scaling the coordinates by $\lambda^t$ (or equivalently, taking $t=0$) is known as {\em Laplacian Eigenmap}, introduced by Belkin and Niyogi \cite{belkin2001laplacian,belkin2003laplacian}. 
+
+In the following theorem we show that the Euclidean distance in the diffusion map coordinates (called diffusion distance) meaningfully measures distance between the probability clouds after $t$ iterations.
+
+\begin{theorem}
+For any pair of nodes $v_{i_1}$, $v_{i_2}$ we have
+\begin{align*}    
+& \left\| \Dphi_t\left(v_{i_1}\right) - \Dphi_t\left(v_{i_2}\right) \right\|^2 =  \\
+& \qquad \qquad
+= \sum_{j=1}^n \frac{1}{\deg(j)}\left[  \Prob\left\{ X(t)=j | X(0) = {i_1}  \right\} - \Prob\left\{ X(t)=j | X(0) = {i_2}  \right\} \right]^2.
+\end{align*}
+\end{theorem}
+
+\begin{proof}
+Note that 
+$$\sum_{j=1}^n \frac{1}{\deg(j)}\left[  \Prob\left\{ X(t)=j | X(0) = {i_1}  \right\} - \Prob\left\{ X(t)=j | X(0) = {i_2}  \right\} \right]^2$$ 
+can be rewritten as
+\begin{align*} 
+& \sum_{j=1}^n \frac{1}{\deg(j)}\left[  \sum_{k=1}^n \lambda_k^t \varphi_k(i_1) \psi_k(j) -  \sum_{k=1}^n \lambda_k^t \varphi_k(i_2) \psi_k(j) \right]^2  =  \\ & \qquad \qquad = \sum_{j=1}^n \frac{1}{\deg(j)}\left[  \sum_{k=1}^n \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right) \psi_k(j) \right]^2
+\end{align*}
+and
+\begin{align*}
+& \sum_{j=1}^n \frac{1}{\deg(j)}\left[  \sum_{k=1}^n \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right) \psi_k(j) \right]^2  \\    & = \sum_{j=1}^n \left[  \sum_{k=1}^n \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right) \frac{\psi_k(j)}{\sqrt{\deg(j)}} \right]^2 \\
+  & = \left\|  \sum_{k=1}^n \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right) D^{-\frac12} \psi_k \right\|^2.
+\end{align*}
+
+Note that $D^{-\frac12}\psi_k = v_k$ which forms an orthonormal basis, meaning that
+\begin{eqnarray*}
+\left\|  \sum_{k=1}^n \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right) D^{-\frac12} \psi_k \right\|^2 & = &\sum_{k=1}^n \left( \lambda_k^t\left( \varphi_k(i_1) - \varphi_k(i_2) \right)    \right)^2 \\
+& = &\sum_{k=2}^n \left( \lambda_k^t \varphi_k(i_1) - \lambda_k^t\varphi_k(i_2)   \right)^2,
+\end{eqnarray*}
+where the last equality follows from the fact that $\varphi_1=\1$. The proof of the theorem is complete.
+
+\end{proof}
+
+As simple example, let us consider the cycle graph  (or ring graph) $C_n$, which is a graph on $n$ nodes $\{1,\dots,n\}$ such that node $k$ is connected to $k-1$ and $k+1$ and $1$ is connected to $n$. The diffusion map of $C_{10}$ truncated to two dimensions, shown in Figure~\ref{figure:DM:ring}, gives a very natural way of displaying the graph (indeed, if one is asked to draw the ring graph, this is probably the drawing that most people would do). It is not difficult to analytically compute the diffusion map of $C_n$ and confirm that it displays the points in a circle.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/Chapter5-ringgraph_dm.png}
+\caption{The diffusion map, truncated to two dimensions,  of the cycle graph $C_{10}$.}
+\label{figure:DM:ring}
+\end{center}
+\end{figure}
+
+
+
+
+
+\subsection{Diffusion maps of point clouds}\label{subs:diffusionmapskernel}
+
+Very often we are interested in embedding in $\RR^d$ a point cloud of points $x_1,\dots,x_n \in \RR^p$ and not necessarily a graph. One option is to use Principal Component Analysis (PCA), but PCA is only designed to find linear structure of the data and the low dimensionality of the dataset may be non-linear. For example, let us say that our dataset is images of the face of a person taken from different angles and lighting conditions, for example, the dimensionality of this dataset is limited by the amount of muscles in the head and neck and by the degrees of freedom of the lighting conditions 
+%(see Figure~\ref{figure:DM:ISOMAP:Faces}) 
+but it is not clear that this low dimensional structure is linearly apparent on the pixel values of the images.
+
+
+Let us consider a point cloud that is sampled from a two dimensional swiss roll embedded in three dimension (see Figure~\ref{figure:DM:SwissRoll}). In order to learn the two dimensional structure of this object we need to differentiate points that are near each other because they are close by in the manifold and not simply because the manifold is curved and the points appear nearby even when they really are distant in the manifold (see Figure~\ref{figure:DM:SwissRoll} for an example). We will achieve this by creating a graph from the data points.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/Chapter5-DM_swissroll-new.png}
+\caption{A swiss roll point cloud (see, for example,~\cite{ISOMAP_paper_2000}). The points are sampled from a two dimensional manifold curved in $\RR^3$ and then a graph is constructed where nodes correspond to points.}
+\label{figure:DM:SwissRoll}
+\end{center}
+\end{figure}
+
+Our goal is for the graph to capture the structure of the manifold. To each data point we will associate a node. For this we should only connect points that are close in the manifold and not points that maybe appear close in Euclidean space simply because of the curvature of the manifold. This is achieved by picking a small scale and linking nodes if they correspond to points whose distance is smaller than that scale. This is usually done smoothly via a kernel\footnote{A detailed discussion of kernel based methods will be given in Chapter~\ref{s:kernellearning}. For now it suffices to think of a kernel as a function.} $K_\eps$, and to each edge $(i,j)$ associating a weight
+\[
+w_{ij} = K_\eps\left( \|x_i - x_j\|_2 \right),
+\]
+a common example of a kernel is $K_\eps(u) = \exp\left( -\frac1{2\eps} u^2 \right)$, that gives essentially zero weight to edges corresponding to pairs of nodes for which $\|x_i-x_j\|_2 \gg \sqrt{\eps}$. We can then take the the diffusion maps of the resulting graph.
+
+\subsection{An illustrative simple example and noisy data}
+
+A simple and illustrative example is to take images of a blob on a background in different positions (imagine a white square on a black background and each data point corresponds to the same white square in different positions). This dataset is clearly intrinsically two dimensional, as each image can be described by the (two-dimensional) position of the square. However, we do not expect this two-dimensional structure to be directly apparent from the vectors of pixel values of each image; in particular we do not expect vectors of images with this type of structure to lie in a two dimensional affine subspace!\footnote{It is worth noting that in a very stylized example where the only possibilities are the blobs not intersecting, or intersecting by a fixed amount, it is possible that, since this effect is captured by just three values, it can still be captured linearly, and that in such simple examples PCA could still capture such low-dimensional structure.}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/DM_blob1d.png}
+\caption{The two-dimensional diffusion map of the dataset  where each data point is an image with the same vertical strip in different positions in the x-axis, the circular structure is apparent.}
+\label{figure:DM:blob1d}
+\end{center}
+\end{figure}
+
+
+Let us start by experimenting with the above example for one dimension. In that case the blob is a vertical stripe and simply moves left and right. We think of our space as the one in many arcade games, if the square or stripe moves to the right all the way to the end of the screen, it shows up on the left side (and same for up-down in the two-dimensional case). Not only should this point cloud have a one dimensional structure but it should also exhibit a circular structure. Remarkably, this structure is completely apparent when taking the two-dimensional diffusion map of this dataset, see Figure~\ref{figure:DM:blob1d}.
+
+
+\begin{figure}[h]
+\begin{center}
+%\includegraphics[width=0.4\textwidth]{figures/DM_blob2d_data.png}
+%\includegraphics[width=0.4\textwidth]{figures/DM_blob2d.png}
+\includegraphics[width=45mm,height=45mm]{figures/blob_tiles.png}\qquad
+\includegraphics[height=45mm]{figures/torusgraph.png}
+\caption{On the left a subset of the data set considered and on the right its three dimensional diffusion map. The fact that the manifold is a torus is remarkably captured by the embedding.}
+\label{figure:DM:blob2d}
+\end{center}
+\end{figure}
+
+For the two dimensional example, we expect the structure of the underlying manifold to be a two-dimensional torus. Indeed, Figure~\ref{figure:DM:blob2d} shows that the three-dimensional diffusion map captures the toroidal structure of the data.
+
+In many applications, the data are noisy and the Euclidean distances $\|x_i - x_j\|$ would be affected by the measurement noise. It is therefore common to apply a denoising algorithm to the data prior to the application of diffusion maps. A popular choice is to first denoise and reduce dimensionality using PCA, followed by diffusion maps in the reduced space of principal components. The dimension of PCA is chosen large enough to retain the non-linear structure of the data and the signal variability, but small enough to effectively diminish the noise. See~\cite{singer2013two,gilles2025cryo} for the application of PCA followed by diffusion maps in biomedical imaging. Fitting a manifold in the presence of noise is a topic of ongoing research~\cite{aizenbud2025estimation,fefferman2025fitting}. 
+
+\subsection{Diffusion maps, images, and data manifolds}
+
+To illustrate the ability of the diffusion map to recover physically meaningful
+latent structure from image data, we experimentally study its performance on two standard image datasets, MNIST and the Yale Face Database.
+
+In both experiments, the affinity between two images 
+$x_i, x_j$ is defined by the Gaussian kernel
+$$
+W_{ij} = \exp\!\left(-\frac{\|x_i - x_j\|^2}{2\varepsilon}\right),
+$$
+where $\varepsilon > 0$ is the bandwidth parameter. Here we choose $\varepsilon$ proportional to the median of the pairwise squared distances: $\varepsilon = \frac{1}{2}\mathrm{median}\bigl\{\|x_i - x_j\|^2 : i \neq j\bigr\}$.
+The median heuristic (as well as the mean heuristic) is a standard data-adaptive choice that scales $\varepsilon$ to the typical squared distance between points in the dataset, avoiding the need to tune the bandwidth by hand.
+
+
+
+
+
+\subsubsection{Example: Diffusion maps on MNIST handwritten digits}
+
+To exhibit the geometry recovered by the diffusion map, we apply it to a subset of the MNIST database. Each image is represented as a vector in $\mathbb{R}^{784}$ by flattening its pixel intensities, so the data matrix $X \in \mathbb{R}^{784 \times 600}$
+has images as columns and pixel intensities as rows. 
+
+
+The resulting embeddings are shown in Figure~\ref{fig:mnist_diffusion} and respectively.
+Figure~\ref{fig:mnist_diffusion} depicts the diffusion map 
+ embedding obtained from the first two diffusion coordinates $\varphi_1, \varphi_2$ for all 
+600 images, with a subset of the images displayed as a small thumbnail at its embedding location and colored borders indicating digit class. 
+
+The four digit classes separate quite well in the $(\varphi_1, \varphi_2)$ plane without any use of class labels during training: the diffusion map discovers the class structure from geometry alone. This gives support to the assumption that images of the same digit class lie on a lower-dimensional manifold within $\mathbb{R}^{784}$, corresponding to the natural variability in handwriting style, stroke width, and slant within that class. Within each digit class the images are organized continuously: adjacent points in the embedding correspond to images that look similar, and one can trace smooth trajectories through each cluster along which the appearance changes gradually.
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.66\textwidth]{figures/mnist_diffusionmap}
+\caption{Diffusion map embedding of
+600 MNIST images (150 each of
+digits 2,3,4 6) in the $(\varphi_1, \varphi_2)$
+plane. A subset of the images is
+displayed as a thumbnail of the corresponding digit image.}
+\label{fig:mnist_diffusion}
+\end{center}
+\end{figure}
+
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.66\textwidth]{figures/mnist_diffusionmap3d}
+\caption{Diffusion map embedding of
+600 MNIST images (150 each of
+digits 2,3,4 6) in the $(\varphi_1, \varphi_2,\varphi_3)$
+space (2 = yellow, 3 = purple, 4 = blue, 6 = red).}
+\label{fig:mnist_diffusion3d}
+\end{center}
+\end{figure}
+
+Figure~\ref{fig:mnist_diffusion3d} shows the  the diffusion map embedding corresponding to the first three diffusion coordinates $\varphi_1, \varphi_2, \varphi_3$, which reveals
+a good (but certainly not perfect) unsupervised clustering of the data points according to their digit labels (here, 2 = yellow, 3 = purple, 4 = blue, 6 = red).
+It is important to emphasize that two and three diffusion coordinates were chosen for visualization purposes, but depending on the task at hand more diffusion dimensions may be needed to accomplish the desired goal. See also the discussion in Chapter~\ref{s:tsne} about using diffusion maps as a preprocessing step.
+
+
+
+\subsubsection{Example: Diffusion maps on the Extended Yale B Face Database}
+
+In this experiment we apply the diffusion map to the
+Extended Yale~B database \cite{georghiades2001few}, a controlled
+face image dataset consisting of $38$ subjects photographed under
+$64$ distinct illumination conditions. Each image has been
+cropped and normalized to $192 \times 168$ pixels. For this
+experiment we select a single subject and work with all $64$ of
+their frontal-pose images, representing each as a vector in
+$\mathbb{R}^{896}$ obtained by resizing to $32 \times 28$ pixels
+and flattening. 
+
+The illumination conditions are parameterized by two angles: the
+azimuth $\phi \in [-130^\circ, +130^\circ]$ and the elevation
+$\theta \in [-40^\circ, +90^\circ]$ of the light source relative
+to the camera axis. As the light source moves around the face, the
+image intensity pattern changes dramatically: under extreme lateral
+illumination large portions of the face fall into shadow, while
+under frontal illumination the face appears nearly uniform. Despite
+this large photometric variation, all $64$ images depict the same
+individual with the same geometry, so they lie on a smooth
+two-dimensional manifold in $\mathbb{R}^{896}$ parameterized by
+$(\phi, \theta)$.
+
+
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.9\textwidth]{figures/faces_diffusionmap}
+\caption{Diffusion map embedding of 64 frontal-pose images of a
+single subject from the Extended Yale B database, varying only in
+illumination condition. Each point is displayed as a thumbnail of
+the corresponding face image, with border color indicating the
+azimuth of the light source (color scale shown at right). The
+embedding appears to organize the images by illumination geometry: $\varphi_1$
+correlates with azimuth (left--right position of the light source)
+and $\varphi_2$ with elevation (above--below position). Images with
+similar shadow patterns are nearby in the embedding; images with
+qualitatively different lighting are far apart.}
+\label{fig:faces_diffusion}
+\end{center}
+\end{figure}
+
+
+The embedding provided by the diffusion map reveals the intrinsic two-dimensional structure of
+the illumination manifold, see Figure~\ref{fig:faces_diffusion}. The first diffusion coordinate $\varphi_1$
+correlates strongly with the azimuth of the light source: moving
+along $\varphi_1$ corresponds to sweeping the light from left to right
+across the face, with the shadow pattern shifting accordingly.
+The second diffusion coordinate $\varphi_2$ captures the elevation of
+the light source: moving along $\varphi_2$ corresponds to raising or
+lowering the light from below to above the face. 
+
+
+
+
+
+
+
+
+\section{Connections between diffusion maps and spectral clustering}
+
+Diffusion maps are tightly connected to spectral clustering (described in Chapter~\ref{c:graphs}). In fact, spectral clustering can be understood as simply performing $k$-means on the embedding given by diffusion maps truncated to $k-1$ dimensions.
+
+A natural way to try to overcome the issues of $k$-means depicted in Figure~\ref{figure:3:cluster_kmeans_circles} is by using diffusion maps: Given the data points we construct a weighted graph $G = (V,E,W)$ using a kernel $K_{\epsilon}$, such as $K_{\epsilon}(u) = \exp\left(-\frac1{2\epsilon}u^2\right)$, by associating each point to a vertex and, for which pair of nodes, set the edge weight as
+\[
+w_{ij} = K_{\epsilon}\left( \|x_i-x_j\| \right).
+\]
+
+Recall the construction of a matrix $M = D^{-1}W$ as the transition matrix of a random walk
+\[
+\Prob\left\{ X(t+1) = j | X(t) = i \right\} = \frac{w_{ij}}{\deg(i)} = M_{ij},
+\]
+where $D$ is the diagonal with $D_{ii} = \deg(i)$. The $d$-dimensional diffusion map is given by
+\[
+\Dphi_t^{(d)}(i) = \left[  \begin{array}{c}  \lambda_2^t \varphi_2(i) \\ \vdots \\  \lambda_{d+1}^t \varphi_{d+1}(i) \end{array} \right],
+\]
+where $M  = \Phi \Lambda \Psi^T$ where $\Lambda$ is the diagonal matrix with the eigenvalues of $M$ and $\Phi$ and $\Psi$ are, respectively, the right and left eigenvectors of $M$ (note that they form a bi-orthogonal system, $\Phi^T\Psi = I$).
+
+If we want to cluster the vertices of the graph in $k$ clusters, then it is natural to truncate the diffusion map to have $k-1$ dimensions (since in $k-1$ dimensions we can have $k$ linearly separable sets). If indeed the clusters were linearly separable after embedding then one could attempt to use $k$-means on the embedding to find the clusters, this is precisely the motivation for spectral clustering.
+
+\begin{algorithm}
+Spectral Clustering: Given a graph $G=(V,E,W)$ and a number of clusters $k$ (and $t$), spectral clustering consists in taking a $(k-1)$ dimensional diffusion map
+\[
+\Dphi_{t}^{(k-1)}(i) =  \left[  \begin{array}{c}  \lambda_2^t \varphi_2(i) \\ \vdots \\  \lambda_{k}^t \varphi_{k}(i) \end{array} \right]
+\]
+and clustering the points $\Dphi_{t}^{(k-1)}(1),\Dphi_{t}^{(k-1)}(2),\dots,\Dphi_{t}^{(k-1)}(n)\in\RR^{k-1}$ using, for example, $k$-means clustering. Usually, the scaling of $\lambda_m^t$ is ignored (corresponding to $t=0$).
+\caption{Spectral clustering described using diffusion maps.}
+\label{DMAPS:algorithm:3:spectralclustering}
+\end{algorithm}
+
+In order to show that this indeed coincides with Algorithm~\ref{algorithm:3:spectralclustering}, it is enough to show that $\varphi_m = D^{-\frac{1}{2}}v_m$ where $v_m$ is the eigenvector associated with the $m$-th smallest eigenvalue of $\LLL_G$. This follows from the fact that $S=D^{-\frac12}WD^{-\frac12}$ as defined in~\eqref{eq:SisVlambdaVT} is related to $\LLL_G$ by
+\[
+\LLL_G = I - S,
+\]
+and $\Phi = D^{-1/2}V$.
+
+
+
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.7\textwidth]{figures/Chapter5-fig_3_DM2tau_new1}
+\caption{For two clusters, spectral clustering consists in assigning to each vertex $i$ a real number $\varphi_2(i)$, then setting a threshold $\tau$ and taking $S = \{ i\in V:\, \varphi_2(i)\leq \tau \}$. This real number can both be interpreted through the spectrum of $\LLL_G$ as in Algorithm~\ref{algorithm:3:spectralclustering2clusters} or as the diffusion map embedding as in Algorithm~\ref{DMAPS:algorithm:3:spectralclustering}.}
+\label{figure:3:cluster_2means_threshold}
+\end{center}
+\end{figure}
+
+
+
+
+Proposition~\ref{prop:3:NcutandRandomWalks} below establishes a connection between $\Ncut$ (as described in Chapter~\ref{c:graphs}) and the random walks introduced above. Let $M$ as defined in~\eqref{eq:def:M} denote the matrix of transition probabilities. 
+Recall that $M\1 = \1$, corresponding to $M\varphi_1 = \varphi_1$, which means that $\psi_1^TM =\psi_1^T$, where 
+\[
+\psi_1 = D^{\frac12}v_1 = D\varphi_1 = \left[\deg(i) \right]_{1\leq i\leq n}.
+\]
+This means that $ \left[\frac{ \deg(i)} { \vol(G)} \right]_{1\leq i\leq n}$ is the stationary distribution of this random walk. Indeed it is easy to check that, if $X(t)$ has a certain distribution $p_t$ then $X(t+1)$ has a distribution $p_{t+1}$ given by $p_{t+1}^T = p_{t}^TM$
+
+\begin{proposition}\label{prop:3:NcutandRandomWalks}
+Given a graph $G=(V,E,W)$ and a partition $(S,S^c)$ of $V$, $\Ncut(S)$ corresponds to the probability, in the random walk associated with $G$, that a random walker in the stationary distribution goes to $S^c$ conditioned on being in $S$ plus the probability of going to $S$ condition on being in $S^c$, more explicitly:
+\[
+\Ncut(S) = \Prob\left\{ X(t+1) \in S^c | X(t) \in S  \right\} + \Prob\left\{ X(t+1) \in S | X(t) \in S^c  \right\},
+\]
+where $\Prob\{X(t) = i\} =\frac{  \deg(i)} { \vol(G)} $.
+\end{proposition}
+
+\begin{proof}
+Without loss of generality we can take $t=0$. Also, the second term in the sum corresponds to the first with $S$ replaced by $S^c$ and vice-versa, so we'll focus on the first one. We have:
+
+\begin{eqnarray*}
+\Prob\left\{ X(1) \in S^c | X(0) \in S  \right\} & = & \frac{\Prob\left\{ X(1) \in S^c \cap X(0) \in S  \right\}}{\Prob\left\{ X(0) \in S  \right\}} \\
+& = & \frac{\sum_{i\in S}\sum_{j\in S^c} \Prob\left\{ X(1) \in j \cap X(0) \in i  \right\}}{\sum_{i\in S} \Prob\left\{ X(0) = i  \right\}} \\
+& = & \frac{\sum_{i\in S}\sum_{j\in S^c} \frac{\deg(i)}{\vol(G)} \frac{w_{ij}}{\deg(i)}}{\sum_{i\in S} \frac{\deg(i)}{\vol(G)}} \\
+& = & \frac{\sum_{i\in S}\sum_{j\in S^c} w_{ij}}{ \sum_{i\in S} \deg(i)}  =  \frac{\cut(S) }{ \vol(S)}.
+\end{eqnarray*}
+
+Analogously,
+\[
+\Prob\left\{ X(t+1) \in S | X(t) \in S^c  \right\} = \frac{\cut(S) }{ \vol(S^c)},
+\]
+which concludes the proof.
+\end{proof}
+
+\section{Commute time distance}\label{s:commute}
+
+We saw that the diffusion distance is a way to equip the graph with a metric that has a nice probabilistic interpretation.  
+A natural question is if there are other meaningful and useful metrics for graphs. Perhaps the first metric that comes to mind is the {\em shortest path metric}, or geodesic distance. A cost $c_{ij}$ is associated with each edge, e.g., $c_{ij} = w_{ij}^{-1}$. The cost of a path is the sum of costs along the path edges. The geodesic distance between $i$ and $j$ is the smallest possible cost over all possible paths connecting $i$ and $j$. It can be verified that the geodesic distance is indeed a metric (i.e., it satisfies all properties required from a metric), but it is not necessarily an $\ell^2$ metric. Not every metric can be embedded in a Euclidean (or in general, Hilbert) space. For example, the $\ell^1$ distance (Manhattan distance) cannot be embedded in a Euclidean space (it does not satisfy the parallelogram identity). Also, the geodesic distance has other shortcomings that will be discussed later in the course, such as its sensitivity to noise. We remark that the geodesic distance is the basis for a remarkable non-linear dimensionality reduction method called Isomap \cite{ISOMAP_paper_2000}, which will be revisited later on.
+
+Are there any other interesting/natural graph metrics? Given the random walk process over the graph, it is natural to consider the average time it takes to get from node $i$ to node $j$. It can be easily seen to satisfy the triangle inequality. However, it is not symmetric: the average time to get from $i$ to $j$ may not equal the time from $j$ to $i$. So, we can symmetrize it. Clearly, the time to get from a node to itself is 0, so overall we get a metric. It is called the {\em commute time distance}. Surprisingly, a kind of miracle happens: The commute time distance turns out to be a Euclidean distance corresponding to an embedding that is also given in terms of eigenvectors and eigenvalues of the graph Laplacian. Our goal is to prove this by starting from the probabilistic interpretation (see also \cite{doyle1984random,lovasz1993random}). 
+
+
+Consider an irreducible random walk  $\{X(t)\}_{t=0}^\infty$ with jump probabilities $M_{ij} = \Prob\left\{ X(t+1) = j | X(t) = i   \right\} = w_{ij}/\deg(i)$ where $w_{ij}$ are the weights of a undirected graph; irreducibility is then equivalent to the graph being connected. We define the {\em first passage time} and {\em mean first passage time} as follows:
+
+\paragraph*{First Passage Time}
+
+\begin{equation}
+\tau_{ij}=\left\{\begin{array}{cc}
+                   \inf\left\{ t>0 \,|\, X(t)={x}_{j}, \; X(0)={x}_{i}\right\} & \mbox{for }
+i\neq j, \\
+&\\
+                   0 & \mbox{for } i=j.
+                 \end{array}
+\right.
+\end{equation}
+
+
+\paragraph*{Mean First Passage Time}
+\begin{equation}
+t_{ij}=\mathbb{E}[\tau_{ij}].
+\end{equation}
+The {\em expected commute time} between ${x}_{i}$ and ${x}_{j}$
+is defined as
+\begin{equation}
+t_{ij}+t_{ji}.
+\end{equation}
+Next, we show that the expected commute
+time is a metric. Let
+\begin{equation}
+\tau'_{ij}=\inf\left\{ t>0 \,|\, X(t)={x}_{j},\,X(0)={x}_{i}\right\}.
+\end{equation}
+Notice that $\tau_{ii} \neq \tau'_{ii}$ because $\tau'_{ii} > 0.$ Let
+\begin{equation}
+t'_{ij}=\mathbb{E}[\tau'_{ij}].
+\end{equation}
+The random walker can get from $x_i$ to $x_j$ either directly in one time step with probability $M_{ij}=w_{ij}/\deg(i)$, or it first goes from $x_i$ to $x_k$ ($k\neq j$) with probability $M_{ik}$ and the expected time to get to $x_j$ is $1+t'_{kj}$. Let $T$ and $T'$ denote the matrices with entries respectively  $t_{ij}$ and $t'_{ij}$. We have,\footnote{This step needs irreducibility as otherwise some of the terms would be infinite and the cancellation in the last equality wouldn't necessarily hold}
+\begin{eqnarray}
+T'_{ij}&=&M_{ij}\cdot1+\sum_{k\neq j}M_{ik}(1+T'_{kj}) \nonumber \\
+&=& \sum_{k}M_{ik} + \sum_{k\neq j} M_{ik}T'_{kj} \nonumber \\
+&=& 1 + \sum_{k} M_{ik}T'_{kj} - M_{ij}T'_{jj}
+\end{eqnarray}
+that is,
+\begin{equation}
+T'=\1\1^T+M(T'-\ddiag(T')),\label{eq:cmt1}
+\end{equation}
+ where $\1\1^T$ denotes the all-ones matrix and $\ddiag(T')$ is the diagonal matrix obtained by setting to zero all non-diagonal entries of $T'$. 
+ 
+
+
+Let us try to determine $\ddiag(T')$ first. To that end,
+let ${\psi}_{1}^T=[\deg(i)]_{1\leq i\leq n}$ be
+be the left eigenvector of $M$
+\begin{equation}
+{\psi}_{1}^{T}M={\psi}_{1}^{T}.
+\end{equation}
+Multiply (\ref{eq:cmt1}) by ${\psi}_{1}^{T}$ on both sides to obtain
+\begin{eqnarray}
+{\psi}_{1}^{T}T' & = & {\psi}_{1}^{T}\1\1^T+{\psi}_{1}^{T}M(T'-\ddiag(T'))\\
+ & = & {\psi}_{1}^{T}\1\1^T+{\psi}_{1}^{T}(T'-\ddiag(T')).\nonumber
+\end{eqnarray}
+Thus, we have
+\begin{equation}
+{\psi}_{1}^{T}\ddiag(T')={\psi}_{1}^{T}\1\1^T={\psi}_{1}^{T}\1\1^T=\left(\sum_{k=1}^{n}\deg(k)\right)\1^T,
+\label{eq:cmt2}
+\end{equation}
+or equivalently,
+%\begin{equation}
+%d_{i}M_{ii}=\sum_{k=1}^{n}d_{k},
+%\end{equation}
+%that is,
+\begin{equation}
+T'_{ii}=\frac{1}{\deg(i)}\sum_{k=1}^{n}\deg(k) = \frac{1}{\deg(i)} \vol(G),
+\end{equation}
+recall that te {\em volume} of $G$ is the sum of the node degrees. %: $$\text{vol}(G)=\sum_{i=1}^n d_i.$$
+$T'_{ii}$ is the mean return (or recurrence) time from node $i$ to itself. We see that it is proportional to $\vol(G)$: The larger the graph, the more time the random walker wanders (on average) around before returning back. $T'_{ii}$ is inversely proportional to $\deg(i)$: The larger $\deg(i)$, the more possibilities the random walker has to return to node $i$. Remarkably, $T'_{ii}$ does not see much about the structure of the graph, besides the total edge weights and the specific node degree.
+
+Now we will show uniqueness of the solution $T'$ to (\ref{eq:cmt1}). Indeed,
+assume that $T_2'$ is another solution such that
+\begin{equation}
+T_2'=\1\1^T+M(T_2'-\ddiag(T')),
+\end{equation}
+then
+\begin{equation}
+T'-T_2'=M(T'-T_2').
+\end{equation}
+We see that the columns on $T'-T_2'$ are right eigenvectors of $M$ with eigenvalue 1. But if $M$ is irreducible, the only eigenvector with eigenvalue is 1 is the all-ones vector. Therefore,
+\begin{equation}
+T'-T_2'={\textbf 1}{u}^{T}
+\end{equation}
+ for some $u$; the fact that $T'$ and $T'_2$ need to agree on the diagonal means that $u$ must be zero and we must have $T'_2=T'$.
+%However, $\text{diag}(T') = \text{diag}(T') = M_d$. Therefore, $u=0$ and $M=M'$.
+
+Now that we established that $T'$ is unique let us solve for it. Notice that that the mean first passage time matrix $$T = [t_{ij}]_{1\leq i,j \leq n}$$ can be written as
+\begin{equation}
+T = T' - \ddiag(T').
+\end{equation}
+Therefore, (\ref{eq:cmt1}) is equivalent to $T+\ddiag(T')=\1\1^T+MT$ which we can rewrite as
+\begin{equation}
+(I-M)T=\1\1^T-\ddiag(T').\label{eq:cmt3}
+\end{equation}
+Unfortunately, $(I-M)$ is not invertible, so we cannot obtain $T$ by simply inverting $(I-M)$.
+
+Recall that the graph Laplacian is defined
+as
+\begin{equation}
+L=D-W=D(I-M).\label{eq:graph_laplacian}
+\end{equation}
+Multiplying (\ref{eq:cmt3}) by $D$ gives
+\begin{equation}
+LT=D\1\1^T-D\ddiag(T').\label{eq:cmt4}
+\end{equation}
+We also recall that $L\1=0$ and $L\succeq 0$. 
+
+
+The eigen-decomposition of $L$ can be written as
+\begin{equation}
+L=\sum_{l=1}^{n}\mu_{l}{\phiLap}_{l}{\phiLap}_{l}^{T} = \sum_{l=2}^{n}\mu_{l}{\phiLap}_{l}{\phiLap}_{l}^{T}
+\end{equation}
+with $0=\mu_{1}\leq\mu_{2}\leq\cdots\leq\mu_{n}$, and $\phiLap_1 = \frac{1}{\sqrt{n}}{\textbf 1}$. Note that since $G$ is connected then $\mu_{2}>0$. 
+The pseudo-inverse of the graph Laplacian is given by
+\begin{equation}
+L^\dagger=\sum_{l=2}^{n}\frac{1}{\mu_{l}}{\phiLap}_{l}{\phiLap}_{l}^{T}.
+\end{equation}
+Then,  $L^\dagger$ has the  properties listed in~\eqref{eq:pinvproperties}. Moreover,
+\begin{equation}
+L^\dagger L=\sum_{l=2}^{n}{\phiLap}_{l}{\phiLap}_{l}^{T}=I-{\phiLap}_{1}{\phiLap}_{1}^{T} = I - \frac{1}{n}{\textbf 1}{\textbf 1}^T.\label{eq:cmt5}
+\end{equation}
+
+Multiplying (\ref{eq:cmt4}) by $L^\dagger$ gives
+\begin{equation}
+\left(L^\dagger L\right)T=L^\dagger D\1\1^T -L^\dagger DM_{d}.\label{eq:cmt6}
+\end{equation}
+Combining (\ref{eq:cmt5}) and (\ref{eq:cmt6}) for each column of $T$, we have
+\begin{equation}
+T=L^\dagger D\1\1^T-L^\dagger D\ddiag(T')+{\textbf 1}{ u}^{T}
+\end{equation}
+for some vector $u$, that is,
+\begin{equation}
+t_{ij}=\sum_{k=1}^{n}L_{ik}^\dagger \deg(k)-\vol(G)L_{ij}^\dagger +u_{j}\label{eq:cmt7}
+\end{equation}
+(here we used that $D\,\ddiag(T')= \vol(G) I$).
+From $t_{ii}=0$ we find
+\begin{equation}
+u_{i}=-\sum_{k=1}^{n}L_{ik}^\dagger \deg(k)+\text{vol}(G)L_{ii}^\dagger .\label{eq:cmt8}
+\end{equation}
+From (\ref{eq:cmt7}) and (\ref{eq:cmt8}), for $i\neq j$, the average
+commute time between ${x}_{i}$ and ${x}_{j}$ is
+\begin{eqnarray}
+t_{ij}+t_{ji} & = & \sum_{k=1}^{n}L_{ik}^\dagger \deg(k)-\text{vol}(G)L_{ij}^\dagger -\sum_{k=1}^{n}L_{jk}^\dagger \deg(k)+\text{vol}(G)L_{jj}^\dagger \nonumber \\
+ &  & +\sum_{k=1}^{n}L_{jk}^\dagger \deg(k)-\text{vol}(G)L_{ji}^\dagger -\sum_{k=1}^{n}L_{ik}^\dagger \deg(k)+\text{vol}(G)L_{ii}^\dagger \nonumber \\
+ & = & \text{vol}(G)\left(L_{ii}^\dagger +L_{jj}^\dagger -2L_{ij}^\dagger \right),\label{eq:cmt9}
+\end{eqnarray}
+where
+\begin{eqnarray}
+L_{ij}^\dagger  & = & \sum_{l=2}^{n}\frac{1}{\mu_{l}}{\phiLap}_{l}(i){\phiLap}_{l}(j).\label{eq:cmt10}
+\end{eqnarray}
+
+Define the {\em commute time mapping} $\Psi : V \mapsto \mathbb{R}^{n-1}$ as
+\begin{equation}
+\Psi(x_{i}) = \left(\frac{1}{\sqrt{\mu_{2}}}{\phiLap}_{2}(i),\,\frac{1}{\sqrt{\mu_{3}}}{\phiLap}_{3}(i),\,\cdots,\,\frac{1}{\sqrt{\mu_{n}}}{\phiLap}_{n}(i)\right)^{T}.\label{eq:commute_time_embedding}\end{equation}
+We see that the commute time between $x_i$ and $x_j$ is equivalent to the Euclidean distance between $\Psi(x_i)$ and $\Psi(x_j)$:
+\begin{equation}
+t_{ij}+t_{ji}=\text{vol}(G)\left\Vert \Psi({x}_{i})-\Psi({x}_{j})\right\Vert ^{2}.
+\end{equation}
+Also,
+\begin{equation}
+t_{ij}+t_{ji}=\text{vol}(G) (e_i - e_j)^T L^\dagger (e_i - e_j),
+\end{equation}
+where $e_i$ is the $i$'th standard unit vector.
+
+\subsection{Comparison between the diffusion distance and the commute time distance}
+
+Let us assume that the graph is regular, that is, $\deg(i)=d$ for all $i=1,2,\ldots,n$, or equivalently $D=dI$.
+Then,
+\begin{equation}
+L = D - W = D(I-M) = d(I-M),
+\end{equation}
+so $M$ and $L$ share the same eigenvectors
+\begin{equation}
+\phi_l = \phiLap_l,
+\end{equation}
+and the eigenvalues are related by
+\begin{equation}
+\mu_l = d(1-\lambda_l).
+\end{equation}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=100mm,height=65mm]{figures/diffusion_commute3}
+\end{center}
+\caption{Filter transfer function $f(\lambda)$ for diffusion map ($t=2$ and $t=4$) and the commute time map.}
+\end{figure}
+
+The commute time distance can become meaningless for some families of graphs. We see that the filter corresponding to the commute time distance associates a similar non-zero weight to all small eigenvalues. If all eigenvalues are assigned the same weight (i.e, constant filter), then the resulting distance between nodes $i$ and $j$ is simply $\frac{1}{d_i} + \frac{1}{d_j}$. This is quite boring, as it tells us nothing about the connectivity between the two nodes. It turns out that in certain cases the commute time distance has exactly this boring behavior \cite{von2014hitting}.  
+
+We comment that many other filter/transfer functions are possible in practice, and it all depends on the problem at hand. 
+
+\subsection{Effective resistance}
+The commute time distance is also proportional to the {\em resistance distance}, where the graph is viewed as an electrical network of resistors, with the resistance of each edge given by $$r_{ij} = w_{ij}^{-1}$$ Using Ohm's Law and Kirckhoff's Law it is possible to compute the effective resistance between any two nodes in the graph. The effective resistance turns out to be exactly the same as the commute time distance just without the factor of $\text{vol}(G)$. This provides an alternative physical interpretation of the commute time distance.
+
+To see this, suppose that $\mb{v} \in \mathbb{R}^n$ is the vector of electric potentials at the vertices. Recall Ohm's Law that relates the potential with the resistance $R$ and the electric current $I$
+$$V = RI$$
+Let $\mb{i} \in \mathbb{R}^{2|E|}$ be the vector of signed edge currents, with 
+$$\mb{i}_{i \to j} = \frac{\mb{v}_i - \mb{v}_j}{r_{ij}} = w_{ij}(\mb{v}_i - \mb{v}_j)$$  
+We see that
+\begin{equation}
+\mb{i} = \Delta U\mb{v},
+\end{equation}
+where $U$ is an $|E|\times n$ signed edge adjacency matrix of $G$, meaning that the row of $U$ corresponding to $(i,j)\in E$ is given by $e_i-e_j$. The signing is arbitrary but needs to be set. $\Delta=\diag(\vecc[w_{ij}]_{(i,j)\in E})$ is the $|E|\times |E|$ matrix whose diagonal elements are the edge weights.
+
+Also, Kirckhoff's Law says that a resistor network cannot hold current: all 
+flow entering vertex $i$ from
+edges in the graph must exit $i$ to an external source. Let $\mb{i}_{\text{ext}} \in \mathbb{R}^n$ denote the vector of external currents,
+where $\mb{i}_{\text{ext}}(i)$ is the amount of current entering the graph through node $i$. We then have
+\begin{equation}
+\mb{i}_{\text{ext}}(i) = \sum_{j : (i,j)\in E} \mb{i}_{i\to j}.
+\end{equation}
+Equivalently, in matrix form
+\begin{equation}
+\mb{i}_{\text{ext}} = U^T \mb{i} = U^T \Delta U\mb{v} = L\mb{v}
+\end{equation}
+Thus, by applying the Laplacian on the vector of potentials we get the external source current. In particular, we distinguish between internal nodes $i$ for which $\mb{i}_{\text{ext}}(i)=0$, and boundary nodes with $\mb{i}_{\text{ext}}(i) \neq 0$. Notice that for internal nodes
+$$L \mb{v}(i)=0$$
+is equivalent to
+$$\mb{v}_i = \frac{1}{\deg(i)} \sum_{j:(i,j)\in E} w_{ij} \mb{v}_j$$  
+that is, the potential at the node is the weighted average of the potential at its neighbors.
+
+Now, in order to calculate the effective resistance between nodes $i$ and $j$ we need to solve
+\begin{equation}
+L\mb{v} = \mb{i}_{\text{ext}}  
+\end{equation} 
+with nodes $i$ and $j$ being boundary nodes and all other nodes being internal nodes. That is, we let
+$$\mb{i}_{i,j,\text{ext}}(a) = I (e_i - e_j) = \left\{\begin{array}{rc}
+                                    I & a=i \\
+                                    -I & a=j \\
+                                    0 & \text{otherwise} 
+                                  \end{array}
+ \right.$$
+Notice that $\mb{1}^T \mb{i}_{i,j,\text{ext}}=0$, therefore if the graph is connected (the eigenvalue 0 is simple), the solution for the potential vector $\mb{v}$ is given by
+\begin{equation}
+\mb{v} = L^\dagger \mb{i}_{i,j,\text{ext}} = I L^\dagger(e_i - e_j)
+\end{equation} 
+The potential drop between nodes $i$ and $j$ is
+\begin{equation}
+\mb{v}_i - \mb{v}_j =  I (e_i - e_j)^T L^\dagger (e_i - e_j)
+\end{equation}
+Which shows that the effective resistance is 
+\begin{equation}
+R^{\text{eff}}(i,j) = \frac{\mb{v}_i - \mb{v}_j}{I} = (e_i - e_j)^T L^\dagger(e_i - e_j)
+\end{equation}
+Therefore, the effective resistance and the commute time distance are equivalent (up to the factor of $\text{vol}(G)$). 
+
+\subsection{Time synchronization on graphs}
+Here we demonstrate another application of the pseudo-inverse of the Laplacian and the commute time distance / effective resistance.
+Consider the time-synchronization problem, in which $n$ sensing nodes are part of a multi-hop
+communication network. Each node has a local clock,
+but each pair of clocks differs by a constant offset. However,
+nodes that communicate directly can estimate the difference
+between their local clocks by exchanging
+messages that are time stamped with local clock times. For
+example, suppose that nodes $i$ and $j$ can communicate
+directly with each other and have clock offsets $t_i$ and $t_j$
+with respect to a reference clock. By passing messages
+back and forth, the nodes can measure the relative clock
+offset $t_i-t_j$ with the real-valued measurement
+\begin{equation}
+\label{offsets}
+s_{ij} = t_i - t_j + \xi_{ij},\qquad (i,j)\in E
+\end{equation}
+where $\xi_{ij}$ is the measurement noise. The task is to estimate the clock offsets $t_1,\ldots, t_n$ (up to a global offset) from such pair-wise measurements.
+It is also an instance of a ranking problem, in which $t_i$ may represent the ``strength" of the $i$'th player, and $s_{ij}$ is the outcome or score of a match between players $i$ and $j$.
+Clearly, we need that the graph of measurements is connected. Also, suppose that the random variables $(\xi_{ij})_{(i,j)\in E}$ are independent zero-mean Gaussians, i.e., $$\xi_{ij} \sim \mathcal{N}(0,\sigma_{ij}^2),\qquad (i,j)\in E$$ Clearly, using the offset measurements we can only hope to estimate $t_1,\ldots,t_n$ up to a global shift. We may therefore assume that they are centered, i.e., $\sum_{i=1}^n t_i = 0$, or
+$${\mathbf 1}^T t = 0$$
+We seek to find a solution to the over-determined system of linear equations (\ref{offsets}) which in vector notation can be written as 
+$$s = Ut + \xi$$
+and $\xi \sim \mathcal{N}(0,\diag(\sigma)^2)$, where $\diag(\sigma)$ is the diagonal $|E|\times |E|$ matrix with $\sigma_{ij}$ in the diagonal. We pre-whiten the noise by dividing each equation with the standard deviation $\sigma_{ij}$ to get
+$$\diag(\sigma)^{-1} s = \diag(\sigma)^{-1} Ut + z$$
+where $$z \sim \mathcal{N}(0,I)$$
+The least squares estimator $\hat{t}$ satisfies 
+$$U^T \diag(\sigma)^{-2} U\hat{t} = U^T \diag(\sigma)^{-2} s$$
+We therefore define weights 
+$$w_{ij} = \sigma_{ij}^{-2}$$
+for which the least squares estimator satisfies
+$$L \hat{t} = U^T \Delta s$$,
+where $\Delta = \diag(\vecc[w_{ij}]_{(i,j)\in E})$ is the $|E|\times |E|$ matrix whose diagonal elements are the edge-weights. The solution (assuming $\mb{1}^T t = 0$) is then given by
+\begin{equation}
+\hat{t} = L^\dagger U^T \Delta s
+\end{equation} 
+Notice that the least squares estimator is unbiased: 
+\begin{equation}
+\mathbb{E}[\hat{t}] = L^\dagger U^T \Delta \mathbb{E}[s] = L^\dagger U^T \Delta Ut = L^\dagger L t = t
+\end{equation}
+The error is given by
+\begin{equation}
+\hat{t} - t = L^\dagger U^T \Delta (s - \mathbb{E}[s]) = L^\dagger U^T \Delta \xi 
+\end{equation}
+Hence, the covariance of the estimation error is given by
+\begin{equation}
+\mathbb{E}[(\hat{t} - t)(\hat{t}-t)^T] = L^\dagger U^T \Delta \Delta^{-1} \Delta U L^\dagger = L^\dagger L L^\dagger = L^\dagger
+\end{equation}
+In particular, the mean squared error (MSE) of the $i$'th clock is the $i$'th diagonal term of $L^\dagger$
+\begin{equation}
+\mathbb{E}[(\hat{t}_i - t_i)^2] = L^\dagger_{ii},
+\end{equation}
+and the MSE of all $n$ estimators is
+\begin{equation}
+\mathbb{E}[\|\hat{t} -  t\|^2] = \sum_{i=1}^n L^\dagger_{ii} = \operatorname{Tr}(L^\dagger).
+\end{equation}
+Finally, the offset $t_i-t_j$ between nodes $i$ and $j$ is estimated as $\hat{t}_i - \hat{t}_j$. The MSE of the offset is
+\begin{eqnarray}
+\mathbb{E}[((\hat{t}_i - \hat{t}_j) - (t_i - t_j))^2] &=& \mathbb{E}[((\hat{t}_i - t_i) - (\hat{t}_j - t_j))^2] \nonumber \\
+&=& \mathbb{E}[(\hat{t}_i - t_i)^2] + \mathbb{E}[(\hat{t}_j - t_j)^2] - 2\mathbb{E}[(\hat{t}_i - t_i)(\hat{t}_j - t_j)] \nonumber \\
+&=& L^\dagger_{ii} + L^\dagger_{jj} - 2L^\dagger_{ij},
+\end{eqnarray}
+which is the effective resistance distance. More accurate offset estimates are reflected by shorter commute time distances.
+
+
+\section{Other non-linear dimensional reduction techniques}
+
+
+There are several other similar non-linear dimensional reduction methods. A particularly popular one is Isomap~\cite{ISOMAP_paper_2000}. The idea is to find an embedding in $\RR^d$ for which Euclidean distances in the embedding correspond as much as possible to geodesic distances in the graph. This can be achieved by, between pairs of nodes $v_i,\,v_j$ finding their geodesic distance and then using, for example, Multidimensional Scaling to find points $y_i\in\RR^d$ that minimize (for example)
+\[
+\min_{y_1,\dots,y_n \in \RR^d}\sum_{i,j} \left(   \|y_i-y_j\|^2 - \delta_{ij}^2   \right)^2,
+\]
+which can be done with spectral methods (it is a good exercise to compute the optimal solution to the above optimization problem). 
+
+Locally linear embedding (LLE) \cite{roweis2000nonlinear} and Isomap are often considered landmarks in the area of nonlinear dimension reduction.  Beyond diffusion maps \cite{RRCoifman_SLafon_2006} and Laplacian eigenmaps \cite{belkin2001laplacian,belkin2003laplacian}, there are several other nonlinear dimension reduction methods worth mentioning here, including Hessian LLE \cite{donoho2003hessian}, local tangent space alignment \cite{zhang2004principal}, and UMAP \cite{mcinnes2018umap}. There are other variants of diffusion maps such as anisotropic diffusion maps based on the Mahalanobis distance \cite{singer2008non} and alternating diffusion \cite{lederman2018learning} for learning the geometry of common latent variables. Here, we choose to present in more detail t-Distributed Stochastic Neighbor Embedding (t-SNE) \cite{maaten2008visualizing}, a popular method for visualization of high-dimensional data, and later in Chapter~\ref{s:vectordiffusionmap} vector diffusion maps \cite{ASinger_HTWu_2011_VDM}  that uses the graph connection Laplacian and generalizes diffusion maps from scalar functions to vector fields.              
+
+
+
+
+
+
+\subsection{t-Distributed Stochastic Neighbor Embedding}\label{s:tsne}
+
+
+
+t-SNE is a nonlinear dimension reduction method designed primarily for the visualization of high-dimensional data~\cite{maaten2008visualizing}.
+Unlike spectral methods such as diffusion maps, which are based on eigenvalue problems and have a clear operator-theoretic interpretation, t-SNE is formulated as a stochastic optimization problem whose objective is to preserve local neighborhood relations in a probabilistic sense.
+
+The central idea of t-SNE is that points that are close in high-dimensional space should remain close in the embedding, while distant points are modeled with much weaker constraints. To that end we will define two distances, one suitable for the original high-dimensional data space, and one for the low-dimensional embedding space.
+
+Given a set of points $\{x_1, \dots, x_n\} \subset \mathbb{R}^d$, we define the similarity of point $x_j$ to $x_i$ as the conditional probability $p_{i|j}$ given by
+$$p_{i|j} = \frac{\exp(-\|x_i - x_j\|^2 / 2\sigma_i^2)}{\sum_{k \neq i} \exp(-\|x_i - x_k\|^2 / 2\sigma_i^2)} \quad \text{and} \quad
+p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}.
+$$
+In contrast to graph Laplacians and diffusion maps,
+the bandwidth $\sigma_i$ is not global. Instead it is determined such that it is adapting the scale to the local density of the data.
+
+Let $\{y_1, \dots, y_n\} \subset \mathbb{R}^m$ (where $m \ll d$, typically $m=2$ or $3$) denote the embedded points. In the low-dimensional space, we use a heavy-tailed Student t-distribution with one degree of freedom (which is a Cauchy distribution) to model similarities
+$$q_{ij} = \frac{(1 + \|y_i - y_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|y_k - y_l\|^2)^{-1}}.$$
+The choice of the t-distribution in the embedding space alleviates the so-called crowding problem, which arises when high-dimensional neighborhoods are projected into low-dimensional spaces.
+The heavy tails of the t-distribution allow distant points in $\mathbb{R}^d$ to be modeled by even larger distances in $\mathbb{R}^m$, preventing the ``crowding'' at the center of the map often seen in standard SNE~\cite{hinton2002stochastic}.
+
+The embedding is determined by minimizing the Kullback-Leibler (KL) divergence between the joint probability distribution $P$ (in $\mathbb{R}^d$) and $Q$ (in $\mathbb{R}^m$)
+\begin{equation}
+    \label{KL-tsne}
+C = \text{KL}(P \| Q) = \sum_{i \neq j} p_{ij} \log \frac{p_{ij}}{q_{ij}}
+\end{equation}
+with respect to the variables $y_1,\dots,y_n$.
+This cost function is non-convex and is typically optimized via gradient descent\footnote{The method of gradient descent is discussed in detail in Chapter~\ref{c:optimization}.}. The gradient has a particularly intuitive ``spring-force'' interpretation
+$$\frac{\partial C}{\partial y_i} = 4 \sum_j (p_{ij} - q_{ij})\frac{y_i - y_j}{1 + \|y_i - y_j\|^2}$$
+with two opposing forces:
+\begin{itemize}
+\item[$\bullet$] 
+Attraction: The term $p_{ij}$ pulls $y_i$ toward $y_j$ if they are close in the original space. 
+\item[$\bullet$] 
+Repulsion: The term $q_{ij}$ pushes $y_i$ away from $y_j$ if they are close in the embedding space but not in the original space.
+\end{itemize}
+
+
+We note that  the embedding provided by t-SNE is invariant under global rotations and translations but not under scaling, 
+and global distances and large-scale geometry are generally distorted. Thus, t-SNE may therefore better be viewed as a local neighborhood-preserving visualization method rather than a general-purpose dimension reduction technique.
+
+
+
+\medskip
+
+We demonstrate the effectiveness of t-SNE by applying it to the MNIST (Modified National Institute of Standards and Technology)  database~\cite{lecun1998mnist} of handwritten digits. 
+Each datapoint (image) $x_i$ is an $28 \times 28$ black-and-white image containing a handwritten digit. See the left panel of Figure~\ref{fig:mnist_tsne} for some example images.
+The corresponding 2-D embedded points $y_i$ are computed via t-SNE.  Since the t-SNE objective is non-convex, the final embedding is sensitive to initialization and hyperparameters. Here, we use the implementation proposed in~\cite{linderman2019clustering}.
+ The resulting embedding is shown in the right panel of Figure~\ref{fig:mnist_tsne}.
+It is evident that t-SNE is quite effective in separating the different digits. 
+
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=27mm,height=55mm]{figures/mnist2}\qquad\quad
+\includegraphics[width=80mm,height=55mm]{figures/mnist_tsne2}
+\caption{Embedding of MNIST via t-SNE using the implementation proposed in~\cite{linderman2019clustering}. The left panel shows some example images from MNIST. The right panel shows the t-SNE embedding. Different colors correspond to different digits. (Image courtesy of Stefan Steinerberger.)}
+\label{fig:mnist_tsne}
+\end{center}
+\end{figure}
+
+
+
+There are some interesting connections between t-SNE and spectral clustering, as uncovered in~\cite{linderman2019clustering} and~\cite{cai2022theoretical}, 
+which provides some of the first rigorous mathematical justifications for why t-SNE behaves so effectively as a clustering tool. First note that the attractive term resembles a graph Laplacian $(L_P y)_i = \sum_j p_{ij}(y_i - y_j)$,
+where $P$ acts as a weighted adjacency matrix. Also, the gradient descent flow during the initial phase behaves similarly to power iteration on a graph Laplacian~\cite{cai2022theoretical}. Specifically, the early iterations essentially perform a form of spectral clustering.
+The clusters are formed based on the dominant eigenvectors of the transition matrix, much like the initial stages of a diffusion process.
+It is furthermore shown in~\cite{linderman2019clustering} that if the data contains well-separated clusters (quantified by the spectral gap of the Laplacian), t-SNE is provably guaranteed to keep these clusters separated in the low-dimensional embedding. These connections should not be interpreted as placing t-SNE within the framework of spectral dimension reduction methods; rather, they provide insight into the local dynamics of its optimization landscape.
+
+Diffusion maps are sometimes used as a preprocessing step  for t-SNE~\cite{wolf2018scanpy,moon2019visualizing,haghverdi2015diffusion}. The standard pipeline, common in computational biology \cite{wolf2018scanpy}, is to first reduce the data to a moderate number of diffusion coordinates which removes noise and compresses the intrinsic geometric structure into a tractable representation, and then to apply t-SNE (or the closely related UMAP algorithm~\cite{mcinnes2018umap}) to this 
+$k$-dimensional intermediate representation to produce the final 2D visualization. This two-stage approach aims to combine the strengths of both methods: diffusion maps provide a geometrically meaningful and noise-robust intermediate representation, while t-SNE  optimizes that representation specifically for visual interpretability in two dimensions.
+
+\section{Kernel learning}\label{s:kernellearning}
+
+Linear methods are computationally efficient and well-understood, but they fail when the relationship between variables is inherently non-linear. The kernel approach allows us to lift our data into a high-dimensional (potentially infinite-dimensional) feature space where linear boundaries can capture complex structures, all without ever explicitly computing the coordinates in that space, a procedure referred to as the {\em kernel trick}. 
+
+One of the primary advantages of the kernel approach is its ability to bypass the often difficult task of explicit feature engineering. In many domains---network analysis being a prime example---practitioners may struggle to define a concrete feature vector for an object, yet they can intuitively provide a measure of affinity or similarity between pairs of objects.
+
+From a mathematical perspective, this ``user-defined'' similarity measure can be accompanied with some rigorous guarantees, as we will demonstrate in this section: If the practitioner's affinity function qualifies as a positive semi-definite  kernel (a property verifiable via Bochner’s Theorem, Theorem~\ref{th:bochner}), then Mercer’s Theorem (Theorem~\ref{th:mercer}) guarantees that this measure corresponds to a valid inner product in some high-dimensional feature space. Consequently, the kernel trick allows us to perform sophisticated non-linear learning via a similarity metric, rather than requiring the explicit construction of a feature map.
+
+\subsection{Positive semidefinite kernels and reproducing kernels}
+
+In practice, choosing a kernel is a combination of principled heuristics and empirical validation.
+The linear kernel $K(x,x') = x^\top x'$ assumes the data is already linearly separable (or nearly so) in its original coordinates.
+The polynomial kernel $K(x,x') = 
+(\langle x, x' \rangle + r)^d$,
+is useful in image processing where pixel interactions matter. The Gaussian kernel $K(x,x') = \exp (-\|x-x'\|^2/2\eps^2)$, which is sometimes also called RBF kernel (where RBF stands for Radial Basis Function) serves as a powerful default for most general-purpose applications, provided its hyperparameter is tuned carefully.
+The Laplacian kernel $K(x,x') = \exp\bigl(-\gamma\|x-x'\|\bigr)$ for $\gamma>0$ is well suited for modeling physical processes or signals that have sharp changes or disjointed behavior (e.g., ``edges'' in natural images) that a Gaussian kernel might over-smooth.
+
+One property that turns out to be very useful for a kernel is positive-definiteness.
+
+
+
+\begin{definition}[Positive semi-definite kernel]\label{def:psd_kernel}
+Let $\calX$ be a nonempty set.  A function $K\colon\calX\times\calX\to\R$ is called
+a \emph{positive semi-definite (PSD) kernel}  if for all
+$n\in\N$, all choices of points $x_1,\ldots,x_n\in\calX$, and all
+$\alpha_1,\ldots,\alpha_n\in\R$,
+\begin{equation}\label{eq:psd_condition}
+  \sum_{i=1}^n\sum_{j=1}^n \alpha_i\alpha_j K(x_i,x_j) \;\ge\; 0.
+\end{equation}
+Equivalently, the \emph{Gram matrix} $\gramK\in\R^{n\times n}$ defined by
+$(\gramK)_{ij} = K(x_i,x_j)$ for $i,j =1,\dots,n$ is positive semi-definite for all such choices.
+\end{definition}
+
+
+Condition \eqref{eq:psd_condition} is purely algebraic and requires no topological
+structure on $\calX$.  The set $\calX$ can be discrete, a manifold, a function space,
+or any abstract set.
+
+
+
+
+
+
+Reproducing Kernel Hilbert Spaces (RKHS) provide a convenient and rigorous functional analysis framework
+for kernel learning.
+
+\begin{definition}\label{def:rkhs}
+Let $\Hilb$ be a Hilbert space of real-valued functions on $\calX$ with inner product
+$\langle \cdot, \cdot \rangle_{\Hilb}$.  We say $\Hilb$ is a \emph{reproducing kernel Hilbert space}
+(RKHS) if there exists a function $K\colon\calX\times\calX\to\R$ such that:
+\begin{enumerate}
+\item For each $x\in\calX$, the function $K_x(\cdot) := K(x,\cdot)$ belongs to $\Hilb$;
+\item For all $f\in\Hilb$ and all $x\in\calX$,
+\begin{equation}\label{eq:reproducing}
+  f(x) = \langle f, K_x\rangle_{\Hilb} = \langle f, K(x,\cdot)\rangle_{\Hilb}.
+\end{equation}
+\end{enumerate}
+The function $K$ is called the \emph{reproducing kernel} of $\Hilb$.
+\end{definition}
+
+The following proposition (whose proof is left to the reader) summarizes basic properties of the reproducing kernel.
+
+\begin{proposition}\label{prop:rk_properties}
+Let $\Hilb$ be an RKHS with reproducing kernel $K$.  Then:
+\begin{enumerate}
+\item $K$ is symmetric: $K(x,x') = K(x',x)$ for all $x,x'\in\calX$.
+\item $K$ is positive semi-definite in the sense of Definition~\ref{def:psd_kernel}.
+\item For all $x,x'\in\calX$, $K(x,x') = \langle K_x, K_{x'} \rangle_{\Hilb}$.
+\item The reproducing kernel is unique.
+\end{enumerate}
+\end{proposition}
+
+A kernel $K$ can often be understood via an explicit {\em feature map} $\phi: \mathcal{X} \to \mathcal{F}$, where $\mathcal{F}$ is some (possibly high-dimensional) feature space, such that
+\begin{equation}\label{eq:kerneltrick}
+    K(x, x') = \langle \phi(x),\, \phi(x') \rangle_{\mathcal{F}}.
+\end{equation}
+This means the kernel computes the inner product between the feature representations of $x$ and $x'$, without needing to construct $\phi$ explicitly. This is the {\em kernel trick}: algorithms that depend only on inner products between inputs can be kernelized by replacing $\langle x, x' \rangle$ with $K(x, x')$, implicitly working in $\mathcal{F}$.
+
+As a simple example, consider $x \in \mathbb{R}^2$ and the polynomial kernel given by $K(x, x') = (x^\top x')^2$. Expanding this out reveals it equals $\langle \phi(x), \phi(x') \rangle$ for $\phi(x) = (x^2,\, (x')^2,\, \sqrt{2} x x')^\top$, a three-dimensional feature map computed via a scalar operation.
+
+\subsection{Mercer's Theorem}
+
+While the kernel trick allows us to compute similarities without knowing the coordinates of the data in the feature space, Mercer’s Theorem provides the explicit mathematical construction of those coordinates. It provides a constructive answer to the question {\em ``which functions $K$ are valid kernels, i.e., correspond to an inner product in some feature space?''} 
+
+
+
+
+\begin{theorem}[Mercer's Theorem]\label{th:mercer}
+Let $\mathcal{X} \subseteq \mathbb{R}^d$ be closed, 
+ let $\mu$ be a strictly positive Borel measure on ${\mathcal X}$, and let $K: \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ be a continuous, symmetric function. If $K$ is positive semi-definite, then there exist non-negative eigenvalues $\{\lambda_j\}_{j=1}^\infty$ and an orthonormal sequence of continuous eigenfunctions $\{\psi_j\}_{j=1}^\infty$ in $L^2(\mathcal{X})$ such that
+\begin{equation}
+    K(x, x') = \sum_{j=1}^{\infty} \lambda_j\, \psi_j(x)\, \psi_j(x'),
+\end{equation}
+where the series converges absolutely for each pair $(x,x') \in \mathcal{X} \times \mathcal{X}$
+and uniformly on every compact subset of $\mathcal{X} \times \mathcal{X}$.
+\end{theorem}
+
+\begin{proof}
+Define the linear operator $T_k: L^2(X, \mu) \to L^2(X, \mu)$ by
+$$(T_k f)(x) = \int_X K(x, t) f(t) d\mu(t).$$
+Because $K$ is continuous and symmetric, $T_k$ is a compact, self-adjoint operator. By the Spectral Theorem for compact self-adjoint operators, there exists an orthonormal basis of $L^2(X, \mu)$ consisting of eigenfunctions $\{\phi_j\}_{j=1}^\infty$ with corresponding eigenvalues $\lambda_j$.
+Due to positive definiteness, $\lambda_j \ge 0$.
+We order them such that $\lambda_1 \ge \lambda_2 \ge \dots \to 0$.
+The eigenfunctions corresponding to $\lambda_j > 0$ are continuous because $\phi_j(x) = \frac{1}{\lambda_j} \int_X K_j(x, t) \phi_j(t) d\mu(t)$.
+
+To establish pointwise convergence we 
+consider the truncated kernel expansion $K_n(x, t) = \sum_{j=1}^n \lambda_j \phi_j(x) \phi_j(t)$. We want to show that as $n \to \infty$, $K_n \to K$.
+Define the remainder kernel $R_n(x, t) := K(x, t) - \sum_{j=1}^n \lambda_j \phi_j(x) \phi_j(t)$.
+$R_n$ is also a continuous, symmetric, positive definite kernel. For any positive definite kernel, the diagonal elements must be non-negative, i.e.,
+$$R_n(x, x) = K(x, x) - \sum_{j=1}^n \lambda_j \phi_j(x)^2 \ge 0.$$
+This implies that for all $n$ we have
+$$\sum_{j=1}^n \lambda_j \phi_j(x)^2 \le K(x, x).$$
+Since the partial sums are monotonic and bounded, the series $\sum_{j=1}^\infty \lambda_j \phi_j(x)^2$ converges pointwise. By the Cauchy-Schwarz inequality
+\begin{equation}\label{eq:mercercauchyschwarz}
+\Big| \sum_{j=m}^n \lambda_j \phi_j(x) \phi_j(t) \Big| \le \sqrt{\sum_{j=m}^n \lambda_j \phi_j(x)^2} \sqrt{\sum_{j=m}^n \lambda_j \phi_j(t)^2}.
+\end{equation}
+This proves the absolute convergence of the series for each pair $(x, t)$.
+
+To prove uniform convergence on a compact subset $S \subset X$, we invoke Dini's Theorem.
+Let $g_n(x) = \sum_{j=1}^n \lambda_j \phi_j(x)^2$. We know $g_n(x)$ is a sequence of continuous functions (sums of squares of continuous eigenfunctions).
+$g_n(x)$ is monotonically increasing ($g_{n+1} \ge g_n$ since $\lambda_j \ge 0$).
+The limit $g(x) = \sum_{j=1}^\infty \lambda_j \phi_j(x)^2$ is equal to $K(x, x)$ (which is continuous).
+By Dini's Theorem, if a monotonic sequence of continuous functions converges pointwise to a continuous function on a compact set, the convergence is uniform. Thus, $\sum \lambda_j \phi_j(x)^2$ converges uniformly to $K(x, x)$ on $S$. Utilizing once more the bound~\eqref{eq:mercercauchyschwarz}, the uniform convergence of the diagonal terms implies the uniform convergence of the cross-terms $K(x, t)$.
+
+Finally, we must show the limit is indeed $K(x, t)$. To that end, we define $R(x, t) := K(x, t) - \sum_{j=1}^\infty \lambda_j \phi_j(x) \phi_j(t)$.
+Since $T_R$ is a positive operator with all eigenvalues equal to zero (as we subtracted the entire spectral decomposition), the spectral radius of $T_R$ is 0. For a self-adjoint compact operator, this implies $T_R = 0$. Since $R(x, t)$ is continuous and $\mu$ is strictly positive, $T_R = 0$ implies $R(x, t) = 0$ for all $(x, t)$, hence
+$$K(x, t) = \sum_{j=1}^{\infty} \lambda_j \phi_j(x) \phi_j(t),$$
+which completes the proof.
+
+\end{proof}
+
+The closely related but more general Moore-Aronszajn Theorem~\cite{aronszajn1950theory} states that 
+every positive definite kernel defines a unique RKHS (existence and structure). In comparison, Mercer's Theorem establishes under additional analytic assumptions, that the kernel admits an eigenfunction expansion which comes with an explicit feature map given by
+ $$\phi(x) = \bigl(\sqrt{\lambda_1}\psi_1(x),\,\sqrt{\lambda_2}\psi_2(x),\,\ldots\bigr).$$
+While this concrete construction of the feature map is useful for theoretical purposes, in practice we avoid computing it by using the kernel trick.
+
+\subsection{Bochner's Theorem}\label{s:bochner}
+
+While Mercer's Theorem provides a link between a PSD kernel and a feature map in $L_2$, {\em Bochner's Theorem} provides a powerful characterization of PSD kernels for the case when the kernel is {\em translation-invariant}, i.e., a kernel that can be expressed in the form $K(x, x') = \kappa(x - x')$ for some function $\kappa$.
+
+
+
+Consider a finite Borel measure $\mu$ of $\mathbb{R}^p$. That is, $\mu(\mathbb{R}^p) < \infty$ and $\mu(A) = \int_{A \subset \mathbb{R}^p} \,d\mu$. For example, if $\mu$ is absolutely continuous with respect to the Lebesgue measure $dx$ then $d\mu = f(x)\,dx$ where $f$ is the probability density function. The Fourier transform of $\mu$ is
+\begin{equation}
+\hat{\mu}(\xi) = \int_{\mathbb{R}^p} e^{-2\pi \imath \langle \xi, x \rangle}\,d\mu(x).
+\end{equation}
+Observe that
+\begin{equation}
+|\hat{\mu}(\xi)| \leq \mu(\mathbb{R}^p) < \infty.
+\end{equation}
+That is, $\hat{\mu}$ is bounded. Also, $\hat{\mu}$ is a continuous function. Moreover, for every $n=1,2,\ldots$ we can associate with $\hat{\mu}$ a PSD quadratic form:
+\begin{eqnarray}
+\sum_{i,j=1}^n \hat{\mu}(\xi_i-\xi_j) \alpha_i \bar{\alpha}_j &=& \sum_{i,j=1}^n \alpha_i \bar{\alpha}_j \int_{\mathbb{R}^p} e^{-2\pi \imath \langle \xi_i - \xi_j, x\rangle}\,d\mu(x) \\
+&=& \int_{\mathbb{R}^p} \left| \sum_{i=1}^n \alpha_i e^{-2\pi \imath \langle \xi_i, x \rangle }\right|^2 \,d\mu(x) \geq 0.
+\end{eqnarray}
+We conclude that $\hat{\mu}$ is bounded, continuous, and the matrix $(\hat{\mu}(\xi_i-\xi_j))_{i,j=1}^n$ is PSD for every $n=1,2,\ldots$ and for all $\xi_1,\ldots,\xi_n \in \mathbb{R}^p$.
+
+But the converse is also true: If $f$ is bounded, continuous, and the matrix $(f(x_i-x_j))_{i,j=1}^n$ is PSD for all choices of $n=1,2,\ldots$ and $x_1,\ldots,x_n\in \mathbb{R}^p$, then $f$ is the Fourier transform of a finite Borel measure.
+
+
+
+
+From the convolution theorem and Parseval's theorem we get
+\begin{equation}
+\langle \hat{K}  \hat{\alpha}, \hat{\alpha}  \rangle \geq 0.
+\end{equation}
+It follows that
+\begin{equation}
+\int_{\mathbb{R}^p} |\hat{\alpha}|^2(\xi) \hat{K}(\xi)\,d\xi \geq 0.
+\end{equation}
+Since we can choose $\alpha(x)$ (or $\hat{\alpha}(\xi)$), we must have $\hat{K}(\xi) \geq 0$. 
+
+We thus have proved  Bochner's theorem~\cite{bochner1932vorlesungen}:
+\begin{theorem}\label{th:bochner}
+A (complex-valued) function $K \in L^{\infty}(\mathbb{R}^p) \cap C(\mathbb{R}^p)$ is positive definite on $\mathbb{R}^p$
+if and only if it is the (inverse) Fourier transform of a finite non-negative
+Borel measure $\mu$ on $\mathbb{R}^p$, i.e.,
+\begin{equation}
+K(x) = \int_{\mathbb{R}^p} e^{2\pi \imath \langle \xi, x \rangle}\,d\mu(\xi).
+\end{equation}
+\end{theorem}
+
+\medskip
+When $K$ is normalized so that $K(0) = 1$, the measure $\mu(\xi)$ becomes a probability distribution over frequencies $\xi \in \mathbb{R}^d$. For the Gaussian kernel
+$$    K(x, x') = \exp\!\left(-\frac{\|x - x'\|^2}{2\eps^2}\right),
+$$
+the spectral measure $\mu(\xi)$ is a Gaussian distribution with variance $1/\eps^2$ (because the inverse Fourier transform of the Gaussian is also a Gaussian, see e.g.~\cite[Lemma 1.5.1]{Gro01}), which immediately confirms that the Gaussian kernel is PSD.
+
+This  has immediate consequences for diffusion maps. Let $x_1,x_2,\ldots, x_n \in \mathbb{R}^p$ and consider the $n\times n$ weight matrix $W$ with entries
+$
+W_{ij} = e^{-\frac{\|x_i - x_j \|^2}{2\epsilon^2}}$.
+Then $W$ is PSD for all values of $n$, $p$, and $\epsilon$. More generally,  Bochner's theorem implies that for positive kernels the eigenvalues of $W$ and the adjacency matrix $A$ are non-negative and we can use the diffusion map with any positive real $t>0$.
+
+\subsection{The Representer Theorem}
+
+The following theorem, known as {\em Representer Theorem}, is fundamental in kernel methods because it guarantees that the optimal solution to a regularized cost functional lives in a finite-dimensional subspace, regardless of how large the underlying Hilbert space is.
+
+
+\begin{theorem}\label{th:representer}
+Let $\mathbb{H}$ be an RKHS with reproducing kernel $K$. 
+Given a set of training data $\{(x_i, y_i)\}_{i=1}^n \subset \mathcal{X} \times \mathbb{R}$, consider a cost function of the form
+$$J(f) = L(f(x_1), \dots, f(x_n)) + \Psi(\|f\|_{\mathbb{H}}^2)$$
+where $L: \mathbb{R}^n \to \mathbb{R}$ is an arbitrary loss function and $\Psi: [0, \infty) \to \mathbb{R}$ is a strictly monotonically increasing regularization function.
+
+Then, any minimizer $f^* \in \mathbb{H}$ of $J(f)$ admits a representation of the form
+$$f^*(x) = \sum_{i=1}^n \alpha_i K(x, x_i)$$
+for some coefficients $\alpha_i \in \mathbb{R}$.
+\end{theorem}
+
+\begin{proof}
+Let $\mathbb{H}_S = \text{span}\{K(\cdot, x_1), \dots, K(\cdot, x_n)\}$ be the subspace of $\mathbb{H}$ spanned by the kernel functions at the training points. Any function $f \in \mathbb{H}$ can be decomposed into its projection onto $\mathbb{H}_S$ and an orthogonal component $f_\perp \in \mathbb{H}_S^\perp$:
+$$f = f_S + f_\perp, \quad \text{where } f_S = \sum_{i=1}^n \alpha_i K(\cdot, x_i).$$
+By the reproducing property, for any $j \in \{1, \dots, n\}$, the evaluation of $f$ at $x_j$ is
+$$f(x_j) = \langle f, K(\cdot, x_j) \rangle_{\mathbb{H}} = \langle f_S + f_\perp, K(\cdot, x_j) \rangle_{\mathbb{H}}.$$
+Since $f_\perp$ is orthogonal to the span of the kernels, $\langle f_\perp, K(\cdot, x_j) \rangle_{\mathbb{H}} = 0$, thus
+$$f(x_j) = \langle f_S, K(\cdot, x_j) \rangle_{\mathbb{H}} = f_S(x_j).$$
+This shows that the loss term $L$ depends only on $f_S$. Now consider the regularization term. By the Pythagorean theorem we have
+$$\|f\|_{\mathbb{H}}^2 = \|f_S + f_\perp\|_{\mathbb{H}}^2 = \|f_S\|_{\mathbb{H}}^2 + \|f_\perp\|_{\mathbb{H}}^2.$$
+Since $\Psi$ is strictly monotonically increasing, $\|f_\perp\|_{\mathbb{H}}^2$ must be zero for $f$ to minimize $J(f)$. If $\|f_\perp\|_{\mathbb{H}} > 0$, then $f_S$ would achieve a strictly lower cost than $f$. Thus, the minimizer $f^*$ must lie entirely in $\mathbb{H}_S$. 
+
+\end{proof}
+
+The representer theorem acts as a kind of dimensionality reduction principle for optimization: although learning occurs in a potentially infinite-dimensional RKHS, the optimal solution lies in the finite-dimensional span of kernel evaluations at the training data. Consequently, the optimization problem depends on the number of training observations rather than the dimensionality of the feature space.
+
+
+
+\subsection{Applications of kernel learning}
+
+\noindent
+\textbf{Kernel ridge regression:} 
+The kernelized version of ridge regression replaces  $\min \|X\theta - y\|^2 + \lambda\|\theta\|^2$ with a minimization over functions $f$ in a RKHS $\mathbb{H}$, i.e., we consider
+\begin{equation}
+    \min_{f \in \mathbb{H}} \,\frac{1}{m}\sum_{i=1}^m (f(x_i) - y_i)^2 + \lambda \|f\|^2_{\mathbb{H}}.
+\end{equation}
+By Theorem~\ref{th:representer}, the solution takes the form $f^*(x) = \sum_{i=1}^m \alpha_i K(x_i, x)$, and substituting this into the objective reduces the problem to
+\begin{equation}
+    \min_{\alpha \in \mathbb{R}^m} \,\frac{1}{m}\|K\ \alpha - y\|^2 + \lambda\, \alpha^\top K \alpha,
+\end{equation}
+where $G_K$ is the $m \times m$ Gram matrix with entries $(G_K)_{ij} = K(x_i, x_j)$. Setting the gradient to zero yields the closed-form solution:
+\begin{equation}
+    \alpha = (K + \lambda m I)^{-1}y.
+\end{equation}
+Predictions at a new point $x$ are then given by $f^*(x) = K(x)^\top \alpha$, where $K(x) = (K(x_1, x), \dots, K(x_m, x))^\top$. The key insight is that the algorithm never requires explicit access to the feature map $\phi(x)$; all computations are performed through the kernel matrix $G_K$.
+
+
+
+
+\medskip
+\noindent
+\textbf{Kernel regression:}
+While kernel ridge regression is an optimization-based approach, kernel regression is a localized density estimation approach. In particular, it is a non-parametric regression method that estimates the relationship between an input variable $x$ and an output $y$ by taking a weighted average of observed responses, where the weights depend on the similarity between inputs measured by a kernel function. 
+
+Suppose we observe data $(x_1,y_1),\dots,(x_n,y_n)$, to predict the value of $y$ at a new point $x$, kernel regression assigns larger weights to observations whose inputs are close to $x$.
+The resulting prediction is a weighted average of the form
+$$
+\hat f(x) = \frac{\sum_{i=1}^{n} K(x,x_i) y_i}
+{\sum_{i=1}^{n} K(x,x_i)}.
+$$
+This formula is known as the {\em Nadaraya–Watson kernel regression estimator}~\cite{nadaraya1964estimating,watson1964smooth}.
+
+See~\cite{gilles2025cryo} for an application of kernel regression in cryogenic electron microscopy (cryo-EM).
+
+\medskip
+\noindent
+\textbf{Kernel PCA:}
+Standard PCA finds directions of maximum variance by computing the eigenvectors of the sample covariance matrix. Kernel PCA~\cite{scholkopf1998nonlinear} extends this to nonlinear settings by implicitly performing PCA in the feature space $\mathcal{F}$. 
+By exploiting the kernel trick, kernel PCA does not need to set up a feature map explicitly.
+The (centered) covariance operator in $\mathcal{F}$ is:
+\begin{equation}
+    C = \frac{1}{m}\sum_{i=1}^m \langle \phi(x_i), \phi(x_i)\rangle,
+\end{equation}
+and one seeks eigenvectors $v \in \mathcal{F}$ satisfying $Cv = \mu v$. Since any such eigenvector must lie in the span of $\{\phi(x_i)\}$, we can write $v = \sum_{i=1}^m \alpha_i \phi(x_i)$, and the eigenvalue problem reduces to:
+\begin{equation}
+    \tilde{G}\alpha = m\mu\, \alpha,
+\end{equation}
+where $\tilde{G}$ is the {\em centered} Gram matrix
+\begin{equation}
+    \tilde{G} = G_K - \mathbf{1}_m G_K - G_K\mathbf{1}_m + \mathbf{1}_m G_K \mathbf{1}_m,
+\end{equation}
+with $\mathbf{1}_m = \frac{1}{m}\mathbf{1}\mathbf{1}^\top$ the $m\times m$ matrix with all entries $1/m$. The projection of a new point $x$ onto the $r$-th kernel principal component is:
+\begin{equation}
+    z_r(x) = \sum_{i=1}^m \alpha_i^{(r)}\, K(x_i, x),
+\end{equation}
+where $\alpha^{(r)}$ is the $r$-th eigenvector of $\tilde{G}$. Kernel PCA is particularly effective for dimensionality reduction and feature extraction when the data lies on a nonlinear manifold, as the feature space $\mathcal{F}$ may ``unfold'' structure that is invisible to linear PCA in the input space.
+
+\smallskip
+Both kernel PCA and diffusion maps are spectral manifold learning techniques that embed high-dimensional data into a lower-dimensional space by solving an eigenvalue problem derived from a kernel matrix $K(x,x')$. But kernel PCA operates on a centered version of $K$. It seeks the directions of maximum variance in a high-dimensional feature space, hence it is concerned with certain geometric projections in Hilbert space. It is also highly sensitive to data density. In contrast, diffusion maps operate on a normalized version of $K$, so it can be made more invariant to density via renormalization. It views $K$ as a transition matrix for a Markov chain on the data and emphasizes intrinsic geometry and connectivity, rather than variance in feature space.
+
+
+\medskip
+\noindent
+\textbf{Random Fourier Features:} 
+Assume we are given a  dataset $\{x_1, \dots , x_n\} \in \R^d$.
+Since the measure $\mu(\xi)$ arising in Bochner's Theorem is a probability distribution (for a properly normalized kernel $K$), we can write
+\begin{equation*}
+    K(x, x') = \mathbb{E}_{\xi \sim \mu}\!\left[e^{2\pi \imath \xi^\top(x - x')}\right]
+    = \mathbb{E}_{\omega \sim \mu}\!\left[\cos\!\left(\omega^\top(x - x')\right)\right],
+\end{equation*}
+where the second equality holds when $\mu$ is symmetric. This means we can approximate $K(x, x')$ by drawing random frequencies $\xi_1, \dots, \xi_r \sim \mu$ with $r \ll n$ and constructing the $r$-dimensional random Fourier feature map
+\begin{equation*}
+    \phi(x) = \sqrt{\frac{2}{d}}\Bigl[\cos(\xi_1^\top x + b_1),\; \dots,\; \cos(\xi_r^\top x + b_r)\Bigr]^\top,
+\end{equation*}
+where $b_i \sim \text{Uniform}[0, 2\pi]$, so that $K(x, x') \approx \langle \phi(x), \phi(x') \rangle$. This approximation (due to Rahimi \& Recht~\cite{rahimi2007random}) allows kernel methods to scale to large datasets by replacing expensive $\mathcal{O}(n^2)$ kernel matrix computations with cheaper inner products in a $r$-dimensional feature space.
+
+The Random Fourier Features method can be used for instance to create a low-rank approximation of the kernel matrix for kernel PCA. This technique makes kernel PCA scalable to large datasets. Instead of working with the kernel matrix $K \in \R^{n \times n}$, we work 
+with the \emph{explicit feature matrix} $\Phi \in \R^{n \times D}$:
+\begin{equation}\label{eq:feature_matrix}
+  \Phi = \begin{bmatrix}
+    \phi(x_1)^\top\\
+    \phi(x_2)^\top\\
+    \vdots\\
+    \phi(x_n)^\top
+  \end{bmatrix} \in \R^{n \times D}
+\end{equation}
+Then one can show that with a certain probability $K \approx \Phi\Phi^\top$, see~\cite{rahimi2007random}. This is a form of matrix sketching, see also Chapter~\ref{s:sketching}.
+
+
+
+
+
+\smallskip
+\noindent
+\textbf{Kernel SVM:}
+Another natural use case of the kernel approach arises in connection with Support Vector Machines, a classification method which will be discussed in detail (together with its kernel variant) in Chapter~\ref{s:svm}.
+
+
+\section{Semi-supervised learning}\label{s:semisupervised}
+
+Classification is a central task in machine learning which we will explore in detail in Chapters~\ref{c:classification} and~\ref{c:deeplearning}. In this section, we discuss an application of graph Laplacians and diffusion maps to classification in the {\em semi-supervised} setting.
+
+In a supervised learning setting we are given many labeled examples and want to use them to infer the label of a new, unlabeled example. For simplicity, let us focus on the case of two labels, $\{-1,+1\}$. 
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.22\textwidth]{figures/Chapter5-SSL_justSL_new}
+\caption{Given a few labeled points, the task is to label an unlabeled point.}
+\label{figure:2:SupervisedLearning}
+\end{center}
+\end{figure}
+
+
+Let us consider the task of labeling the point ``?'' in Figure~\ref{figure:2:SupervisedLearning} given the labeled points. The natural label to give to the unlabeled point would be $1$.
+
+However, if we are given not just one unlabeled point, but many, as in Figure~\ref{figure:2:SemiSupervisedLearning}; then it starts being apparent that $-1$ is a more reasonable guess.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\textwidth]{figures/Chapter5-SSL_notjustSL_new}
+\caption{In this example we are given many unlabeled points, the unlabeled points help us learn the geometry of the data.}
+\label{figure:2:SemiSupervisedLearning}
+\end{center}
+\end{figure}
+
+Intuitively, the unlabeled data points allowed us to better learn the intrinsic geometry of the dataset. That is the idea behind {\em Semi-Supervised Learning} (SSL). While supervised learning relies exclusively on labeled examples, semi-supervised learning combines labeled and unlabeled data to leverage the underlying structure of the input space when labeled data are limited.
+
+So, let us explore how we can exploit the structure of the input data to improve classification when labels are scarce.
+Just as above, we will use the data points to construct (via a kernel $K_\eps$) a graph $G=(V,E,W)$ where nodes correspond to points. More precisely, let $l$ denote the number of labeled points with labels $f_1,\dots,f_l$, and $u$ the number of unlabeled points (with $n=l+u$), the first $l$ nodes $v_1,\dots,v_l$ correspond to labeled points and the rest $v_{l+1},\dots,v_n$ are unlabaled. We want to find a function $f:V\to \{-1,1\}$ that agrees on labeled points: $f(i)=f_i$ for $i=1,\dots,l$ and that is ``as smooth as possible'' on the graph. A way to pose this is the following \cite{zhu2003semi} 
+\[
+ \min_{f:V\to \{-1,1\}:\, f(i)=f_i\, i=1,\dots,l} \sum_{i<j}w_{ij}\left( f(i) - f(j) \right)^2.
+\]
+Instead of restricting ourselves to giving $\{-1,1\}$ we allow ourselves to give real valued labels, with the intuition that we can ``round'' later by, e.g., assigning the sign of $f(i)$ to node $i$.
+
+We thus are interested in solving
+\[
+ \min_{f:V\to \RR:\, f(i)=f_i\, i=1,\dots,l} \sum_{i<j}w_{ij}\left( f(i) - f(j) \right)^2.
+\]
+
+If we denote by $f$ the vector (in $\RR^n$ with the function values) then, recalling Proposition~\ref{prop:cut_Laplacian}, we are can rewrite the problem as
+\begin{eqnarray*}
+ \sum_{i<j}w_{ij}\left( f(i) - f(j) \right)^2 
+= f^TL_Gf.
+\end{eqnarray*}
+
+
+
+\begin{remark}
+ Consider an analogous example on the real line, where one would want to minimize
+ \[
+  \int f'(x)^2 dx.
+ \]
+Integrating by parts
+\[
+ \int f'(x)^2 dx = \mathrm{Boundary\ Terms} - \int f(x)f''(x)dx.
+\]
+Analogously, in $\RR^d$:
+\[
+ \int \left\|\nabla f(x)\right\|^2 dx =  \int \sum_{k=1}^d \left( \frac{\partial f}{\partial x_k}(x) \right)^2 dx = \mathrm{B.\ T.} - \int f(x) \sum_{k=1}^d \frac{\partial^2 f}{\partial x_k^2}(x)dx =
+ \]
+ $\displaystyle{= \mathrm{B.\ T.} - \int f(x) \Delta f(x) dx}$,
+
+which helps motivate the use of the term graph Laplacian for $L_G$.
+\end{remark}
+
+Let us consider our problem
+\[
+ \min_{f:V\to \RR:\, f(i)=f_i\, i=1,\dots,l} f^TL_G f.
+\]
+We can write
+\[
+ D = \left[ \begin{array}{cc} D_L & 0  \\  0  &  D_U  \end{array}  \right], \quad W = \left[ \begin{array}{cc} W_{LL} & W_{LU}  \\  W_{UL}  &  W_{UU}  \end{array}  \right], \quad L_G = \left[ \begin{array}{cc} D_L - W_{LL} & -W_{LU}  \\  -W_{UL}  & D_U - W_{UU}  \end{array}  \right], 
+ \]
+and $f =  \left[ \begin{array}{c} f_L   \\  f_U  \end{array}  \right]$, where $L$ and $U$ correspond to the set of indices of  labeled and unlabeled nodes, respectively (not to be confused with the graph Laplacian $L_G$). 
+ 
+ 
+Then we want to find (recall that $W_{UL}=W_{LU}^T$)
+\[
+\min_{f_U\in \RR^{u}} f_L^T\left[ D_L - W_{LL}\right] f_L - 2f_U^TW_{UL}f_L + f_U^T\left[ D_U - W_{UU}\right] f_U.
+\]
+By first-order optimality conditions\footnote{Readers who want to refresh their memory about first-order optimality conditions may take a peak at Chapter~\ref{s:optimality}.}, it is easy to see that the optimal satisfies
+\[
+ \left( D_U - W_{UU}\right) f_U = W_{UL}f_L.
+\]
+If $D_U-W_{UU}$ is invertible\footnote{It is not difficult to see that unless the problem is in some form degenerate, such as the unlabeled part of the graph being disconnected from the labeled one, then this matrix will indeed be invertible.}, then
+\[
+ f_U^\ast = \left( D_U - W_{UU}\right)^{-1}W_{UL}f_L.
+\]
+
+\begin{remark}
+ The function $f$ we constructed is called a harmonic extension \cite{zhu2003semi}. Indeed, it shares properties with harmonic functions in Euclidean space such as the mean value property and maximum principles; if $v_i$ is an unlabeled point then
+ \[
+  f(i) = \left[ D_U^{-1} \left( W_{UL}f_l + W_{UU}f_u \right) \right]_i = \frac1{\deg(i)}\sum_{j=1}^n w_{ij}f(j),
+ \]
+which immediately implies that the maximum and minimum value of $f$ needs to be attained at a labeled point.
+\end{remark}
+
+
+\subsubsection{An interesting experiment and the Sobolev Embedding Theorem}
+
+Let us try a simple experiment. Let us say we have a grid on $[-1,1]^d$ dimensions (with say $m^d$ points for some large $m$) and we label the center as $+1$ and every node that is at distance larger or equal to $1$ to the center, as $-1$. We are interested in understanding how the above algorithm will label the remaining points, hoping that it will assign small numbers to points far away from the center (and close to the boundary of the labeled points) and large numbers to points close to the center.
+
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_1d_labels.png}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_1d_learned.png}
+\caption{The $d=1$ example of the use of this method to the example described above, the value of the nodes is given by color coding. For $d=1$ it appears to smoothly interpolate between the labeled points.}
+\label{figure:2:SSL_1d_labels}
+\end{center}
+\end{figure}
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_2d_labels.png}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_2d_learned.png}
+\caption{The $d=2$ example of the use of this method to the example described above, the value of the nodes is given by color coding. For $d=2$ it appears to smoothly interpolate between the labeled points.}
+\label{figure:2:SSL_2d_labels}
+\end{center}
+\end{figure}
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_3d_labels.png}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_3d_learned.png}
+\caption{The $d=3$ example of the use of this method to the example described above, the value of the nodes is given by color coding. For $d=3$ the solution appears to only learn the label $-1$.}
+\label{figure:2:SSL_3d_labels}
+\end{center}
+\end{figure}
+
+See the results for $d=1$ in Figure~\ref{figure:2:SSL_1d_labels}, $d=2$ in Figure~\ref{figure:2:SSL_2d_labels}, and $d=3$ in Figure~\ref{figure:2:SSL_3d_labels}. While for $d\leq 2$ it appears to be smoothly interpolating between the labels, for $d=3$ it seems that the method simply learns essentially $-1$ on all points, thus not being very meaningful. Let us turn to $\RR^d$ for intuition:
+
+Let us say that we want to find a function in $\RR^d$ that takes the value $1$ at zero and $-1$ at the unit sphere, that minimizes $\int_{B_{0}(1)}\|\nabla f(x)\|^2 dx$. Let us consider the following function on $B_0(1)$ (the ball centered at $0$ with unit radius)
+\[
+ f_\eps(x) = \left\{  \begin{array}{cc}   1-2\frac{|x|}{\eps} & \text{if} |x|\leq \eps \\  -1 & \text{otherwise.}   \end{array} \right.
+\]
+A quick calculation suggest that
+\[
+ \int_{B_{0}(1)}\|\nabla f_\eps(x)\|^2 dx = \int_{B_{0}(\eps)}\frac1{\eps^2}dx = \vol(B_0(\eps)) \frac1{\eps^2}dx \approx \eps^{d-2},
+\]
+meaning that, if $d>2$, the performance of this function is improving as $\eps \to 0$, explaining the results in Figure~\ref{figure:2:SSL_3d_labels}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_3d_labels.png}
+\includegraphics[width=0.45\textwidth]{figures/Chapter5-SSL_3d_learned_m2.png}
+\caption{The $d=3$ example of the use of this method with the extra regularization $f^TL^2f$ to the example described above, the value of the nodes is given by color coding. The extra regularization seems to fix the issue of discontinuities.}
+\label{figure:2:SSL_3d_labelsm2}
+\end{center}
+\end{figure}
+
+One way of thinking about what is going on is through the Sobolev Embedding Theorem. $H^m\left( \RR^d\right)$ is the space of function whose derivatives up to order $m$ are square-integrable in $\RR^d$, Sobolev Embedding Theorem says that if $m > \frac{d}2$ then, if $f\in H^m\left( \RR^d\right)$ then $f$ must be continuous and bounded (i.e., $f \in C_0(\RR^d)$), which would rule out the behavior observed in Figure~\ref{figure:2:SSL_3d_labels}. It also suggests that if we are able to control also second derivatives of $f$ then this phenomenon should disappear (since $2>\frac32$). While we will not describe it here in detail, there is, in fact, a way of doing this by minimizing not $f^TLf$ but $f^TL^2f$ instead, Figure~\ref{figure:2:SSL_3d_labelsm2} shows the outcome of the same experiment with the $f^TLf$ replaced by $f^TL^2f$ and confirms our intuition that the discontinuity issue should disappear (see, e.g.,~\cite{Nadler_SSL_sobolev_09} for more on this phenomenon).
+
+
+
+\section{A brief primer on reversible Markov chains}\label{sec:MarkovChains}
+
+With the material already described in this chapter one is able to very easily describe the basics of the theory of reversible Markov chains, so we will take the opportunity to do this (while pointing the interested reader to~\cite{levinperesmarkovchains2017} for a thorough treatment). We will focus here on Markov chains on finite state spaces\footnote{The theory relatively easily extends to discrete-step Markov chains on infinite state spaces, but also (with more effort) to continuous-time Markov processes, see Remark~\ref{remark:infiniteMarkovChains}.}. 
+
+A Markov chain on $N$ states is a random walk on the state space, identified with $[N]$, whose transition probabilities depend only on the current state and not on the past (the so-called \emph{Markovian property}). Let us describe the transition probabilities by
+\begin{equation}\label{eq:MarkovChainTransitionMatrix}
+    M_{ij} = \PP\left( X(t+1)=j | X(t) = i\right).
+\end{equation}
+
+Let $\pi\in[0,1]^{N}$ (with $\pi^\top\1=1$) be a stationary measure of the Markov chain, meaning that $\pi^\top M = \pi^\top$.\footnote{An argument analogous to Proposition~\ref{prop:columnstochastichaseig1}, together with the Peron-Frobenius can show the existence of a stationary measure.} A Markov chain is said to be \emph{irreducible} if there is no proper subset of states where the probability mass can be fully trapped, in other words: A Markov chain is irreducible if for all $i,j\in[N]$, $\exists_{t>0}$ such that $\PP\left( X(t)=j | X(0) = i\right)>0$. One can show that irreducible Markov chains have unique stationary measures (and the stationary measure needs to be strictly positive).\footnote{There are a few different proofs of this fact, it also follows from Peron-Frobenius. Note that irreducibility alone does not imply that the Markov chain needs to converge to the stationary measure, for that aperiodicity is needed~\cite{levinperesmarkovchains2017}.}
+
+In the rest of this section we will focus on Markov chains with a unique stationary $\pi$ that furthermore satisfies $\pi>0$ (we will identify the Markov chain with the transition matrix $M$ given in~\eqref{eq:MarkovChainTransitionMatrix}). Since $\pi$ is a stationary measure of $M$ we must have that, for each state $i$, the probability inflow at the: $\sum_{j\in[N]}\pi_jM_{ji}$ is the same as the probability outflow: $\sum_{j\in[N]}\pi_iM_{ij}$. Note that this is indeed equivalent to stationarity as $\sum_{j\in[N]}\pi_jM_{ji}=\left(\pi^\top M\right)_i$ and $\sum_{j\in[N]}\pi_iM_{ij} = \pi_i\sum_{j\in[N]}M_{ij}=\pi_i$. A natural stronger condition is to request that the inflow and outflow are the same per edge, not just total per state: for $\pi>0$ the stationary measure and for all $i,j\in[N]$,
+\begin{equation}\label{eq:reversibleMC}
+ \pi_jM_{ji} = \pi_i M_{ij}.
+\end{equation}
+Condition~\eqref{eq:reversibleMC} is known as the detailed balance condition. Markov chains satisfying detailed balance~\eqref{eq:reversibleMC} are called reversible Markov chains, they form a very important class of Markov chains. A reversible Markov chain can be thought of as a Markov chain that, at stationarity (or equilibrium), has the same dynamics when viewed running forward or backwards in time.
+
+Reversibility (condition~\eqref{eq:reversibleMC}) can be viewed as $M$ being self-adjoint in the inner product $\langle \cdot, \cdot \rangle_\pi$ (given by $\langle x, y \rangle_\pi = \sum_{i=1}^N \pi_i x_i y_i$). Namely 
+$$\langle x, My \rangle_\pi = \sum_{i=1}^N\sum_{j=1}^N \pi_i x_i M_{ij}y_j = \sum_{i=1}^N\sum_{j=1}^N \pi_j x_i M_{ji}y_j = \langle M^\top x, y \rangle_\pi.$$
+
+Given $M$ a reversible Markov chain with a stationary measure $\pi>0$, let us define 
+\begin{equation}\label{eq:WisdiagpiM}
+    W = \diag(\pi)M,
+\end{equation}
+where $\diag(\pi)$ is the diagonal matrix with diagonal entries given by $\pi$. Reversibility is equivalent to $W$ being a symmetric matrix, since $W\geq 0$ it can be viewed as the weight matrix of a graph on $N$ nodes. This means that any reversible Markov chain with a strictly positive stationary measure can be viewed as the diffusion map from some weighted graph $G=([N],E,W)$ and thus the theory developed in this chapter (including connections with spectral clustering and Cheeger's Inequality) can be directly used to understand reversible Markov chains.
+
+
+A very important concept in the study of Markov Chains is that of mixing time: how many iterations of the Markov Chain are needed, when starting from an initial distribution $\mu_0$, to reach a distribution that is at most $\eps$ away from $\pi$ in Total Variation (TV) distance. The TV distance between two probability distributions $p$ and $q$ (defined on the same probability space) is given by $\sup_E\|p(E)-q(E)\|$ where the supremum is taken over all measurable sets in the probability space. Since in our case the distributions are finite (they are distributions over [N]) we have
+\[
+\|\mu-\nu\|_{TV} =\frac12\sum_{i\in [N]}\left| \mu_i - \nu_i \right| = \frac12\|\mu-\nu\|_{1},
+\]
+where $\mu_i$ and $\nu_i$ are the probabilty of $i$ under, respectively, $\mu$ and $\nu$, and $\|\cdot\|_1$ denotes the $\ell_1$-norm in $\RR^N$.
+
+\begin{definition}[Mixing time]
+Given a Markov Chain with transition matrix $M\in\RR^{N\times N}$ and unique stationary measure $\pi\in\RR^N$ and $\eps>0$, we define the mixing time from a starting distribution $\mu^0$ as
+\[
+T_{mix}(M,\mu_0,\eps) \defeq \inf\left\{t\geq 0:\,\|\mu_0^\top M^t - \pi\|_{TV}\leq \eps\right\}.
+\]
+The worst-case mixing time is given by the mixing time when the Markov Chain is started from the worst state
+\[
+T_{mix}(M,\eps) \defeq \sup_{i\in[N]} T_{mix}(M,\delta_i,\eps),
+\]
+where $\delta_i$ is the delta distribution at state $i$; when viewed as a vector $\delta_i=e_i$.
+\end{definition}
+
+A core idea in the study of Markov Chains is to bound mixing times via functional inequalities that involve the spectrum of the transition matrix. A central object in this context is the {\em Dirichlet Form} which measures how a function varies under the transitions of the Markov Chain: given a function $f:[N]\to\RR$ (here viewed as a vector $f\in\RR^N$) the Dirichlet Form of $M$ is given by
+\begin{equation}
+\mathcal{E}_M(f) \defeq \frac12 \sum_{i,j=1}^N \pi_i f_i (I-M)_{ij}f_j.     
+\end{equation}
+The Markov Chain is said to satisfy a {\em Poincar\'{e} inequality} with constant $C_M$ if, for all $f\in\RR^{N}$,
+\begin{equation}\label{eq:poincare-for-MC}
+    \Var_{\pi}(f) \leq C_M \mathcal{E}_M(f),
+\end{equation}
+where $\Var_{\pi}(f)$ is the variance of $f$ under the measure $\pi$. In other words: $ \Var_{\pi}(f) = \sum_{i=1}^n \pi_i\left( f_i - \pi^\top f \right)^2$. Note that $\pi^\top f=\EE_\pi f$ corresponds to the mean of $f$ under the distribution $\pi$.
+
+The best constant in \eqref{eq:poincare-for-MC} is known as the {\em spectral gap} of the Markov Chain:
+\begin{equation}\label{eq:Gap-for-MC}
+    \mathrm{gap}_M \defeq \inf_{\substack{f\in\RR^N \\ \Var_{\pi}(f)\neq 0  }}\frac{\mathcal{E}_M(f)}{\Var_{\pi}(f)}.
+\end{equation}
+
+Note that we have
+\begin{equation}\label{eq:DirichletAndLaplacian}
+    \mathcal{E}_M(f) = \frac12  f^\top \diag(\pi) (I-M) f = \frac12  f^\top (D_W-W) f = \frac12  f^\top L_W f,
+\end{equation}
+where $W$ is the weight matrix of a graph, as in~\eqref{eq:WisdiagpiM}, and $D_W=\diag(\pi)$ and $L_W=D_W-W$ are the associated degree and graph Laplacian matrices, respectively. Thus, $\Var_{\pi}(f)=0\Rightarrow \mathcal{E}_M(f)=0$ and $\mathrm{gap}_M$ in~\eqref{eq:Gap-for-MC} indeed corresponds to the best Poincar\'e constant in~\eqref{eq:poincare-for-MC}. Similarly, noting that $\pi^\top f = \1^\top D_W f$,
+\begin{eqnarray}
+    \Var_\pi(f) & = &  \sum_{i=1}^n \pi_i\left( f_i - \pi^\top f \right)^2 = \EE_\pi f^2 - \left( \EE_\pi f \right)^2  \nonumber\\
+    & = & f^\top D_W f - \left(\1^\top D_W f\right)^2. \label{eq:VarAndDW} 
+\end{eqnarray}
+
+Recall that, by construction $\tr D_W = \sum_{i=1}^N \pi_i = 1$ and that we assume in this section that $\pi_i>0$ for all $i\in[N]$.
+
+Recall from Chapter~\ref{c:graphs} that the normalized graph Laplacian is given by $\LLL_W = I - D_W^{-\frac12} W  D_W^{-\frac12}$ and its second smallest eigenvalue is given (as we saw in~\eqref{eq:3:Ncut:relaxed} and~\eqref{eq:3:Ncut:relaxed_LLL}) by
+ $$\lambda_2(\LLL_W) = \inf_{\substack{y\in\RR^N\setminus\{0\} \\ \1^\top D_W y = 0}}   \frac{y^\top L_W y}{y^\top D_W y}.$$
+
+Note that adding a multiple of $\1$ to $f\in\RR^N$ does not affect either $\mathcal{E}_M(f)$ or $\Var_\pi(f)$ (see~\eqref{eq:DirichletAndLaplacian}). This means we can write
+\[
+\mathrm{gap}_M = \inf_{\substack{f\in\RR^N\setminus \{0\}\\ \1^\top D_W f=0  }}\frac{\mathcal{E}_M(f)}{\Var_{\pi}(f)} = \inf_{\substack{f\in\RR^N\setminus \{0\}\\ \1^\top D_W f=0  }}\frac{f^\top L_W f}{f^\top D_W f} = \lambda_2(\LLL_W) = 1-\lambda_2(M),
+\]
+where $\lambda_2(M)$ is the second largest eigenvalue of $M$. The second inequality used~\eqref{eq:DirichletAndLaplacian} and~\eqref{eq:VarAndDW}. The fourth inequality follows from the fact that $M=\diag(\pi)^{-1}W$ (recall~\eqref{eq:WisdiagpiM}) is similar to $\diag(\pi)^{-\frac12}W\diag(\pi)^{-\frac12}$ and $\LLL_W = I - \diag(\pi)^{-\frac12}W\diag(\pi)^{-\frac12}$.
+
+
+
+
+
+Similarly to the situation in Remark~\ref{remark:lazyDMaps} it is simpler to focus on lazy walks. We say a Markov Chain $M$ is lazy if $M_{ii}\geq \frac12$ for all $i\in[N]$ (this ensures that all eigenvalues of $M$ are non-negative). Given a transition matrix $M$ we can consider a lazy version of it by taking $M_{\text{lazy}}=\frac12M+\frac12I$. This does not affect reversibility and reduces the spectral gap by half.
+
+We now show a central result in this area: a control on the spectral gap (or, equivalently on $\lambda_2(\LLL_W)$) provides a bound on the mixing time of a Markov Chain.
+
+\begin{theorem}[Spectrum and mixing, see Theorem 12.4 in~\cite{levinperesmarkovchains2017}]\label{thm:spectralgapmixingtime}
+ Let $M$ be a reversible Markov Chain with unique stationary measure $\pi$ (satisfying $\pi>0$). Let $\mathrm{gap}_M$ denote the spectral gap of $M$ (meaning that $M$ satisfies a Poincar\'e inequality with constant $\mathrm{gap}_M$). Let $M_{\text{lazy}}=\frac12+\frac12M$ be the lazy version of $M$. We have:
+ \[
+T_{mix}(M_{\text{lazy}},\eps) \leq \frac2{\mathrm{gap}_M}
+\left(
+\log\left(\frac1{\pi_{\min}}\right)+\log\left(\frac1{\eps}\right)
+\right).
+\]
+If $M$ itself is a lazy Markov Chain then
+ \[
+T_{mix}(M,\eps) \leq \frac1{\mathrm{gap}_M}
+\left(
+\log\left(\frac1{\pi_{\min}}\right)+\log\left(\frac1{\eps}\right)
+\right).
+\]
+\end{theorem}
+
+
+
+
+
+\begin{proof}
+Let $\varphi_1,\dots,\varphi_N$ be the eigenvectors of $M$ built in~\eqref{eq:MisPhiLambdaPsiT} (associated with eigenvalues $1=\lambda_1(M)>\cdots\geq\lambda_N(M)$). Recall that $\varphi_1=\1$ and that $\varphi_k^\top D_W\varphi_\ell=\delta_{k\ell}$ (in other words, they are orthonormal in the inner product $\langle\cdot,\cdot\rangle_\pi$). We can write (see~\eqref{eq:MisPhiLambdaPsiT}) $M = \Phi\Lambda\Psi^\top$ where $\Phi=[\varphi_1,\dots,\varphi_N]$, $\Lambda$ is a diagonal matrix with entries $\Lambda_ii= \lambda_i(M)$, and $\Psi = D_W\Phi$. Furthermore, for $t>0$ an integer, $M^t = \Phi\Lambda^t\Psi^\top=\sum_{k=1}^N\lambda_k^t(M)\varphi_k (D_W\varphi_k)^\top$ (see~\eqref{eq:Masrank1withphiandpsi} and recall that $D_W=\diag(\pi)$). 
+Given a starting state $i\in[N]$ and respective starting measure $\delta_i$ we have
+\begin{eqnarray*}
+\delta_i^\top M^t &=& \delta_i^\top\sum_{k=1}^N\lambda_k^t(M)\varphi_k D_W\varphi_k^\top =  \delta_i^\top\left( \1\1^\top D_W + \sum_{k=2}^N\lambda_k^t(M)\varphi_k \varphi_k^\top D_W\right) \\
+    &=& \pi^\top + \sum_{k=2}^N\lambda_k^t(M)\varphi_k(i) \varphi_k^\top D_W,
+\end{eqnarray*}
+where $\varphi_k(i)$ denotes the $i$-th entry of $\varphi_k$.
+
+Thus, for every $j\in[N]$,
+\begin{eqnarray}
+    \left| \frac{\left(\delta_i^\top M^t\right)_j}{\pi_j} - 1 \right| & = & \left| \sum_{k=2}^N\lambda_k^t(M)\varphi_k(i) \varphi_k(j) \right| \leq \lambda_\ast^t   \sum_{k=2}^N\left|\varphi_k(i) \varphi_k(j) \right| \nonumber\\
+    &\leq & \lambda_\ast^t \left( \sum_{k=2}^N  \varphi_k(i)^2\right)^{\frac12}
+    \left( \sum_{k=2}^N  \varphi_k(j)^2\right)^{\frac12}, \label{eq:MCequation2}
+\end{eqnarray}
+where $\lambda_\ast = \max\left\{\lambda_2(M),|\lambda_n(M)|\right\}$ and the second inequality is an application of Cauchy-Schwarz.
+
+Since $D_W^{\frac12}\Phi$ is an orthogonal matrix, it holds that
+\(
+I = D_W^{\frac12}\Phi\left(D_W^{\frac12}\Phi \right)^\top, 
+\)
+and thus, for every $i\in[N]$,
+\begin{equation}\label{eq:MCequation3}
+1 = I_{ii} = \sqrt{\pi_i} \left( \sum_{k=1}^N  \varphi_k(j)^2\right) \sqrt{\pi_i} = \pi_i \left( 1 + \sum_{k=2}^N  \varphi_k(j)^2 \right).
+\end{equation}
+
+Thus, combining~\eqref{eq:MCequation2} and~\eqref{eq:MCequation3}
+\begin{equation}\label{eq:MCequation4}
+\left| \frac{\left(\delta_i^\top M^t\right)_j}{\pi_j} - 1 \right| \leq \lambda_\ast^t \sqrt{\pi_i^{-1}-1}\sqrt{\pi_j^{-1}-1}\leq \frac{\lambda_\ast^t}{\pi_{\min}}.
+\end{equation}
+
+This means that
+\begin{eqnarray*}\label{eq:MCequation5}
+ \|\delta_iM^t-\pi\|_{TV} 
+ &=& \frac12 \sum_{j=1}^N \left| \left(\delta_i^\top M^t\right)_j - \pi_j \right| 
+ = \frac12 \sum_{j=1}^N \pi_j\left|  \frac{\left(\delta_i^\top M^t\right)_j}{\pi_j} - 1\right| \\
+ &\leq & \frac12\max_j \left|  \frac{\left(\delta_i^\top M^t\right)_j}{\pi_j} - 1\right| \leq \frac12 \frac{\lambda_\ast^t}{\pi_{\min}}.
+\end{eqnarray*}
+
+For $M$ a lazy Markov Chain (meaning that $M_{ii}\geq \frac12$ for all $i\in[N]$) we have $\lambda_n\geq 0$ and so $\mathrm{gap}_M = 1-\lambda_\ast$. Thus
+\begin{equation}
+\|\delta_iM^t-\pi\|_{TV} \leq \frac12 \frac{(1-\mathrm{gap}_M)^t}{\pi_{\min}}\leq \frac12 \frac{\exp(-\mathrm{gap}_Mt)}{\pi_{\min}}.
+\end{equation}
+This gives
+\[
+T_{mix}(M,\eps) \leq \frac1{\mathrm{gap}_M}\log\left(\frac1{2\eps\pi_{\min}}\right)\leq \frac1{\mathrm{gap}_M}
+\left(
+\log\left(\frac1{\pi_{\min}}\right)+\log\left(\frac1{\eps}\right)
+\right),
+\]
+the result for $M_{\text{lazy}}$ can be obtained by noting that $M_{\text{lazy}}$ is always a lazy Markov Chain and that $\mathrm{gap}_{M_{\text{lazy}}}=\frac12\mathrm{gap}_M$.
+\end{proof}
+
+Theorem~\ref{thm:spectralgapmixingtime} shows that mixing times are governed by a Fiedler eigenvalue $\lambda(\LLL_W)$ of the underlying weighted graph. Cheeger's inequality. Theorem~\ref{thm:cheegerinequality}, further shows that these are directly related to bottlenecks (small cuts) in the graph. These results together can be interpreted as saying that if there are no bottlenecks in the graph, the associated Markov Chain necessarily mixes fast.
+
+It is generally possible to improve the dependency on $\pi_{\min}$ on the control of mixing times. A (now) standard way is through so-called Log-Sobolev inequalities. The idea is to develop analogues to Poincar\'e inequalities that control the entropy of a test function, rather than the variance. This tends to allow one to replace the $\log(\pi_{\min}^{-1})$ term by a $\log\log(\pi_{\min}^{-1})$ term. See, e.g.,~\cite{Diaconisetal-LogSobolev96}.
+
+
+
+\begin{remark}\label{remark:infiniteMarkovChains}
+The theory above adapts relatively easily to Markov Chains on infinite state spaces by considering the spectrum of an associated Markov transition kernel. Furthermore, one can also analogously develop a theory of continuous time Markov Processes (see, e.g.,~\cite{FukushimaOshimaTakeda2011}). In fact, the Gaussian Poincar\'e inequality (Proposition~\ref{prop:GaussianPoincare}) plays the same role as~\eqref{eq:poincare-for-MC} for a certain Markov Process (see Remark~\ref{remark:Ornstein-Uhlenbeck}, and~\cite{vanHandel_LectureNotesProb_14} (Section 2)).
+\end{remark}
+
+As we will see below, many Markov Chains of interest have exponential state spaces (such as $\{\pm1\}^n$, meaning that $N=2^n$) and the goal is to have polynomial in $n$ mixing times.
+
+\subsection{A word about Markov Chain Monte Carlo methods}
+
+An important use of Markov Chains is to sample from high dimensional distributions that are easy to access up to normalization. This strategy usually goes by the name of Markov Chain Monte Carlo~\cite{hastings1970monte,robert1999monte}. These are central objects in both Statistical Physics~\cite{krauth2006statistical} and high dimensional Bayesian Statistics~\cite{gelman1995bayesian}. 
+
+
+Let us focus on a (rich) class of examples for the sake of exposition: The goal is to sample from a probability distribution over the hypercube $\{\pm1\}^n$ (meaning that $N=2^n$), which $\pm1$ entry is usually called \emph{a spin}. Let $J\in\RR^{n\times n}$ be a symmetric matrix. Given $\beta\geq 0$ we define the following probability distribution over the hypercube, known as a Gibbs measure\footnote{In Statistical Physics $\beta$ corresponds to the inverse temperature ($\frac{1}{T}$) of the system, governing a trade-off between energy and entropy.}:
+\begin{equation}\label{eq:gibbsmeasurexTJx}
+\pi_x = \frac{1}{Z_n}\exp{\left(\beta x^TJx\right)},
+\end{equation}
+for $x\in\{\pm1\}^n$, where $Z_n = \sum_{x\in\{\pm1\}^n}\exp{\left(\beta x^TJx\right)}$ is known as a the normalization constant, or partition function.
+
+Distributions of the form of~\eqref{eq:gibbsmeasurexTJx} are central in both Statistical Physics and Bayesian Statistics. In Statistical Physics, by taking different choices of $J$, it includes very important models such as Curie-Weiss, Ising, Sherrington-Kirkpatrick, and Edward-Anderson models. It is also central in Statistics. In fact the posterior distribution of the node memberships given the graph edges in the Stochastic Block Model (in two communities) of Chapter~\ref{c:community} is naturally written in the form~\eqref{eq:gibbsmeasurexTJx}, see~\cite{Abbe_SBM_survey}.
+
+The goal will be to construct a Markov Chain whose unique stationary measure is the target distribution. A key property of these measures is that while they are hard to compute (because computing $Z_n$ requires summing over exponentially many summands) they are easy to access up to normalization, meaning that it is easy to compute relative probabilities, such as $\pi_x/\pi_y$ for two states $x$ and $y$.
+
+Motivated by the example above let us show the construction of a reversible Markov Chain to sample from a (positive) probability distribution $\pi$ in $[N]$. We start by building a graph on $[N]$, and for the sake of exposition, let us say this is a simple unweighted $d$-regular graph with adjacency $W$. Each step of the Markov Chain proceeds as follows: From state $x\in[N]$, the chain picks a neighbor uniformly at random, let us call that neighbor $y\in[N]$; then the Markov Chain moves to $y\in[N]$ with probability $\frac{\pi_y}{\pi_x+\pi_y}$ and stays in $x$ with probability $\frac{\pi_x}{\pi_x+\pi_y}$ (note that while computing $\pi_x$ is difficult for, e.g.~\eqref{eq:gibbsmeasurexTJx}, computing these update probabilities is easy).  The reader can check that this Markov Chain is reversible and that $\pi$ is indeed a stationary measure. This essentially corresponds to the celebrated {\em Metropolis algorithm} (see, e.g.~\cite{Newman-Barkema-MCMC99}).\footnote{The choice of neighboring node to potentially move to does need to be uniformly random, in which case the probability of \emph{accepting} or \emph{rejecting} the move depends on those probabilities, as to make the chain reversible on $\pi$ (and so it is no longer given by $\frac{\pi_y}{\pi_x+\pi_y}$ and $\frac{\pi_y}{\pi_x+\pi_y}$).}
+
+Returning to the hypercube and the target distribution~\eqref{eq:gibbsmeasurexTJx}, a classical Markov Chain is obtained by taking the contribution above for the graph whose nodes are elements of $\{\pm1\}^n$ and two nodes are connected if they differ in only one entry (often called a spin). In this case $N=2^n$ and $d=n$. This gives rise to the celebrated Glauber Dynamics (see~\cite{levinperesmarkovchains2017}).\footnote{This can be viewed as what is called in Physics a ``Heat Bath'' where the system is resampled conditioned on all but one spin.} In many situations this process allows one to sample distributions of the form of~\eqref{eq:gibbsmeasurexTJx} in time that is polynomial in $n$ (and so logarithmic in $N$). There has been exciting recent progress on understanding mixing times of these (and other related) chains~\cite{AnariLiuOveisGharanFOCS2020,ChenEldan2025LocalizationSchemes}.
+
+
+
+
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}[\level\sep Random walks: eigenvalues]\label{prob:random_walks_evals}
+    Let $G = (V, E, W)$ be an undirected weighted graph.
+    \begin{enumerate}[(a)]
+        \item Suppose that $A, B \in \R^{n\times n}$ are similar matrices, which means that there exists an invertible matrix $P\in \R^{n\times n}$ such that $B = P^{-1} A P$. Prove that they have the same eigenvalues, with equal geometric multiplicities.
+        
+        \item Show that the transition probability matrix $M \coloneqq D^{-1}W$ is similar to the matrix $S \coloneqq D^{-1/2}W D^{-1/2}$.
+        
+        \item Deduce that all eigenvalues of $M$ are real.
+
+        \item Prove that every eigenvalue of $M$ belongs to the interval $[-1,1]$, and show that $1$ is an eigenvalue.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Random walks: connectivity]\label{prob:random_walks_connectivity}
+    Let $G = (V, E, W)$ be an undirected weighted graph. Show that the largest eigenvalue of $M = D^{-1}W$ has multiplicity one if and only if the graph is connected. Here, two vertices are connected if and only if there exists a path from one to another along which all edges have positive weights.
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Equilibrium distribution]\label{prob:equilibrium_distribution}
+    Let $G = (V, E, W)$ be an undirected weighted graph, and $X$ a random walk (with independent set) associated to it, the one having transition probabilities
+    \begin{equation*}
+        \P\brap{X(t+1) = j \mid X(t) = i} = \frac{w_{ij}}{\deg(i)}.
+    \end{equation*}
+    Suppose that there is an equilibrium distribution $\pi$ on $V$, which means that starting from any $i \in V$,
+    \begin{equation*}
+        \P\brap{X(t) = j \mid X(0) = i} \to \pi_j \text{ as }t \to \infty
+    \end{equation*}
+    holds for any $j \in V$. Prove that $\lambda_2(M) < 1$.
+\end{myexercise}
+\begin{hint}
+   This means that for any $i_1, i_2, j \in V$, we have $\P\brap{X(t) = j \mid X(0) = i_1} - \P\brap{X(t) = j \mid X(0) = i_2} \to 0$.
+\end{hint}
+
+\begin{myexercise}[\level\level\sep Truncated diffusion map of a cycle graph]\label{prob:truncated_diffusion_map_cycle}
+    Let $n \geq 2$ and $\omega = e^{-2\pi i / n} $ be the primitive $n$-th root of unity. In this problem, we index rows and columns of $n \times n$ matrices from $0$ to $n-1$, rather than $1$ to $n$.
+    \begin{enumerate}[(a)]
+        \item The \emph{Discrete Fourier Transform} (DFT) matrix   
+        is an $n \times n$ matrix $F = (F_{j,k})_{j,k=0}^{n-1}$ with
+        \begin{equation*}
+            F_{j,k} \coloneqq \frac{1}{\sqrt{n}}\omega^{jk}.
+        \end{equation*}
+        Prove that $F$ is a unitary matrix, meaning that $F^*F = FF^* = I_n$. 
+        
+        \item A \emph{Circulant} matrix is an $n \times n$ matrix $C = (C_{j,k})_{j,k=0}^{n-1}$ with $C_{j,k} = c_{j-k \text{ mod }n}$, where $c_0, \ldots, c_{n-1}$ are $n$ real numbers:
+        \begin{equation*}
+            C = 
+            \begin{pmatrix}
+                c_0 & c_{n-1} & c_{n-2} & \cdots & c_{1}\\
+                c_{1} & c_0 & c_{n-1} & \cdots & c_{2}\\
+                c_{2} & c_{1} & c_0 & \cdots & c_{3}\\
+                \vdots & \vdots & \vdots & \ddots & \vdots \\
+                c_{n-1} & c_{n-2} & c_{n-3} & \cdots & c_0
+            \end{pmatrix},
+        \end{equation*}
+
+        Prove that $F$ diagonalizes $C$, meaning that $FCF^*$ is a diagonal matrix.
+        
+        \item Deduce that the eigenvalues of $C$ are given by
+        \begin{equation*}
+            \lambda_j = \sum_{k=0}^{n-1} c_k \omega^{kj} = c_0 + c_1 \omega^{j} + \dots + c_{n-1} \omega^{(n-1)j}, \quad j = 0, 1, \ldots, n-1.
+        \end{equation*}
+        Note that the eigenvalues $\lambda_0, \ldots, \lambda_{n-1}$ are not necessarily ordered.
+
+        \item Let $C_n$ be a cycle graph of length $n$, where $n \geq 3$. Find the diffusion map truncated to $2$ dimensions.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Diffusion map of a complete graph]\label{prob:diffusion_map_complete_graph}
+    Let $K_n$ be complete graph on $n$ nodes, where $n \geq 3$. Find the diffusion map. (Since there are more bases of real-valued eigenvectors, it is sufficient to pick one.)
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Diffusion map of a lazy walk]\label{prob:diffusion_map_lazy_walk}
+    Let $G = (V, E, W)$ be an undirected weighted graph with the associated transition probability matrix $M$. Let $\varphi_t \colon V \to \R^{n-1}$ be the diffusion map made from $M$. Now let $M' = \frac{1}{2}(M + I)$ be the transition probability matrix of the associated lazy walk, and $\varphi'_t \colon V \to \R^{n-1}$ be the diffusion map made from $M'$. Prove that for any $t \geq 1$:
+    \begin{equation*}
+        \varphi'_t = 2^{-t}\sum_{u=0}^t {t \choose u} \varphi_u.
+    \end{equation*}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\level\sep Aperiodicity of a lazy walk]\label{prob:aperiodicity_lazy_walk}
+    Let $G = (V, E, W)$ be an undirected weighted graph.
+    \begin{enumerate}[(a)]
+        \item Let $M' = \frac{1}{2}(M + I)$ be the transition probability matrix of the associated lazy walk. Show that $M'$ is not necessarily symmetric, but it has $n$ non-negative eigenvalues.
+
+        \item Prove that the lazy random walk is aperiodic, which means that for any vertex $i \in V$ there is no (period) integer $k > 1$ such that for any (time) $t \geq 1$:
+        \begin{equation*}
+            \brap{(M')^t}_{ii} > 0 \implies k \mid t.
+        \end{equation*}
+        
+        \item Suppose that $W$ is an irreducible matrix. Prove that there exists $T \in \N$ such that for every $t \geq T$, all entries of $(M')^t$ are positive. (This means that the associated Markov Chain is regular.)
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}
+Show that the mean first passage time $t_{ij} = \mathbb{E}[\tau_{ij}]$ satisfies that triangle inequality.
+\end{myexercise} 
+
+\begin{myexercise}
+Let $L = D - W$ be the Laplacian of a weighted undirected connected graph. Show that the pseudo-inverse $L^\dagger$ is given by
+$$L^\dagger = (L + \frac{1}{n}{\textbf 1}{\textbf 1}^T)^{-1} - \frac{1}{n} {\textbf 1}{\textbf 1}^T.$$
+\end{myexercise} 
+
+\begin{myexercise}
+Is it necessarily the case that all entries of $L^\dagger$ are non-negative, i.e., that $L^\dagger_{ij} \geq 0$ for $i,j=1,\ldots,n$? 
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Hitting times and semi-supervised learning]\label{prob:hitting_times_semi_supervised}
+    Let $G = (V,E,W)$ be an undirected, connected graph with non-negative weights $w_{ij}$. The vertex set is partitiond as $V = V_{+} \cup V_{\scriptstyle -} \cup V^{\star}$, where $V_{+}$ are labeled as 1, $V_{\scriptstyle -}$ are labeled as 0 and $V^{\star}$ are unlabeled. Suppose that every unlabelled vertex ($V_{\star}$) is connected to at least one labelled vertex ($V_{+} \cup V_{\scriptstyle -}$) by an edge.
+    
+    To predict the label of the unlabeled vertices, you wish to find a function $f^{\star}: V \to \mathbb{R}$ which agrees on the labeled vertices and predicts the values of the unlabeled vertices as values in $\mathbb{R}$ as smoothly as possible:
+    \begin{equation}\label{eq:optproblem}
+        f^\star := \arg\,\min_{\substack{f: V \to \mathbb{R}: \\ f(i) = 1, i \in V^+ \\ f(i) = 0, i \in V^-}} \sum_{i < j} w_{ij} (f(i) - f(j))^2.
+    \end{equation}
+    
+    Now, consider a random walk $X$ on $V$ given by the following transition probabilities:
+    \begin{equation*}
+        \P\brap{X(t+1)=j\mid X(t)=i} = \frac{w_{ij}}{\deg(i)}.
+    \end{equation*}
+    Given a node $i \in V$, let $g(i)$ be the probability that a random walker starting at $i$ reaches a node in $V_{+}$ before reaching one in $V_{\scriptstyle -}$. I.e. if $T_{+} = \inf\brac{t \geq 0 \colon X(t) \in V_{+}}$ and $T_{\scriptstyle -} = \inf\brac{t \geq 0 \colon X(t) \in V_{\scriptstyle -}}$, then
+    \begin{equation*}
+        g(i) \coloneqq \P\brap{T_{\scriptstyle +} < T_{\scriptstyle -} \mid X(0)=i}.
+    \end{equation*}
+    \begin{enumerate}[(a)]
+        \item Show that for any $i \in V$ and $t \geq 0$, $\sum_{j \in V} \P\brap{X(t+1)=j\mid X(t)=i} = 1$, so that $X$ is a random walk.
+        \item Show that $g$ satisfies constraints of the optimization problem: $g(i) = 1$ for $i \in V_{+}$, and $g(i) = 0$ for $i \in V_{\scriptstyle -}$.
+        \item Prove that $g$ satisfies the following equality for any unlabelled $i \in V^\star$:
+        \begin{equation}\label{eq:gconditions}
+            g(i) = \frac{1}{\deg(i)} \sum_{j\in V_{+}} w_{ij} +  \frac{1}{\deg(i)} \sum_{j\in V^{\star}} w_{ij} g(j).
+        \end{equation}
+        \item By analyzing first-order optimality conditions (it is enough to state the formula from the notes, without proving) of the optimization problem \eqref{eq:optproblem}, show that $f^\star$ also satisfies \eqref{eq:gconditions}, and conclude that $f^\star = g$.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}
+Suppose we want to denoise the function $f \in L^2(\Omega)$ where $\Omega \subset \mathbb{R}^p$ by solving the following regularization problem:
+$$\min_g \|f-g\|^2_{L^2(\Omega)} + \mu\int_\Omega g(x) \Delta^k g(x) \,dx$$
+where $\Delta^k$ is the $k$'th iterated Laplacian. Find $g$ and determine to what Sobolev space it belongs. Consider the similar graph regularization problem
+$$\min_{g:V\to \mathbb{R}} (f-g)^T D (f-g) + \mu g^T L^k g,$$
+where $L^k$ is the $k$'th iterated combinatorial Laplacian $L^k=(D-W)^k$.\\
+\begin{hint}
+Express $g$ in terms of the eigenfunctions/eigenvectors of a suitable operator.    
+\end{hint}
+\end{myexercise}
+ 
+\begin{myexercise}
+Show that $f \in H^1(\mathbb{R}^2)$ does not imply $f\in C_0(\mathbb{R}^2)$ by constructing a sequence of functions $\{f_n\}_{n=1}^\infty$ in $H^1(\mathbb{R}^2)$ satisfying $$\lim_{n\to \infty} \|f_n\|_{H^1(\mathbb{R}^2)}=0,$$ but $\lim_{n\to \infty} f_n \notin C_0(\mathbb{R}^2)$
+\begin{hint}
+The $\log$ function.    
+\end{hint}    
+\end{myexercise}
+
+\begin{myexercise}
+Derive the solution to the extension problem with $l$ labeled points and $u=n-l$ unlabeled points using the discrete Sobolev norm $H^m(V)$ (with $m\geq 1$) as the cost function. That is, find $f$ that solves the minimization problem
+\begin{eqnarray*}
+\min_{f:V \to \mathbb{R}} f^T (D+L^m) f,\\
+\mbox{s.t. } f(i)=f_i,\quad \mbox{for } i=1,\ldots,l.
+\end{eqnarray*}
+\end{myexercise}
+
+\begin{myexercise}
+Derive the solution to the `noisy' extension problem, where the $l$ labeled points may be contaminated by measurement errors. Specifically, find the solution to the minimization problem
+\begin{eqnarray*}
+\min_{g:V \to \mathbb{R}} \sum_{i=1}^l d_i (f(i)-g(i))^2 + \mu g^T (D+L^m) g\\
+\end{eqnarray*}
+\end{myexercise}
+
+\begin{myexercise}
+Use a computer simulation (e.g., using Matlab or Python) to sample independently $n$ unlabeled points $x_1,x_2,\ldots,x_n$ in $\mathbb{R}^2$ from a Gaussian mixture model with two isotropic independent Gaussians $X_1$ and $X_2$ centered at $\mu_1=(-1,-1)$ and $\mu_2=(1,1)$. That is, let $$X_1\sim \mathcal{N}(\mu_1,\sigma^2I)\quad \mbox{and } \quad X_2 \sim \mathcal{N}(\mu_2,\sigma^2I),$$ where $I = \left(
+                                                                                                                 \begin{array}{cc}
+                                                                                                                   1 & 0 \\
+                                                                                                                   0 & 1 \\
+                                                                                                                 \end{array}
+                                                                                                               \right)$ and define the random vector $X$ from which $x_1,\ldots,x_n$ are drawn as $$X=ZX_1+(1-Z)X_2,$$ where $Z$ is a Bernoulli random variable independent of $X_1$ and $X_2$:
+    $$Z=\left\{\begin{array}{cc}
+         1 & \mbox{with probability } \frac{1}{2}, \\
+         &\\
+         0 & \mbox{with probability } \frac{1}{2}.
+       \end{array}\right.
+    $$
+Add the two centers as labeled points. That is, define the label of $\mu_1$ as ``RED'' and the label of $\mu_2$ as ``BLUE".
+\begin{enumerate}
+\item Use the harmonic extension algorithm to label the $n$ unlabeled points (use $w_{ij}=e^{-\|x_i-x_j\|^2_{\mathbb{R}^2}/\varepsilon}$ as your similarity measure). Try different values of $n$, $\sigma$ and $\varepsilon$, especially notice the behavior of the algorithm for large $n$.
+\item Replace the cost function $f^T L f$ by $f^T(D+L^2)f$ corresponding to the Sobolev norm $\|f\|^2_{H^2(\mathbb{R}^2)}$. Compare the classification errors of the two methods. Explain your results in light of the Sobolev embedding theorem.
+\end{enumerate}
+
+    
+\end{myexercise}
+
+

@@ -1,0 +1,18 @@
+---
+title: "随机投影与线性降维"
+description: "Johnson–Lindenstrauss 引理、随机 SVD 与矩阵草图"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `dimensionreduction-JL.tex`，尚待翻译。
+:::
+
+## Johnson–Lindenstrauss 引理
+
+## 随机化 SVD
+
+## 矩阵草图
+
+## 习题 {.unnumbered}
+

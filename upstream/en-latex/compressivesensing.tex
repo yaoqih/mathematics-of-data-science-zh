@@ -1,0 +1,931 @@
+\chapter{Compressive Sensing and Sparsity}
+\label{c:cs}
+
+
+Most of us have noticed how saving an image in JPEG dramatically reduces the space it occupies on our hard drives (as opposed to file types that save the value of each pixel in the image). The idea behind these compression methods is to exploit known structure in the images; although our cameras will record the  value (even three values in RGB) for each pixel, it is clear that most collections of pixel values will not correspond to pictures that we would expect to see. Natural images do not correspond to arbitrary arrays of pixel values, but have some specific structure to them. It is this  special structure one aims to exploit by choosing a proper representation of the image. Indeed, natural images are known to be approximately sparse in certain bases (such as the wavelet bases) and this is the core idea behind JPEG (actually, JPEG2000; JPEG uses a different basis).
+
+\section{Sparse recovery}\label{s:sparse}
+
+Let us think of $x\in \CC^p$ as the signal corresponding to the image already represented in the basis in which it is sparse. The modeling assumption is that $x$ is $s$-sparse, or $\|x\|_0\leq s$, meaning that $x$ has at most $s$ non-zero components and, usually, $s\ll p$. The $\ell_0$-norm\footnote{We recall that the $\ell_0$ norm is not actually a norm, as it does not necessarily rescale linearly with a rescaling of $x$.} $\|x\|_0$ of a vector $x$ is the number of non-zero entries of $x$. 
+This means that when we take a picture, our camera makes $p$ measurements (each corresponding to a pixel) but then, after an appropriate change of basis, it keeps only $s\ll p$ non-zero coefficients and drops the others. This seems a rather wasteful procedure and thus motivates the question: ``If only a few degrees of freedom are kept after compression, why not in the first place measure in a more efficient way and take considerably less than $p$ measurements?''. 
+
+The question whether we can carry out  data acquisition and compression simultaneously is at the heart of {\em Compressive Sensing}~\cite{Candes_CS1,Candes_CS2,Candes_CS3,Candes_CS4,Donoho_CS,FoucartRauhut_CSbook}. It is particularly important in MRI imaging \cite{lustig2007sparse,feng2017compressed}, as fewer measurements potentially means shorter data acquisition time. Indeed, current MRI technology based on concepts from compressive sensing can, in certain cases, reduce the time needed to collect the data by a factor of six or more~\cite{lustig2007sparse}, which has been reported to have significant benefits especially in pediatric MR imaging~\cite{vasanawala2010improved}.
+We recommend the book~\cite{FoucartRauhut_CSbook} as a great in-depth reference about compressive sensing.
+
+In mathematical terms, the acquired measurements $y \in \CC^m$ are connected to the signal  of interest $x \in \CC^p$, with $m \ll p$, via 
+\begin{equation}\label{cs}
+\left[\begin{array}{c} \\ y \\ \  \end{array}\right] = \left[\begin{array}{cccccccccccccccccc} \\  & & & & & &  & A & & & & & & & & & & \\ \  \end{array}\right] \left[\begin{array}{c}  \\ \\ \\ x \\ \\ \\ \   \end{array}\right].
+\end{equation}
+The matrix $A \in\CC^{m \times p}$ models the linear measurement (information) process. Classical linear algebra tells us that if $m < p$, then the linear system~\eqref{cs} is underdetermined and that there are infinitely many solutions (assuming that there exists at least one solution). In other words, without additional information, it is impossible to
+recover $x$ from $y$ in the case $m < p$.
+
+In this chapter, we assume that $x$ is $s$-sparse with $s<m\ll p$. The goal is to recover $x$ from this underdetermined system and do this in a computationally efficient manner.
+We emphasize that we {\em do not  know} the location of the non-zero coefficients of $x$ a priori\footnote{And therein lies the challenge, since $s$-sparse signals  do not form a linear subspace of $\RR^p$ (the sum of two $s$-sparse signals is in general no longer $s$-sparse but $2s$-sparse).}, otherwise the task would be trivial.
+
+
+
+
+\subsection{Gaussian width of $s$-sparse vectors}\label{ss:gausswidth}
+
+
+
+
+Before discussing algorithms, let us discuss well-posedness of the problem at hand: In order to be able to reconstruct $x$ from $y$ we need at the very least that $A$ is injective on sparse vectors.
+Furthermore, in order for reconstruction to be stable, one should ask not only that $A$ is injective with respect to $s$-sparse vectors, but actually that it is almost an isometry, meaning that the $\ell_2$ distance between $Ax_1$ and $Ax_2$ should be comparable to the distances between $x_1$ and $x_2$, if they are $s$-sparse. Since the difference between two $s$-sparse vectors is in general a $2s$-sparse vector, we can alternatively ask for $A$ to approximately preserve the norm of $2s$-sparse vectors. Gordon's Theorem (Theorem~\ref{GordonsTheorem}) suggests that we can take $A\in\RR^{m\times p}$ to have i.i.d.\ Gaussian entries and to take $m\approx \omega^2\left(\mathcal{S}_{2s}\right)$, where $\mathcal{S}_{2s} = \left\{x:\,x\in\SSS^{p-1},\,\|x\|_0\leq 2s\right\}$ is the set of $2s$-sparse vectors, and $\omega\left(\mathcal{S}_{2s}\right)$ denotes the Gaussian width of $\mathcal{S}_{2s}$ (see Definition~\ref{def:gaussianwidth}).
+
+\begin{proposition}\label{proposition:ssparse:gaussianwidth}
+ If $s\leq p$, the Gaussian width $\omega\left(\mathcal{S}_{s}\right)$ of $\mathcal{S}_s$, the set of unit-norm vectors that are at most $s$-sparse, satisfies
+ \[
+  \omega\left(\mathcal{S}_{s}\right)^2 \lesssim s \log\left( \frac{p}s \right).
+ \]
+\end{proposition}
+
+\proofb{
+ \[
+  \omega\left(\mathcal{S}_{s}\right) = \EE \max_{v\in\SSS^{p-1},\, \|v\|_0\leq s} g^Tv, %\log\left( \frac{N}s \right),
+ \]
+ where $g\sim \NNN(0,I_{p\times p})$. We have
+ \[
+  \omega\left(\mathcal{S}_{s}\right) = \EE \max_{\Gamma\subset [p],\, |\Gamma|=s} \|g_{\Gamma}\|,
+ \]
+ where $g_{\Gamma}$ is the restriction of $g$ to the set of indices $\Gamma$.
+
+
+Given a set $\Gamma$, Theorem~\ref{thm:chisquare_concentration}  yields
+\[
+ \Prob\left\{  \|g_{\Gamma}\|^2 \geq s + 2\sqrt{s}\sqrt{t} + 2t \right\} \leq \exp(-t).
+\]
+Union bounding over all $\Gamma\subset [p],\, |\Gamma|=s$ gives
+\[
+ \Prob\left\{\max_{\Gamma\subset [p],\, |\Gamma|=s} \|g_{\Gamma}\|^2 \geq s + 2\sqrt{s}\sqrt{t} + 2t \right\} \leq {p \choose s} \exp(-t).
+\]
+
+Taking $u$ such that $t=su$, gives
+\begin{equation}\label{5:equation:boundsparsegaussianwidth}
+ \Prob\left\{\max_{\Gamma\subset [p],\, |\Gamma|=s} \|g_{\Gamma}\|^2 \geq s\left(1+2\sqrt{u} + 2u\right)  \right\} \leq \exp\left[-su + s\log\left(e\frac{p}s\right)\right].
+\end{equation}
+Taking $u> \log\left(e\frac{p}s\right)$ reveals that the typical size of $\max_{\Gamma\subset [p],\, |\Gamma|=s} \|g_{\Gamma}\|^2$ is $\lesssim s\log\left(\frac{p}s\right)$. The proof can be completed by integrating~\eqref{5:equation:boundsparsegaussianwidth} in order to get a bound of the expectation of $\sqrt{\max_{\Gamma\subset [p],\, |\Gamma|=s} \|g_{\Gamma}\|^2}$.
+
+}
+
+This suggests that $\approx 2s\log\left(\frac{p}{2s}\right)$ measurements suffice to stably identify a $2s$-sparse vector. Indeed, we will see below that at this order of number of measurements it will actually be possible to efficiently recover an  $s$-sparse vector.
+
+\subsection{Sparse recovery and $\ell_1$ optimization}
+
+Since the system~\eqref{cs} is underdetermined and we know that $x$ is sparse, the natural approach to try  to recover $x$ is to solve
+\begin{equation}\label{eq:6:L0normmin}
+\begin{array}{cl}
+\min \,\,& \|z\|_0 \\
+\text{s.t.} & Az = y,
+\end{array}
+\end{equation}
+and hope that the optimal solution $z$ corresponds to the signal in question $x$. However the optimization problem~\eqref{eq:6:L0normmin} is  NP-hard  in general~\cite{natarajan1995sparse,FoucartRauhut_CSbook}. Instead, the approach usually taken in sparse recovery is to consider a convex surrogate of the $\ell_0$ norm, namely the $\ell_1$ norm: $\|z\|_1 = \sum_{i=1}^p |z_i|$. 
+Figure~\ref{fig:lp-norm} depicts the $\ell_p$ balls and illustrates how the $\ell_1$ norm can be seen as a convex surrogate of the $\ell_0$ norm due to the \emph{pointiness} of the $\ell_1$ ball in the direction of the basis vectors, i.e. in ``sparse'' directions.  
+
+\begin{figure}[h]
+\subcaptionbox{$p=0$}{ \includegraphics[height=18mm]{figures/Chapter11-l0.eps}}
+\subcaptionbox{$p=\frac{1}{2}$}{\includegraphics[height=18mm]{figures/Chapter11-l0-5.eps}}
+\subcaptionbox{$p=1$}{\includegraphics[height=18mm]{figures/Chapter11-l1.eps}}
+\subcaptionbox{$p=2$}{\includegraphics[height=18mm]{figures/Chapter11-l2.eps}}
+\subcaptionbox{$p=\infty$}{\includegraphics[height=18mm]{figures/Chapter11-linf.eps}}
+\caption{$\ell_p$ norm unit balls with different values for $p$}
+\label{fig:lp-norm}
+\end{figure}
+
+The process of $\ell_p$ minimization can be understood as inflating (or deflating) the $\ell_p$ ball until one hits the affine subspace of interest. Figure~\ref{fig:l1l2} illustrates how $\ell_1$ norm minimization promotes sparsity, while $\ell_2$  norm minimization does not favor sparse solutions. 
+We have seen in Chapter~\ref{ss:hypercube} that the $\ell_1$ ball becomes ``increasingly pointy'' with increasing dimension. This behavior works in our favor in compressive sensing---another manifestation of the {\em blessings of dimensionality}.
+
+
+\begin{figure}[h]
+\subcaptionbox{$p=1$}{\includegraphics[height=40mm]{figures/Chapter11-l1_int.eps}}\qquad
+\subcaptionbox{$p=2$}{\includegraphics[height=40mm]{figures/Chapter11-l2_int.eps}}
+\caption{A two-dimensional depiction of $\ell_1$ and $\ell_2$ minimization. In $\ell_p$ minimization, one inflates the $\ell_p$ ball  until it hits the affine subspace of interest. This image conveys how the $\ell_1$ norm (left) promotes sparsity due to the ``pointiness'' of the $\ell_1$ ball. In contract,  $\ell_2$ norm minimization (right) does not favor sparse solutions.}
+\label{fig:l1l2}
+\end{figure}
+
+
+
+
+
+
+This motivates us to consider the following optimization problem  (surrogate to~\eqref{eq:6:L0normmin}):
+\begin{equation}\label{eq:6:L1normmin}
+\begin{array}{cl}
+\min \,\, & \|z\|_1 \\
+\text{s.t.} & Az = y,
+\end{array}
+\end{equation}
+
+In order for~\eqref{eq:6:L1normmin} to be a good procedure for sparse recovery we need two things: for the solution of it to be meaningful (hopefully to coincide with $x$); and for~\eqref{eq:6:L1normmin} to be efficiently solvable.
+
+\begin{remark}
+We will consider for the moment the real-valued case $x\in\RR^p, A\in\RR^{m\times p}$ and formulate~\eqref{eq:6:L1normmin} as a linear program\footnote{In the complex case, we are dealing with a quadratic program.} (and thus show that it is efficiently solvable). Let us think of $\omega^{+}$ as the positive part of $z$ and $\omega^{-}$ as the symmetric of the negative part of it, meaning that $z = \omega^{+} - \omega^{-}$ and, for each $i$, either $\omega^{-}_i$ or $\omega^{+}_i$ is zero. Note that, in that case,
+\[
+\|z\|_1 = \sum_{i=1}^p \omega^{+}_i + \omega^{-}_i = \1^T \left(  \omega^{+} + \omega^{-} \right).
+\]
+Motivated by this, we consider:
+
+\begin{equation}\label{eq:6:L1normmin_LP}
+\begin{array}{cl}
+\min \,\, &  \1^T \left(  \omega^{+} + \omega^{-} \right) \\
+\text{s.t.} & A\left( \omega^{+} - \omega^{-} \right) = y \\
+ & \omega^{+} \geq 0 \\
+ & \omega^{-} \geq 0,
+\end{array}
+\end{equation}
+which is a linear program. It is not difficult to see that the optimal solution of~\eqref{eq:6:L1normmin_LP} will indeed satisfy that, for each $i$, either $\omega^{-}_i$ or $\omega^{+}_i$ is zero and it is indeed equivalent to~\eqref{eq:6:L1normmin}; if both $\omega^{-}_i$ and $\omega^{+}_i$ are non-zero, one can lower the objective while keep satisfying the constraints by reducing both variables. Since linear programs are efficiently solvable~\cite{LVanderberghe_SBoyd_book}, this implies that the $\ell_1$-optimization problem~\eqref{eq:6:L1normmin} is efficiently solvable. This optimization program is also efficiently solvable over $\CC$ despite not being a linear program, but a quadratic program.
+\end{remark}
+
+In what follows we will discuss under which circumstances one can guarantee that the solution of~\eqref{eq:6:L1normmin} coincides with the sparse signal of interest. We will discuss a couple of different strategies to show this, as different strategies generalize better to other problems of interest. Later in this chapter we also discuss strategies for constructing sensing matrices.
+
+
+
+
+
+\section{Null space property and exact recovery}
+\label{s:nsp}
+
+Given a $s$-sparse vector $x$, our goal is to show that under certain conditions $x$ is the unique optimal solution to
+
+\begin{equation}
+%\label{eq:6:L1normmin}
+\begin{array}{cl}
+\min \,\, & \|z\|_1 \\
+\text{s.t.} & Az = y,
+\end{array}
+\end{equation}
+
+Let $S = \supp(x)$, with $|S|=s$.\footnote{If $x$ has support size strictly smaller than $s$, in what follows, we can simply take a superset of it with size $s$} If $x$ is not the unique optimal solution of the $\ell_1$ minimization problem, there exists $z\neq x$ as optimal solution. Let $v = z-x$, it satisfies
+\[
+\|v+x\|_1 \leq \|x\|_1 \quad \text{ and } \quad A( v+x ) = Ax,
+\]
+this means that $Av=0$. Also, 
+$$\|x\|_S = \|x\|_1 \geq \|v+x\|_1 = \|\left(v+x\right)_S\|_1 + \|v_{S^c}\|_1 \geq \|x_S\|_1 - \|v_S\|_1 + \|v_{S^c}\|_1,$$ where the last inequality follows by applying the triangle inequality. This means that $\|v_S\|_1 \geq \|v_{S^c}\|_1$, but since $|S|\ll p$ it is unlikely for $A$ to have vectors in its nullspace that are so concentrated on such few entries. This motivates the following definition.
+
+\begin{definition}[Null Space Property]\label{def:nullspace}
+$A$ is said to satisfy the $s$-Null Space Property ($A\in \text{s-NSP}$) if, for all $v$ in $\ker(A)$ (the nullspace of $A$) and all $|S| = s$, we have
+\[
+\|v_S\|_1 < \|v_{S^c}\|_1.
+\]
+\end{definition}
+
+From the argument above, it is clear that if $A$ satisfies the Null Space Property for $s$, then $x$ will indeed be the unique optimal solution to~\eqref{eq:6:L1normmin}. In fact, as the property is described in terms of any set $S$ of size $s$, it implies recovery for any $s$-sparse vector.
+
+\begin{theorem}\label{thm:NSPimpliesRecovery}
+Let $x$ be an $s$-sparse vector. If $A\in\text{s-NSP}$ then $x$ is the unique solution to the $\ell_1$ optimization problem~$\eqref{eq:6:L1normmin}$ with $y=Ax$.
+\end{theorem}
+
+The Null Space Property is a statement about certain vectors not belonging to the null space of $A$, thus we can again resort to Gordon's Theorem  (Theorem~\ref{GordonsTheorem}) to establish recovery guarantees for Gaussian sensing matrices. Let us define the intersection with the unit-sphere of the cone of such vectors
+\begin{equation}\label{eq:def:Cs}
+C_s \defeq \left\{v\in\SSS^{p-1}: \exists_{S\subset [p],\, |S|=s} \left\|v_S\right\|_1\geq \left\|v_{S^c}\right\|_1 \right\}.
+\end{equation} 
+
+\subsection{Gordon's Theorem and the Null Space Property}\label{ss:gordonnullspace}
+
+Since for an $m\times p$ matrix $A$, $A\in\text{s-NSP}$ is equivalent to $\ker(A) \cap C_s = \emptyset $, Gordon's Theorem, or more specifically Gordon's Escape Through a Mesh Theorem (Theorem~\ref{thm:GordonEscapeMesh}), implies that there exists a universal $C>0$ such that if $A$ is drawn with iid Gaussian entries, it will satisfy the s-NSP with high probability provided that $m \geq C\, \omega^2\left( C_s \right)$, where $ \omega\left( C_s \right)$ is the Gaussian width of $C_s$ (as defined in~\eqref{eq:def:Cs}).
+
+\begin{proposition}
+Let $s\leq p$ and $C_s\subset \SSS^{p-1}$ defined in~\eqref{eq:def:Cs}. There exists a universal constant $C$ such that
+\[
+\omega\left( C_s \right) \leq C \sqrt{s \log\left( \frac{p}s \right)},
+\]
+where $ \omega\left( C_s \right)$ is the Gaussian width of $C_s$ (as defined in~\eqref{eq:def:Cs}).
+\end{proposition}
+
+\proofb{
+The goal is to upper bound
+\[
+\omega\left( C_s \right) = \EE \max_{v\in C_s} v^Tg,
+\]
+for $g\sim\NNN(0,I)$. Note that $C_s$ is invariant under permutations of the indices. Thus, the maximizer $v\in C_s$ will have its largest entries (in absolute value) in the coordinates where $g$ has its largest entries (in absolute value). Let $S$ be the set of the $s$ coordinates with largest absolute value of $g$. We have
+\[
+\EE \max_{v\in C_s} v^Tg = \EE \max_{v: \left\|v_S\right\|_1\geq \left\|v_{S^c}\right\|_1,\, \|v\|=1} v_S^Tg_S + v_{S^c}^Tg_{S^c}.
+\]
+The key idea is to notice that the condition $\left\|v_S\right\|_1\geq \left\|v_{S^c}\right\|_1$ imposes a strong bound on the $\ell_1$ norm of $v_{S^c}$ via $ \left\|v_{S^c}\right\|_1 \leq \left\|v_S\right\|_1 \leq \sqrt{s} \left\|v_S\right\| \leq \sqrt{s}$. This can be leveraged by noticing that
+\[
+v_S^Tg_S + v_{S^c}^Tg_{S^c} \leq \left\|v_S\right\| \left\|g_S\right\| + \left\|v_{S^c}\right\|_1 \left\|g_{S^c}\right\|_\infty.
+\]
+This gives 
+\[
+\omega\left( C_s \right) \leq \EE \left\|g_S\right\| + \sqrt{s} \left\|g_{S^c}\right\|_\infty,
+\]
+where $S$ corresponds to the set of the $s$ coordinates with largest absolute value of $g$.
+
+We saw in the proof of Proposition~\ref{proposition:ssparse:gaussianwidth}, in the context of computing the Gaussian width of the set of sparse vectors, that $\EE \left\|g_S\right\| \lesssim  \sqrt{s \log\left( \frac{p}s \right)}$. Since all entries of $g_{S^c}$ are smaller, in absolute value than any entry in $g_S$ we have that $\left\|g_{S^c}\right\|_\infty^2 \leq \frac{1}s  \left\|g_S\right\|^2$. This implies that $ \EE \left\|g_{S^c}\right\|_\infty \lesssim \sqrt{\log\left( \frac{p}s \right)}$, concluding the proof.
+}
+
+Together with Theorem~\ref{thm:NSPimpliesRecovery} this implies the following recovery guarantee, matching the order of number of measurements suggested by the Gaussian width of sparse vectors.
+
+\begin{theorem}\label{thm:GaussiansSatisfyNSP}
+There exists a universal constant $C\geq 0$ such that if $A$ is a $m\times p$ matrix with i.i.d.\ Gaussian entries, and $m\geq C s \log\left(\frac{p}{s}\right)$, the following holds with high probability:
+For any $x$ an $s$-sparse vector, $x$ is the unique solution to the $\ell_1$-optimization problem~\eqref{eq:6:L1normmin} with $y=Ax$.
+\end{theorem}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{The Restricted Isometry Property}
+\label{s:rip}
+
+An alternative (and more classical) approach to establishing exact recovery via $\ell_1$-minimization is through the Restricted Isometry Property (RIP), which corresponds precisely with the property of approximately preserving the length of sparse vectors.
+
+\begin{definition}[Restricted Isometry Property (RIP)]\label{def:6:RIP_2}
+An $m\times p$ matrix $A$ (with either real or complex valued entries) is said to satisfy the $(s,\delta)$-Restricted Isometry Property (RIP),
+\[
+ (1-\delta)\|x\|^2 \leq \left\| Ax\right\|^2 \leq (1+\delta)\|x\|^2,
+\]
+for all $s$-sparse $x$.
+\end{definition}
+
+
+If $A$ satisfies the RIP  for sparsity $2s$, it means that it approximately preserves distances between $s$-sparse vectors (hence the name {\em RIP}). This can be leveraged to show that $A$ satisfies the NSP. 
+
+
+\begin{theorem}[\cite{Candes-RIP}]
+Let $y=Ax$ where $x$ is an $s$-sparse vector. Assume that $A$ satisfies the RIP property
+with $\delta_{2s} < \frac{1}{3}$, then the solution $x_*$ to the $\ell_1$-minimization problem
+\begin{equation}\label{l1min}
+\min_z \|z\|_1, \qquad \text{subject to } Az = y = Ax
+\end{equation}
+becomes $x$ exactly, i.e., $x_* = x$
+\label{thm:maincs}
+\end{theorem}
+
+To prove this theorem we need the following lemma.
+
+\begin{lemma}[\cite{Candes-RIP}]\label{lemma:np}
+We have
+\[
+| \langle Ax, Ax^\prime \rangle | \leq \delta_{s+s^{\prime}} \|x\| \|x^\prime\|
+\]
+for all $x, x^\prime$ supported 
+on disjoint subsets $S, S^\prime \subseteq [1, \cdots, p]$, $x, x^\prime \in \R^p$,
+and $|S| \leq s$, $|S^\prime| \leq s^\prime$
+\end{lemma}
+
+\proofb{
+
+Without loss of generality, we can assume $\|x\| = \|x^{\prime}\| = 1$,
+so that the right hand size of the inequality becomes just $\delta_{s+s^\prime}$.
+Since $A$ satisfies the RIP property, we have
+\[
+(1- \delta_{s+s^\prime}) \|x \pm x^\prime \|^2
+\leq \|A(x \pm x^\prime) \|^2
+\leq (1 + \delta_{s+s^\prime}) \|x \pm x^\prime\|^2.
+\]
+Since $x$ and $x^\prime$ have disjoint support,
+$\| x \pm x^\prime \|^2 = \|x\|^2 + \|x^\prime\|^2 = 2$; the RIP property then becomes
+\[
+2(1- \delta_{s+s^\prime}) \leq \|Ax \pm Ax^\prime \|^2
+\leq 2(1 + \delta_{s+s^\prime})
+\]
+The polarization identity implies:
+\begin{align*}
+| \langle Ax, Ax^\prime \rangle | 
+& = \frac{1}{4} \Big| \|Ax + Ax^\prime \|^2 - \|Ax - Ax^\prime\|^2 \Big| \\
+& \leq \frac{1}{4} \Big| 2(1+\delta_{s+s^\prime}) - 2(1-\delta_{s+s^\prime}) \Big| \\
+& = \delta_{s+s^{\prime}}.
+\end{align*}
+
+}
+
+
+To prove Theorem~\ref{thm:maincs}, we simply need to show that the
+Null Space Property holds for the given conditions.
+
+\begin{proof}[of Theorem~\ref{thm:maincs}]
+Take $h \in \ker(A) \setminus \boldmath{0}$. Let index set $S_0$ be the set of indices of $s$
+largest entries (by modulus) of $h$. Let index sets $S_1, S_2, \cdots$ be index sets
+corresponding to the next $s$ to $2s$, $2s$ to $3s$, $\cdots$ largest entries of $h$.
+
+Since $A$ satisfies the RIP, we have
+\begin{align}
+\|h_{S_0}\|^2 & \leq \frac{1}{1-\delta_s} \|Ah_{S_0}\|^2 \\
+& = \frac{1}{1-\delta_s} \sum_{j \geq 1} \langle Ah_{S_0}, A(-h_{S_j}) \rangle 
+& \text{(because $h_{S_0} = \sum_{j \geq 1} (-h_{S_j})$)} \\
+& \le  \frac{1}{1-\delta_s} \sum_{j \geq 1} \delta_{2s} \|h_{S_0}\| \|h_{S_j}\|
+& \text{(by Lemma~\ref{lemma:np})} \\
+& \leq \frac{\delta_{2s}}{1 - \delta_s} \|h_{S_0}\| \sum_{j \geq 1} \|h_{S_j}\| \\
+\|h_{S_0}\| & \leq \frac{\delta_{2s}}{1 - \delta_s} \sum_{j \geq 1} \|h_{S_j}\| .
+\label{eq:pf1}
+\end{align}
+Note that
+\[
+\|h_{S_j}\| \leq s^{\frac{1}{2}} \|h_{S_j}\|_\infty \leq s^{-\frac{1}{2}} \|h_{S_{j-1}}\|_1.
+\]
+We can rewrite (\ref{eq:pf1}) as 
+\begin{align}
+\|h_{S_0}\| & \leq \frac{\delta_{2s}}{1 - \delta_s} s^{-\frac{1}{2}} \sum_{j \geq 1} \|h_{S_{j-1}}\|_1 \\
+& = \frac{\delta_{2s}}{1 - \delta_s} s^{-\frac{1}{2}} \|h\|_1.
+\label{eq:lastpf}
+\end{align}
+Also, by the Cauchy-Schwarz inequality,
+\begin{equation}
+\|h_{S_0}\|_1 = \sum_{i \in S_0} 1 \times |h_i| \leq \sqrt{\sum_{i \in S_0} 1^2}\sqrt{\sum_{i \in S_0} h_i^2} 
+= \sqrt{s} \|h_{S_0}\|.
+\label{eq:hs0}
+\end{equation}
+We have $\delta_{2s} < \frac{1}{3}$ as a condition, so
+\begin{equation}
+\frac{\delta_{2s}}{1-\delta_s} < \frac{\delta_{2s}}{1-\delta_{2s}} < \frac{1}{2} \quad \text{for $\delta_{2s} < \frac{1}{3}$}.
+\label{eq:delta}
+\end{equation}
+Combining (\ref{eq:lastpf}), (\ref{eq:hs0}), and  (\ref{eq:delta}), we get
+\begin{equation}
+% \|h_{S_0}\| \leq \frac{\delta_{2s}}{1 - \delta_s} s^{\frac{1}{2}} \|h\|_1
+\|h_{S_0}\|_1 < \frac{1}{2} \|h\|_1.
+\label{eq:pfhs0h1}
+\end{equation}
+
+Now we show that \eqref{eq:pfhs0h1} is equivalent to $\|h_{S}\|_1 < \|h_{S^C}\|_1$:
+\begin{align*}
+& & \|h_S\|_1 & < \|h_{S^C}\|_1 \\
+& \Leftrightarrow & 2\|h_S\|_1 & < \|h_{S^C}\|_1 + \|h_S\|_1 \\
+& \Leftrightarrow & 2\|h_S\|_1 & < \|h\|_1 \\
+& \Leftrightarrow & \|h_S\|_1 & < \frac{1}{2} \|h\|_1.
+\end{align*}
+
+Thus, we have shown that $\|h_{S_0}\|_1 < \|h_{S^C}\|_1$, which is the Null Space Property and by virtue of Theorem~\ref{thm:NSPimpliesRecovery} our proof is complete.
+
+\end{proof}
+
+Many results in compressive sensing (such as Theorem~\ref{thm:maincs}) can be extended will little extra effort to the case where $x$ is not exactly $s$-sparse, but only approximately $s$-sparse, a property that is sometimes referred to as {\em compressible}. See~\cite{CP08,FoucartRauhut_CSbook} for a detailed discussion.
+
+
+
+\subsection{Random matrices and the Restricted Isometry Property}
+
+Theorem~\ref{thm:GaussiansSatisfyNSP} (and its proof) showed conditions under which a random gaussian matrices satisfy the NSP. To show the same for RIP is straightforward with the mathematical machinery we have now developed. 
+Indeed,
+using Proposition~\ref{proposition:ssparse:gaussianwidth} and Theorem~\ref{thm:Gordon:afterGconcentration}, one can readily show\footnote{Note that the $1\pm \delta$ term in the RIP property corresponds to $(1\pm\eps)^2$ in Gordon's Theorem. Since the RIP is a stronger property when $\delta$ is smaller, one can simply use $\eps = \frac13 \delta$.} that matrices with Gaussian entries satisfy the RIP with $m \approx s \log\left( \frac{p}{s} \right)$.
+
+\begin{theorem}\label{thm:RIPmatricesGaussianEntries}
+ Let $A$ be an $m\times p$ matrix with i.i.d. standard Gaussian entries, there exists a constant $C$ such that, if
+ \begin{equation}\label{condgauss}
+  m \geq Cs\log\left(\frac{p}s\right),
+ \end{equation}
+ then $\frac1{\sqrt{m}}A$ satisfies the $\left(s,\frac14\right)$-RIP with high probability. 
+\end{theorem}
+
+We point out an important aspect in this context. Theorems~\ref{thm:GaussiansSatisfyNSP} and~\ref{thm:RIPmatricesGaussianEntries} combined with Theorem~\ref{thm:maincs} yield a {\em uniform recovery guarantee} for sparse vectors with Gaussian sensing matrices. Once a Gaussian matrix satisfies the RIP or NSP (which it will for certain parameters with high probability), then exact recovery via $\ell_1$-minimization holds uniformly for {\em all} sufficiently sparse vectors. 
+
+
+
+
+
+
+
+
+Figure~\ref{fig:phaseplot} illustrates  the phase transition phenomenon in compressive sensing: 
+The plot shows that for a given sparsity level $s$, $\ell_1$ minimization almost always succeeds in finding the sparsest solution if the number of measurements is above a certain threshold, while it almost always fails if the number of  measurements is below that threshold. The very sharp transition between failure and success visible in the plot is supported by theoretical analysis~\cite{donoho2009observed,amelunxen2014living}.
+The sensing matrix in this experiment is a Gaussian random matrix of dimension $m \times p$ where the  ambient dimension $p=100$ is fixed. The number of measurements, $m$ varies from 1 to 100, and the sparsity $s$ varies from 1 to $m$. For each choice of $s$ and $m$ we construct a sparse vector $x$ with non-zero random coefficients at  $s$ locations chosen uniformly at random from $1,\dots,100$. We compute $y=Ax$ and solve for $x$ via~\eqref{l1min}.
+For  each choice of $s$ and $m$ this experiment  (randomly chosen $A$ and $x$) is repeated 50 times. We plot the empirical rate of success (here, success means that the relative reconstruction error is less than $10^{-5}$), where black means complete failure and white means complete success. A detailed analysis of this phase transition phenomenon can be found in~\cite{donoho2009observed,amelunxen2014living}.
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[height=60mm]{figures/Chapter11-phaseplot}
+\caption{The phase transition phenomenon in compressive sensing: if the number of measurements is above a certain threshold, $\ell_1$ minimization almost always succeeds in finding the sparsest solution, while it almost always fails if the number of  measurements is below that threshold. We plot the empirical
+probability for different sparsity levels and different number of measurements at fixed ambient dimension, where  black represents 100\% failure and white represents 100\% success. Note the sharp transition between the two extremes. }
+\label{fig:phaseplot}
+\end{center}
+\end{figure}
+
+
+
+
+While there are obvious similarities between  Johnson-Lindenstrauss projections and sensing matrices that satisfy the RIP, there are also important differences.\footnote{Interestingly, there are known relationships between the two objects~\cite{krahmer2011new}.}
+We note that for JL dimension reduction to be applicable (an upper estimate of ) the number of vectors must be known a priori (and this number if finite).  JL projection preserves (up to $\epsilon$) pairwise distances between these vectors, but the vectors do not have to be sparse. As a consequence, JL  projections $P$ are, in general, a one-way street, as in general
+ one cannot  recover $x$ from $y=Px$.
+In contrast, a matrix that satisfies the RIP works for infinitely many vectors, however with the caveat that these vectors  must be sparse.  Moreover,  one can recover such sparse vectors $x$ from $y=Ax$ (and can do so numerically efficiently). 
+
+As a consequence of these considerations, a matrix that satisfies the RIP does not necessarily have to satisfy the Johnson-Lindenstrauss Lemma.
+While a Gaussian random matrix does indeed satisfy both, RIP and the Johnson-Lindenstrauss Lemma, other matrices do not satisfy both simultaneously. For example, take a randomly subsampled Fourier matrix $A$ of dimensions $m \times p$. 
+In the notation of the definition of the Fast Johnson-Lindenstrauss transform, this matrix $A$ would correspond to
+$A= SF$, but without the diagonal matrix $D$ that randomizes phases (or signs) of $x$. This matrix $A$ will not meet the Johnson-Lindenstrauss properties of Theorem~\ref{JL_random_0}. But the absence of the phase randomization matrix $D$ is not a hurdle for $A=SF$ to satisfy the RIP under appropriate conditions 
+on the matrix dimensions.
+
+Indeed, it is known~\cite{Candes_CS4} that if $m=\Omega_\delta(s\operatorname{polylog} p)$, then the partial Fourier matrix satisfies the RIP with high probability. The exact number of logarithmic factors needed is the object of much research with the best known upper bound due to Haviv and Regev~\cite{Haviv_Regev_2016}, giving an upper bound of $m=\Omega_\delta(s\log^2s\log p)$. On the side of lower bounds it is know that the asymptotics established for Gaussian matrices of $m=\Theta_\delta(s\log (p/s))$ are not achievable in general~\cite{Bandeira_UncertaintyPrinciple}.
+
+
+
+Checking whether a matrix satisfies the RIP or not is in general NP-hard~\cite{Bandeira_etal_hardRIP,Tillmann_hardRIP}. While Theorem~\ref{thm:RIPmatricesGaussianEntries} suggests that RIP matrices are abundant for $s  \approx \frac{m}{\log\left( p \right)}$, it appears to be very difficult to deterministically construct matrices that satisfy RIP for $s\gg \sqrt{m}$, known as the square bottleneck~\cite{Tao_blog_deterministicRIP,Bandeira_RoadRIP,Bandeira_DerandomizingRIP,Bandeira_ConditionalPaley,JBourgain_etal_2011_RIP,Dustin_bookchapter_RIP}. The only known unconditional construction that is able to break this bottleneck is due to Bourgain et al.~\cite{JBourgain_etal_2011_RIP}; their construction achieves $s \approx m^{\frac12+\eps}$ for a small, but positive, $\eps$. There is also a conditional construction, based on the Paley Equiangular Tight Frame~\cite{Bandeira_RoadRIP,Bandeira_ConditionalPaley}.
+
+In Section~\ref{s:coherence} we will consider more practical conditions for designing sensing matrices. These conditions, which are better suited for applications, are based on the concept of the  {\em coherence} of a matrix. Interestingly, the  phase randomization of $x$ that is notably absent in the partial Fourier matrix mentioned above, will reappear in this context in connection with {\em nonuniform recovery guarantees}.
+
+
+\begin{remark}
+If one is interested in understanding the probability of exact recovery of a specific sparse vector, and not a uniform guarantee on all sparse vectors simultaneously, then it is possible to do a more refined version of the arguments above that are able to predict the exact asymptotics of the number of measurements required; see~\cite{chandrasekaran2012convex} for an approach based on Gaussian widths and~\cite{amelunxen2014living} for an approach based on Integral Geometry.
+\end{remark}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Duality and exact recovery}
+
+In this section we describe yet another approach to show exact recovery of sparse vectors via~\eqref{eq:6:L1normmin}. In this section we take an approach based on duality, the same strategy we took in Chapter~\ref{c:community} to show exact recovery in the Stochastic Block Model. The approach presented here is essentially the same as the one followed in~\cite{Fuchs_sparserepresentations} for the real case, and in~\cite{Tropp_shortcomplexlinearcombinations} for the complex case.
+
+In Chapter~\ref{c:optimization} we derived the dual of a Linear Program using the Lagrangian formulation (we recommend the reader to work out the alternative derivation using the game theoretic approach used in Chapter~\ref{c:community} (there it was used to derived the dual of a Semidefinite Program). The dual to the Linear Program~\eqref{eq:6:L1normmin_LP} is given by:
+
+
+
+\begin{equation}\label{eq:6:L1normmin_LP_Dual}
+\begin{array}{cl}
+\max_u & u^Ty \\
+s.t. & -\1 \leq A^Tu   \leq  \1.
+\end{array}
+\end{equation}
+
+
+
+Weak duality (the fact that $\eqref{eq:6:L1normmin_LP_Dual}\leq\eqref{eq:6:L1normmin_LP}$) is, as usual, easy to verify: 
+If $\omega^{-}$ and $\omega^{+}$ are primal feasible and $u$ is dual feasible, then
+\begin{eqnarray}\label{eq:6:weakduality}
+0 & \leq & \left( \1^T - u^TA \right) \omega^{+} +  \left( \1^T + u^TA \right) \omega^{-} \label{eq:6:weakduality} \\  &= & 1^T\left( \omega^{+} + \omega^{-} \right) - u^T\left[ A\left( \omega^{+} - \omega^{-} \right)\right] = 1^T\left( \omega^{+} + \omega^{-} \right) - u^Ty, \nonumber
+\end{eqnarray}
+showing that $\eqref{eq:6:L1normmin_LP_Dual}\leq\eqref{eq:6:L1normmin_LP}$. 
+Furthermore, we know from Chapter~\ref{s:duality} that strong duality holds, and it guarantees that the optimal values of the two programs actually match.
+
+\subsection{Finding a dual certificate}
+
+In order to show that $\omega^{+} - \omega^{-} = x$ is an optimal solution\footnote{For now we will focus on showing that it is an optimal solution, see Remark~\ref{remark:6:uniquenessofCSsol} for a brief discussion of how to strengthen the argument to show uniqueness.} to~\eqref{eq:6:L1normmin_LP}, we will find a dual feasible point $u$ for which the dual matches the value of $\omega^{+} - \omega^{-} = x$ in the primal, $u$ is known as a \emph{dual certificate} that we introduced in Chapter~\ref{ss:KKT}.
+
+From~\eqref{eq:6:weakduality} it is clear that $u$ must satisfy 
+$$\left( \1^T - u^TA \right) \omega^{+} =0 \quad \text{and} \quad \left( \1^T + u^TA \right) \omega^{-} = 0,$$ the \emph{complementary slackness} condition from Chapter~\ref{ss:KKT}. This means that we must take the entries of $A^Tu$ be $+1$ or $-1$ when $x$ is non-zero (and be $+1$ when it is positive and $-1$ when it is negative), in other words
+\[
+\left( A^Tu\right)_S = \sign\left(x_S\right),
+\]
+where $S = \supp(x)$, and $\left\| A^Tu\right\|_\infty \leq 1$ (in order to be dual feasible).
+
+
+\begin{remark}\label{remark:6:uniquenessofCSsol}
+It is not difficult to see that if we further ask $\left\| \left( A^Tu\right)_{S^c}\right\|_\infty < 1$, any optimal primal solution would have to have its support contained in the support of $x$. Indeed,  extending Theorem~\ref{th:kkt2} to the case when the objective $f$ is not differentiable but has a subdifferential (as is the case for $f(x) = \|x\|_1$), and then using the properties of the subdifferential for the $\ell_1$-norm that we computed in Chapter~\ref{ss:subgradient},
+gives the following lemma.
+\end{remark}
+
+\begin{lemma}\label{le:csdual}
+Consider the problem of sparse recovery discussed above. Let $S = \supp(x)$, if $A_S$ is injective and there exists $u\in\RR^{M}$ such that
+\[
+\left( A^Tu\right)_S = \sign\left(x_S\right),
+\]
+and
+\[
+\left\| \left( A^Tu\right)_{S^c}\right\|_\infty < 1,
+\]
+then $x$ is the unique optimal solution to the $\ell_1$-minimization problem~\eqref{eq:6:L1normmin}.
+\end{lemma}
+
+
+
+Since we know that $\left( A^Tu\right)_S = \sign\left(x_S\right)$ (and that $A_S$ is injective), we try to construct\footnote{Note how this differs from the situation in Chapter~\ref{c:community} where the linear inequalities were enough to determine a unique candidate for a dual certificate.} $u$ by least squares and hope that it satisfies $\left\| \left( A^Tu\right)_{S^c}\right\|_\infty < 1$. More precisely, we take
+\[
+u = \left( A^T_S \right)^\dagger \sign\left(x_S\right),
+\]
+where $\left( A^T_S \right)^\dagger = A_S \left( A_S^TA_S \right)^{-1}$ is the Moore-Penrose pseudo-inverse of $A^T_S$. This gives the following corollary.
+
+\begin{corollary}\label{cor:6:dualcertificate}
+Consider the problem of sparse recovery.  Let $S = \supp(x)$. If $A_S$ is injective and
+\[
+\left\| A_{S^c}^T A_S \left( A_S^TA_S \right)^{-1} \sign\left(x_S\right) \right\|_\infty < 1,
+\]
+then $x$ is the unique optimal solution to the $\ell_1$-minimization problem~\eqref{eq:6:L1normmin}.
+\end{corollary}
+
+
+
+Theorem~\ref{thm:RIPmatricesGaussianEntries} establishes that if $m \geq Cs\log\left(\frac{p}s\right)$, for a universal constant $C$, and $A \in \RR^{m\times p}$ is drawn with i.i.d. Gaussian entries $\NNN\left(0,\frac1m\right)$ then\footnote{Note that the normalization here is taken slightly differently: entries are normalized by $\frac1{\sqrt{m}}$, rather than $\frac{1}{a_m}$, but the difference is negligible for our purposes.} it will, with high probability, satisfy the $(s,1/3)$-RIP. Note that, if $A$ satisfies the $(s,1/3)$-RIP then, for any $|S|\leq s$ one has $\|A_S\| \leq \sqrt{1+\frac13}$ and $\|\left(A_S^TA_S\right)^{-1}\| \leq \left(1-\frac13\right)^{-1} = \frac32$, where $\|\cdot\|$ denotes the operator norm $\|B\| = \max_{\|x\|=1}\|Bx\|$.
+
+This means that if we take $A$ random with i.i.d.\ $\NNN\left(0,\frac1m\right)$ entries then, for any $|S|\leq s$ we have that
+\[
+\| A_S \left( A_S^TA_S \right)^{-1} \sign\left(x_S\right) \| \leq \sqrt{1+\frac13} \frac32\sqrt{s} = \sqrt{3}\sqrt{s},
+\]
+and because of the independency among the entries of $A$, $A_{S^c}$ is independent of this vector and so for each $j\in S^c$ we have
+\[
+\Prob \left(  \left| A_{j}^T A_S \left( A_S^TA_S \right)^{-1} \sign\left(x_S\right) \right| \geq \frac1{\sqrt{M}}\sqrt{3}\sqrt{s} t \right)  \leq 2\exp\left(-\frac{t^2}2\right),
+\]
+where $A_j$ is the $j$-th column of $A$.
+
+An application of the union bound gives
+\[
+\Prob \left(  \left\| A_{S^c}^T A_S \left( A_S^TA_S \right)^{-1} \sign\left(x_S\right) \right\|_\infty \geq \frac1{\sqrt{M}}\sqrt{3}\sqrt{s} t  \right)  \leq 2N\exp\left(-\frac{t^2}2\right),
+\]
+which implies
+\begin{eqnarray*}
+\Prob \left(  \left\| A_{S^c}^T A_S \left( A_S^TA_S \right)^{-1} \sign\left(x_S\right) \right\|_\infty \geq 1  \right) & \leq & 2p\exp\left(-\frac{\left( \frac{\sqrt{m}}{\sqrt{3s}} \right)^2}2\right) \\ &=& \exp\left(- \frac12\left[ \frac{m}{3s} - 2\log(2p) \right] \right),
+\end{eqnarray*}
+which means that we expect to exactly recover $x$ via $\ell_1$ minimization when $m \gg s\log(p)$. While this can be asymptotically worse then the bound of $m \gtrsim s\log\left(\frac{p}s\right)$, and this guarantee is not uniformly obtained for all sparse vectors, the technique in this section is generalizable to several circumstances and illustrates the flexibility of approaches based in construction of dual witnesses. We will discuss nonuniform guarantees in more detail in the next section.
+
+
+\section{From theory to practice} \label{s:cs_practice0}
+
+
+\subsection{Sensing matrices and incoherence}\label{s:coherence}
+
+In applications, we usually cannot completely freely choose the sensing matrix to our liking. This means that Gaussian random matrices play an important role as benchmark, but from a practical viewpoint they play a marginal role. Clearly, randomness in the sensing matrix seems to be very beneficial for compressive sensing. However, in practice, there are numerous design constraints on the sensing matrix $A$, as in many applications one only has access to structured measurement systems. For example,  we may still have the freedom to choose, say the positions of the antennas in radar systems that employ multiple antennas~\cite{strohmer2014analysis,strohmer2013accurate}, the position of sensors in MRI~\cite{lustig2007sparse,Adcock-Hansen-book,block2007undersampled,ni2024auto}, or the sampling locations in digital signal acquisition~\cite{mishali2010theory}.
+By choosing these randomly, we can still introduce randomness in our system. Or, we can transmit random waveforms in sonar and radar systems~\cite{herman2009high,potter2010sparsity}. Yet, in all these cases the overall structure of $A$ is still dictated by the physics of wave propagation. In other applications, it will be other physical constraints or design limitations that will dictate how much randomness we can introduce into the sensing matrix.
+
+While establishing the RIP (with high probability) for Gaussian or Bernoulli random matrices is not too difficult, it is already significantly harder to do so for the partial Fourier matrix~\cite{Candes_CS4,rudelson2008sparse,Haviv_Regev_2016} and time-frequency matrices~\cite{dorsch2017refined}, and even harder for more specific sensing matrices.
+
+
+A useful concept to overcome the practical limitations of the RIP is via the concept of the (in)coherence of a matrix. This concept has proven to be widely applicable in practice.
+While we want to avoid the constraints of the RIP, we nevertheless take it as our point of departure.
+Recall that the RIP (Definition~\ref{def:6:RIP_2}) asks that any $S\subset [p]$, $|S|\leq s$ satisfies:
+\[
+(1-\delta) \|x\|^2 \leq \left\| A_Sx\right\|^2 \leq (1+\delta) \|x\|^2,
+\] 
+for all $x\in \RR^{|S|}$. This is equivalent to
+\[
+\max_x \frac{x^T\left( A_S^TA_S - I \right)x}{x^Tx} \leq \delta,
+\]
+or equivalently
+\[
+\left\| A_S^TA_S - I \right\| \leq \delta.
+\]
+
+If the columns of $A$ are unit-norm vectors (in $\RR^m$), then the diagonal of $A_S^TA_S$ is all-ones, this means that $A_S^TA_S - I$ consists only of the non-diagonal elements of $A_S^TA_S$. If, moreover, for any two columns $a_i$, $a_j$, of $A$ we have $\left| a_i^Ta_j\right| \leq \mu$ for some $\mu$ then, Gershgorin's circle theorem tells us that $\left\| A_S^TA_S - I \right\| \leq \mu (s-1)$.
+
+More precisely, given a symmetric matrix $B$, the Gershgorin's Circle Theorem~\cite{HJ90} states that all of the eigenvalues of $B$ are contained in the so called Gershgorin discs (for each $i$, the Gershgorin disc corresponds to 
+$$\Big\{ \lambda : |\lambda - B_{ii}| \leq \sum_{j\neq i}\left|B_{ij}\right| \Big\}.$$ If $B$ has zero diagonal, then this reads: $\|B\| \leq \max_i \sum_{j\neq i} \left|B_{ij}\right|$.
+
+Given a set of $p$ unit-norm vectors $a_1,\dots,a_p\in\RR^m$ we define its worst-case coherence $\mu$ as
+\begin{equation}\label{coherence}
+\mu(a_1,\dots,a_p) = \max_{i\neq j} \left| \langle a_i, a_j \rangle  \right|.
+\end{equation}
+
+Assume now the vectors $a_1,\dots,a_p\in\RR^m$ have worst-case coherence $\mu$. If we form a matrix with these vectors as columns, then it will satisfy the $\left( s , \mu(s-1) \right)$-RIP, implying that it will satisfy the $\left( s , \frac13 \right)$- RIP for $s  \leq \frac13\frac{1}\mu$.
+
+
+
+This motivates the problem of designing sets of vectors $a_1,\dots,a_p\in\RR^m$ with smallest possible worst-case coherence. This is a central problem in Frame Theory~\cite{SH03,Chr03,Casazza_Kutyniok_2012,waldron2018introduction}.
+Recall that in finite dimensions, a set of vectors $a_1,\dots,a_p \in\Hsp^m$ (where $\Hsp = \R$ or $\C$) is called a frame for $\Hsp^m$ if 
+there exist constants (frame bounds) $0<A\le B < \infty$ such that\footnote{Since here we are dealing with a finite dimensional Hilbert space, the upper frame bound is always trivially fulfilled, and the lower bound is equivalent to the the frame forming a spanning set.}
+\begin{equation}\label{framedef}
+    A \|x\|^2 \le \sum_{k=1}^p | \langle x,a_k \rangle |^2 \le B \|x\|^2
+\end{equation}
+for every $x\in \Hsp^m$. 
+The associated {\em frame operator} $S$ is defined by
+\begin{equation} \label{frameop}
+Sx = \sum_{i=1}^p \langle x,a_i \rangle a_i.
+\end{equation}
+The frame definition~\eqref{framedef} can be equivalently expressed as 
+requiring that $A I \preccurlyeq S \preccurlyeq B I$ holds, where $\preccurlyeq$ denotes the positive-semidefinite order. 
+A frame is called {\em tight} if $A=B$, in which case
+$S=AI$. 
+If $\|a_i\| = 1$ for all $i=1,\dots,p$ then $\{a_k\}_{i=1}^p$ is called a {\em unit norm frame}. We call a unit norm frame $\{a_k\}_{i=1}^p$ {\em equiangular} if
+\begin{equation}
+\label{defequi}
+|\langle a_i,a_j \rangle| = c \quad 
+\text{for all $i,j$ with $i \neq j,$}
+\end{equation}
+for some constant $c\ge 0$.
+Obviously, any orthonormal basis is equiangular.
+
+
+We can now provide an elucidating answer to the question of a lower bound on the coherence of a set of vectors $a_1,\dots,a_p$ via the following theorem from frame theory.
+\begin{theorem}[\cite{SH03}]
+\label{th:bound}
+Let $\{a_k\}_{k=1}^p$ be a unit-norm frame for $\Hsp^m$, where $\Hsp = \R$ or $\C$ Then
+\begin{equation}
+\mu(a_1,\dots,a_p) \ge \sqrt{\frac{p-m}{m(p-1)}}.
+\label{bound1}
+\end{equation}
+Equality holds in~\eqref{bound1} if and only if $\{a_k\}_{k=1}^p$ is an equiangular tight frame.
+
+\end{theorem}
+
+\begin{proof}
+A simple calculation shows that 
+\begin{equation*}
+\trace (S) = \|S^{\frac{1}{2}}\|_F^2 =\sum_{k=1}^{p} \| a_k\|^2 = p, \,\, \text{and}\,
+\trace (S^2) = \|S\|_F^2 =  \sum_{k,l=1}^{p}  |\langle a_k, a_l \rangle|^2,
+\label{trace}
+\end{equation*}
+Let $\lambda_1 \ge   \dots \ge \lambda_m$ be the
+eigenvalues of $S$. Let ${\textbf 1}$ denote the all-one vector.
+By the Cauchy-Schwarz inequality
+\begin{equation*}
+\trace (S)^2 = \Big(\sum_{k=1}^{m} \lambda_k \Big)^2 =
+\langle {\textbf 1} , \{\lambda_k\} \rangle
+\le \| {\textbf 1}\|^2 \| \{\lambda_k\}\|^2 = 
+m \sum_{k=1}^{m} \lambda_k^2 = m \trace S^2,
+\label{trace1}
+\end{equation*}
+which can be stated equivalently as
+\begin{equation}
+  \label{frameforce}  
+\sum_{k}^{p} \sum_{l=1}^{p} |\langle a_k, a_l \rangle|^2 \ge \frac{p^2}{m}.
+\end{equation}
+Equality holds in~\eqref{frameforce} if and only if $\lambda_1 = \dots = \lambda_p = p/m$, i.e., if and only if $\{a_k\}_{k=1}^p$ is a tight frame
+
+We now consider
+\begin{equation}
+\label{framebound1}
+\underset{k\neq l}\max  |\langle a_k, a_l \rangle|^2
+\ge \frac{1}{p^2 - p}\sum_{k \neq l} |\langle a_k, a_l \rangle|^2 = 
+\frac{1}{p^2 - p} \Big( \sum_{k =1}^p\sum_{l =1}^p |\langle a_k, a_l \rangle|^2 - p \Big),
+\end{equation}
+with equality if and only if $\{a_k\}_{k=1}^p$ is equiangular. By the bound~\eqref{frameforce} we have
+\begin{equation}
+\label{framebound2}
+\frac{1}{p^2 - p} \Big( \sum_{k =1}^p\sum_{l =1}^p |\langle a_k, a_l \rangle|^2 - p \Big) \ge
+\frac{1}{p^2 - p} \Big( \frac{p^2}{m} - p \Big)
+= \frac{p-m}{m(p-1)},
+\end{equation}
+with equality if and only if $\{a_k\}_{k=1}^p$ is a tight frame. Inequalities~\eqref{framebound1} and~\eqref{framebound2} together give~\eqref{bound1} and the proof is complete.
+
+\end{proof}
+
+
+
+
+We note that if $\Hsp=\R$ equality in~\eqref{bound1} can only hold if  $p \le m(m+1)/2$, while if $\Hsp=\C$ then equality in~\eqref{bound1} can only hold if $p \le m^2$. This can be shown by a so-called tensoring trick (we invite the reader to try): by analyzing the gram matrix of the vectors $\{a_k\otimes \overline{a_k}\}_{k=1}^p$ (the $m(m+1)/2$ and $m^2$ bounds then appear by the dimension of the subspace in which these vectors lie), see Table II of~\cite{DGS75}.
+
+
+
+
+
+
+The coherence bound~\eqref{bound1} of a set of $p$ unit-norm vectors in $m$ dimensions is also known as Welch bound~\cite{welch2003lower}. Due to this limitation implied by Theorem~\ref{th:bound}, deterministic constructions based on coherence cannot yield matrices that satisfy the RIP for $s\gg \sqrt{m}$, known as the square-root bottleneck~\cite{Bandeira_RoadRIP,Tao_blog_deterministicRIP,JBourgain_etal_2011_RIP,Bandeira_ConditionalPaley}.
+
+
+
+However, as we will see in Section~\ref{s:cs_practice0}, if we are willing to accept slightly weaker recovery guarantees than provided by the RIP, matrices with low coherence do give rise to sensing matrices that come with appealing theoretical guarantees while also being useful in practice.
+
+Theorem~\ref{th:bound} suggests that in order to design sensing vectors of minimal coherence, we should  look for equiangular tight frames (ETFs). The existence and construction of ETFs is a rather challenging problem that intersects with a wide range of areas such as harmonic analsyis, algebraic, combinatorics, finite geometry, group theory and representation theory, and coding theory~\cite{SH03,waldron2018introduction}. Applications include signal processing, wireless communications, numerical linear algebra, and quantum physics. Indeed, ETFs are deeply connected to Zauner's conjecture, particularly through their role in quantum information theory and the concept of SIC-POVMs (Symmetric Informationally Complete Positive Operator-Valued Measures)~\cite{zauner1999quantendesigns,Scott_Grassl_SICPOVM,appleby2019tight}.
+
+Another interesting and very useful construction of sensing vectors with low coherence is given by so-called {\em mutually unbiased bases}~\cite{wootters1989optimal,durt2010mutually,bandyopadhyay2002new,calderbank1997,SH03}. These bases are widely used in quantum information theory as well as in radar and signal processing. Two orthonormal bases $\{ \phi_j \}_{j=0}^{m-1}, \{ \psi_j \}_{j=0}^{m-1} \in \C^m$ are called {\em mutually unbiased}
+if and only if 
+\begin{equation}\label{MUB}
+\forall i,j \,\, | \langle \phi_i, \psi_j \rangle | = \frac{1}{\sqrt{m}}.
+\end{equation}
+The classical example of an MUB consists of the identity matrix and the Discrete Fourier transform matrix concatenated into a $m\times 2m$ matrix. But, perhaps surprisingly, for certain values of $m$, there exist MUBs in $\C^m$ consisting of $m+1$ orthonormal bases $\{ \phi^{(k)}_j \}_{j=0}^{m-1}, k=0,\dots,m$ such that condition~\eqref{MUB} is satisfied for any two orthonormal bases
+$\{\phi^{(i)}_j\}_{j=0}^{m-1}, \{\phi^{(k)}_j\}_{j=0}^{m-1}$, 
+see for example~\cite{wootters1989optimal,bandyopadhyay2002new,calderbank1997,SH03,alltop1980complex}.
+Thus, MUBs give rise to structured sensing matrices of dimension $m \times m^2$ with coherence $\mu = 1/\sqrt{m}$, which thus almost achieve the Welch bound.
+Here is a simple example for an MUB in $\C^m$: Let $m$ be a prime number $\ge 5$ and set $g(j) = \frac{1}{\sqrt{m}}e^{2\pi i j^3/m}$
+for $j=0,\dots,m-1$. Then the vectors $\{g_{k,l}\}_{k,l=0}^{m-1}$ defined via
+\begin{equation}
+g_{k,l}(j) = g(j-k) e^{2\pi i lj/m}, \quad k,l=0,\dots,m-1,
+\label{fingabor}
+\end{equation}
+satisfy $|\langle g_{k,l}, g_{k',l'} \rangle| \in \{0,1/\sqrt{m}\}$
+for all $g_{k,l} \neq g_{k',l'}$, which follows from basic properties of quadratic Gauss sums (cf.~Theorem~2 in~\cite{alltop1980complex}).
+We can add the $m \times m$ identity matrix and end up with $m^2+m$ vectors (split into $m+1$ ONBs) in $\C^m$ which form a MUB of maximal size.
+For other, nonequivalent constructions, of MUBs (which, however, still revolve around translations and modulations in form of the finite Heisenberg group) 
+see~\cite{calderbank1997}.
+Remarkably, for $m$ not a power of a prime number it is not known how many MUB exist; this is an open problem even for $m=6$~\cite{RandomstrasseProblems2024}.
+For $\R^m$ the construction and existence of MUBs faces more constraints. Even the existence of two bases is equivalent to the existence of so-called Hadamard matrices ($m\times m$ $\pm1$ matrices with orthogonal columns) for which the existence for dimensions that are a multiple of $4$ is still a (celebrated) open question (see, e.g.~\cite{RandomstrasseProblems2024}). 
+
+
+
+\subsection{Nonuniform recovery guarantees and coherence} \label{s:cs_practice0}
+
+
+As mentioned before, it follows from Theorem~\ref{th:bound} that deterministic constructions based on coherence cannot yield matrices that satisfy the RIP for $s\gg \sqrt{M}$, known as the square-root bottleneck~\cite{Bandeira_RoadRIP,Tao_blog_deterministicRIP}.
+To overcome this square root bottleneck it seems that something has to give. One fruitful direction is to sacrifice the {\em uniform recovery} granted by the RIP. Namely, once a matrix satisfies the RIP, it is guaranteed that the solution to the $\ell_1$-optimization problem is identical to the solution to the $\ell_0$-optimization problem (the sparsest solution) for {\em all} $s$-sparse vectors. In contrast, we can consider scenarios in which   $\ell_0$-optimization and $\ell_1$ optimization having the same solution holds ``only'' for {\em most} $s$-sparse vectors. This leads to {\em nonuniform recovery} results, which we will pursue below. The benefits however are often worth the sacrifice, since we end up with theoretical guarantees that are much more practical.
+
+Recall that we consider a general linear system of equations $A x = y$, where $A \in \C^{m \times p}$, $x \in \C^p$
+and $m \le p$. We introduce the following generic $s$-sparse model:
+\begin{itemize}
+%\setlength{\itemsep}{-0.3ex}
+\setlength{\parsep}{-0.3ex}
+\item[(i)] The support $S \subset \{1,\dots,p\}$ of the $s$ nonzero
+coefficients of $x$ is selected uniformly at random.
+\item[(ii)] The non-zero entries of $\sign(x)$ form a Steinhaus sequence, i.e.,
+$\sign(x_k):=x_k/|x_k|, k\in I_s,$ is a complex random variable that is
+uniformly distributed on the unit circle, and independent from each other (and from $I_s$).
+\end{itemize}
+
+
+As an example for a theoretical nonuniform  guarantee using coherence-based sensing matrices  we state (without proof) the following theorem, and refer to~\cite{FoucartRauhut_CSbook} for a proof.
+
+
+\begin{theorem}[Theorem 14.5 in~\cite{FoucartRauhut_CSbook}]\label{th:coherence}
+Let $A \in \C^{m \times p}, m \le p$, be a matrix with $\ell_2$-normalized columns and coherence $\mu$. Let $S$ be a subset of $\{1,\dots,p\}$ selected at random according to the uniform model with $\card(S) = s$. Let $x \in \C^p$ be a vector supported on $S$ for which $\sign(x_S)$
+is a Steinhaus sequence independent of $S$. Assume that, for $\eta,\eps \in (0,1)$
+\begin{align}
+  \eta & \le  \frac{c}{\ln(p/\eps)} \label{nonuniform_cond1}  \\
+  \frac{s}{p} \|A\|^2 & \le  \frac{c}{\ln(p/\eps)}  \label{nonuniform_cond2}
+\end{align}
+for an appropriate constant $c > 0$. Then, with probability at least, the
+vector $x$ is the unique minimizer of $\|z\|_1$  subject to  $Az = Ax$.
+\end{theorem}
+
+A simple calculation shows that for a unit-norm tight frame the
+condition~\ref{nonuniform_cond1} is satisfied if $$m \ge Cs \ln(p/\eps),$$
+which is in the ballpark of condition~\eqref{condgauss} for Gaussian sensing matrices.
+Theorem~\ref{th:coherence} demonstrates that by allowing for nonuniform recovery guarantees one can successfully reconstruct sparse signals under
+much milder coherence conditions than imposed by the aforementioned square root bottleneck. That being said, establishing that the support set of real-world signals can be modeled as random is, in general, difficult to justify rigorously. For instance, the wavelet coefficients of natural images are typically concentrated along edges, giving rise to structured, tree-like patterns in the locations of significant coefficients. This insight is utilized in practical compressive sensing systems as, for example, in MRI~\cite{lustig2007sparse,Adcock-Hansen-book}.
+The fact that the support set of many natural signals does not conform to a uniform distribution highlights the relevance of the recovery results established in Sections~\ref{s:sparse}--\ref{s:rip}, which hold for {\em all} sufficiently sparse signals.
+ Furthermore, as pointed out in~\cite{FoucartRauhut_CSbook}, the stability guarantees currently available for models based on random supports are notably weaker than those derived from the restricted isometry property.
+
+Various other versions of {\em nonuniform recovery} results can be found e.g., in~\cite{Tropp_Dictionaries,CP08,FoucartRauhut_CSbook}. See~\cite{strohmer2014analysis,hugel2014remote,Adcock-Hansen-book} for some theoretical results geared towards applications. 
+
+
+\subsection{Further practical considerations} \label{s:cs_practice}
+
+When moving the ideas of compressive sensing to move from theory into practice we encounter some challenges: (i) the choice of the sensing matrix is often limited by practical considerations and physical constraints (both usually rule out a Gaussian sensing matrix); (ii) signals are often not sparse in the measurement domain, but only with respect to some properly chosen transform (and even then, signals are often only approximately sparse);  (iii) for various reasons (speed being one of them) we may need alternative sparse solvers instead of vanilla $\ell_1$-minimization. We already have  discussed~(i) earlier in this section and will 
+discuss items (ii) and (iii) succinctly below.  We recommend~\cite{Adcock-Hansen-book} for a detailed treatment of how to span the gap between theory and practice of compressive sensing.
+
+
+
+As indicated above, signals are often not sparse in the canonical basis, but they are (approximately) sparse after a suitable transformation. For examples audio signals are sparse with respect to a localized Fourier transform such as a Gabor transform~\cite{daudet2006sparse} or some other local trigonometric transform~\cite{malvar1992signal,mallat_book}. 
+JPEG exploits the sparsity of images in the discrete cosine basis or wavelet basis~\cite{mallat_book} while curvelet transforms are effective sparsifiers for images arising in astronomy~\cite{starck2003astronomical}. Radar signal are sparse when (properly) transformed into the time-frequency domain~\cite{herman2009high}. 
+Some signals may even require a redundant dictionary (perhaps consisting of a combination of a wavelet basis, a curvelet basis, and a Fourier basis), see 
+e.g.~\cite[Chapter 12]{mallat_book}. 
+But how do such transform-sparse signals fit into our framework? 
+
+
+
+As before, let $x \in \C^p$ be the signal (or image) of interest and we observe $y=Ax$, where $A \in \C^{m \times p}$ is a sensing matrix, where $m < p$. 
+We assume that $x$ is sparse with respect to some basis or frame $U \in \C^{p \times n}$, where $n \ge p$ (and $n=p$ if we restrict $U$ to be a basis).
+Denote this sparse representation by $w \in \C^n$, i.e.,  $x= Uw$. We write $B:=AU$ and can now solve for $w$ via
+\begin{equation} \label{transformsparse}
+\min \,\, \|z\|_1 \,\,\, \text{s.t.} \,\,  Bz = y.
+\end{equation}
+Having solved this problem (assuming it does indeed yield $w$), we can recover $x$ from $w$ by simply computing $x=Uw$.
+
+Thus, we can (try to) apply the theoretical results developed in the previous sections to the matrix $B=AU$ in place of $A$. In a nutshell, the sensing matrix $A$ has to be {\em incoherent} with respect to the transform in which the signal is sparse. An important example arises in MRI. There, the wavelet transform is often chosen as sparsifying transform and the sensing matrix is derived from randomly subsampling the two-dimensional Discrete Fourier Transform or the Radon transform, see~\cite{lustig2007sparse,Adcock-Hansen-book}.
+In practice, it has been observed that even better results are obtained when the random subsampling of the Fourier coefficients is combined with a deterministic sampling of the  
+Fourier coefficients corresponding the low frequencies, a strategy that has already been suggested in one of the original papers on compressive sensing~\cite{Donoho_CS}. We refer to~\cite{lustig2007sparse,Adcock-Hansen-book} for many more details and modifications. 
+
+Figure~\ref{fig:CSMRI} shows an example of compressive sensing applied to MRI.  The test image is the so-called GLPU phantom (introduced by Guerquin-Kern, Lejeune, Pruessmann and Unser in~\cite{guerquin2011realistic}). It is a continuous, piecewise constant MRI-type image with an analytic expression for its Fourier transform. 
+ The reconstruction of the discrete GLPU phantom from 30\%  randomly chosen discrete Fourier measurements. The wavelet transform with a Haar wavelet has been used as sparsifying transform $U$. The image $x$ is recovered by first solving~\eqref{transformsparse} for $w$, followed by computing $x=Uw$.
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/Chapter11-uniform_haar_3x}
+%\includegraphics[width=0.9\textwidth]{figures/uniform_dct_3x}
+\caption{The GLPU MRI phantom (left), its reconstruction (middle) via $\ell_1$ minimization from  30\% discrete randomly chosen Fourier measurements  using the wavelet transform as  sparsifying transform $U$. The sampling pattern is depicted on the right where white pixels correspond to sampling locations.}
+\label{fig:CSMRI}
+\end{center}
+\end{figure}
+
+
+
+
+\bigskip
+
+There are various other efficient and rigorous methods to recover sparse vectors from underdetermined systems besides $\ell_1$-minimization and the lasso. For example, homotopy methods, greedy algorithms or methods based on approximate message passing. We refer to~\cite{FoucartRauhut_CSbook,Adcock-Hansen-book} for a comprehensive discussion of these techniques. 
+Furthermore,~\cite{Adcock-Hansen-book} contains a detailed discussion of  some subtle potential numerical stability issues one should be aware of. 
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}[\level\level\sep Sparse vector approximation in $\ell^2$]\label{prob:sparse_vector_approx}
+    Let $N \geq s \geq 1$ be integers and $x \in \C^N$ be a vector. Show that there exists an $s$-sparse vector $y \in \C^N$ such that
+    \begin{equation*}
+        \norm{x - y}_2 \leq \frac{1}{2\sqrt{s}}\norm{x}_1.
+    \end{equation*}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep $\ell_0$-Minimization Recovery]\label{prob:l0_minimization}
+    
+    Let $A \in \mathbb{C}^{m\times p}$ be a matrix. Suppose that every $s$-sparse vector $x$ can be uniquely recovered by $A$ via $\|.\|_0$ minimization, i.e, we choose $x^{\ast}$ that minimizes $\|z\|_{0}$ subject to the constraint $Ax=Az$ and $x$ is the unique minimum of this problem if $x$ has at most $s$ nonzero entries.
+    \begin{enumerate}
+        \item Prove that every $2s$ columns of $A$ are linearly independent.
+        
+        \item Prove that $m\ge 2s$.
+        
+        \item Prove that if a matrix $B\in \mathbb{C}^{m\times p}$ satisfies the condition that every $2s$ columns are linearly independent, then every $s$-sparse vector $x$ can be uniquely recovered by $B$ via $\|.\|_0$ minimization.
+
+    \end{enumerate}
+
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Stable nullspace property]\label{prob:stable_nullspace_property}
+     A fundamental fact in compressed sensing is that in order to recover an $s$-sparse vector $x \in \mathbb{R}^N$ by minimizing the $\ell_1$ norm, the measurement matrix $\Phi \in \mathbb{R}^{d\times N}$ needs to satisfy the null space property. The goal of this exercise is to study the compressed sensing problem when $x$ is approximately sparse.
+
+    We say that a matrix $\Phi \in \mathbb{R}^{d\times N}$ satisfies \emph{the $(s,\rho)$-stable null space property} if for every non-zero vector $v \in \ker(\Phi)$ and all sets $S$ such that $|S|\le s$, the following holds
+    \begin{equation*}
+        \|v_{S}\|_1 \le \rho \|v_{S^c}\|_1.
+    \end{equation*}
+
+    Prove the following facts
+    \begin{enumerate}[(a)]
+        \item Given a set $S\subset \{1,\ldots,N\}$ and vectors $x,z \in \mathbb{R}^N$,
+        \begin{equation*}
+            \|(x-z)_{S^c}\|_1 \le \|z\|_1 - \|x\|_1  + 2\|x_{S^c}\|_1 + \|(x-z)_{S}\|_1.
+        \end{equation*}
+        \item Prove that if $\Phi \in \mathbb{R}^{d\times N}$ satisfies the $(s,\rho)$-stable nullspace property with $\rho \in (0,1)$, then the solution of the optimization program 
+        \begin{equation*}
+            \hat{x}:= \mathrm{argmin}\, \|z\|_1 \quad \text{subject to} \quad \Phi z=\Phi x
+        \end{equation*}
+        satisfies 
+        \begin{equation*}
+            \|\hat{x}-x\|_1 \le 2\sigma_s(x)\frac{1+\rho}{1-\rho},
+        \end{equation*}
+        where $\sigma_s(x)$ is the $s$-best term approximation error of $x$, given by $\sigma_s(x) \coloneqq \inf_{z:\|z\|_0 \le s} \|x-z\|_1$.
+        \item Show that the stable nullspace property with $\rho<1$ is sufficient for exact recovery when the vector $x$ is $s$-sparse.
+    \end{enumerate}
+\end{myexercise}
+
+
+
+
+
+
+
+
+\begin{myexercise}
+Let $i =\sqrt{-1}$ and set
+$$
+A=
+\begin{bmatrix}
+i & 0 & -i \\
+0 & i & -i
+\end{bmatrix}.
+$$
+Using the null space property, show that $\ell_1$-minimization will recover any
+1-sparse vector $x$, given $Ax = y$.
+\end{myexercise}
+
+\begin{myexercise}
+On the connection between (in)coherence parameter $\mu$  and restricted isometry constant $\delta_{s}$:
+Show that $\delta_1 = 0, \delta_2 = \mu$, and $\delta_s \le (s-1)\mu$.
+\end{myexercise}
+
+\begin{myexercise}
+Let $A \in \R^{k \times d}$ be a Gaussian random matrix. Give an estimate for the coherence $\mu$ of $A$.
+\end{myexercise}
+
+\begin{myexercise}
+The proximal operator for the $\ell_1$ norm is defined as
+$$\text{prox}_{\lambda \|\cdot\|_1}(y) = \arg\min_{x} \left( \lambda \|x\|_1 + \frac{1}{2}\|x-y\|^2 \right).$$
+Derive the closed-form solution (Soft-Thresholding) for
+$\text{prox}_{\lambda \|\cdot\|_1}(y)$.
+\end{myexercise}
+
+
+\begin{myexercise}
+Consider $y=Ax$, where $A$ is a $100 \times 400$ Gaussian random matrix and $x$ is an $s$-sparse
+vector of length 400. The locations of the non-zero entries of $x$ are chosen uniformly at random
+and the non-zero coefficients of $x$ are normal-distributed. For $s=1,2,\dots,$ solve
+$$\underset{z}{\min} \,\|z\|_1 \quad \text{subject to\,\,} Az=y,$$
+(e.g.\ using the Matlab toolbox \texttt{cvx}, see \texttt {cvxr.com/cvx}, or its Python version \texttt{cvxopt}  or its R version \texttt{cvxr}.).
+For each fixed $s$ repeat the experiment 10 times.
+Create a graph plotting $s$ versus the relative reconstruction error (averaged over the ten experiments
+for each $s$).
+Starting with which value of $s$ (approximately)
+does $\ell_1$-minimization fail to recover $x$?
+\end{myexercise}
+
+\begin{myexercise}
+Same setup as in the previous exercise, but now the non-zero entries of $x$ are non-negative. Taking this information into
+account, we now solve
+$$\underset{z}{\min}\, \|z\|_1 \quad \text{subject to\,\,} Az=y \,\, \text{and\,\,} z \ge 0$$
+(here, $z\ge 0$ is meant entrywise, i.e., for each $k: z_k \ge 0$).
+(The positivity constraint is easy to include in {\texttt cvx}).
+Repeat the simulations as described in the previous exercise.
+Compare your findings to the results from your experiments of the previous exercise and try
+to quantify the difference regarding the range for $s$ for which recovery is still possible in this case.    
+\end{myexercise}
+
+
+
+\begin{myexercise} 
+Let $m$ be a prime number $\ge 5$ and set 
+$$g(j) = \frac{1}{\sqrt{m}}e^{2\pi i j^3/m}$$
+for $j=0,\dots,m-1$. Define the vectors $\{g_{k,l}\}_{k,l=0}^{m-1}$ 
+\begin{equation*}
+g_{k,l}(j) := g(j-k) e^{2\pi i lj/m}, \quad k,l=0,\dots,m-1.
+\end{equation*}
+Prove that these  $m^2$ vectors $\{g_{k,l}\}_{k,l=0}^{m-1}$ plus the $m$ unit vectors $\{e_k\}_{k=0}^{m-1}$ together form a mutually unbiased basis (MUB) of $m(m+1)$ vectors for $\C^m$.
+\end{myexercise}
+
+
+\begin{myexercise}
+This exercise is a bit more involved. It asks you to prove {\em Zauner's Conjecture}, a
+fascinating conjecture that pervades many areas of mathematics, including quantum information theory, harmonic analysis and frame theory, finite group theory and representation theory, algebraic number theory, algebraic geometry, discrete and combinatorial geometry, operator algebras, and matrix analysis.
+(If you actually succeed in proving Zauner's Conjecture, T.S.\ will send you one of the famous {\em Zaunerstollen} (different Zauner) as reward; and you may also become a serious contender for significant mathematical awards). \\
+\textbf{Zauner's Conjecture:}~\cite{zauner1999quantendesigns,renes2004symmetric} For every integer $d \ge 2$, there exists a unit vector $\psi \in \mathbb C^d$ (called a {\em fiducial vector} such that its orbit under the Weyl–Heisenberg group,
+$$
+\mathcal F = \{ T_x M_{\omega}\psi : (x,\omega)\in  \Z_d \times \Z_d \},
+$$
+forms an {\em equiangular tight frame} of $d^2$ vectors in $\mathbb C^d$. Here $T_x$ is the cyclic translation operator defined by $T_x f(t) = f(t-x)$ where $t= 0,\dots,d-1$ and $x= 0,\dots,d-1$ (thus the translation index $t-x$ is computed modulo $d$) and $M_{\omega}$ is the modulation operator defined by $M_{\omega} f(x) = f(x) e^{2\pi i \omega t/d}$ for $\omega =0,\dots,d-1.$.
+\end{myexercise}
+
+
+
+
+

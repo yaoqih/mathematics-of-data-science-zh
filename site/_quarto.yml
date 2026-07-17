@@ -1,0 +1,73 @@
+project:
+  type: book
+  output-dir: _site
+  preview:
+    port: 4321
+    browser: true
+
+lang: zh
+
+book:
+  title: "数据科学的数学基础"
+  subtitle: "Mathematics of Data Science 中文翻译"
+  author:
+    - Afonso S. Bandeira
+    - Amit Singer
+    - Thomas Strohmer
+  date: last-modified
+  search: true
+  page-navigation: true
+  chapters:
+    - index.qmd
+    - part: "阅读说明"
+      chapters:
+        - status.qmd
+        - editorial.qmd
+    - part: "正文"
+      chapters:
+        - chapters/01-introduction.qmd
+        - chapters/02-high-dimensions.qmd
+        - chapters/03-svd-pca.qmd
+        - chapters/04-linear-regression.qmd
+        - chapters/05-graphs-clustering.qmd
+        - chapters/06-diffusion-maps.qmd
+        - chapters/07-random-projections.qmd
+        - chapters/08-optimization.qmd
+        - chapters/09-classification.qmd
+        - chapters/10-deep-learning.qmd
+        - chapters/11-graph-laplacians.qmd
+        - chapters/12-community-detection.qmd
+        - chapters/13-gaussian-analysis.qmd
+        - chapters/14-matrix-concentration.qmd
+        - chapters/15-compressive-sensing.qmd
+        - chapters/16-low-rank-recovery.qmd
+    - references.qmd
+  sidebar:
+    style: docked
+    collapse-level: 1
+  page-footer:
+    left: "内部翻译预览 · 未获授权前请勿公开传播"
+    right: "基于 Quarto 构建"
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      light: [cosmo, styles/theme.scss]
+      dark: [darkly, styles/theme-dark.scss]
+    css: styles/print.css
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    smooth-scroll: true
+    code-copy: true
+    code-overflow: wrap
+    html-math-method: mathjax
+    link-external-newwindow: true
+    fig-align: center
+    reference-location: margin
+    citation-location: document
+
+execute:
+  freeze: auto

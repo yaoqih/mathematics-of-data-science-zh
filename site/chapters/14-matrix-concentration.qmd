@@ -1,0 +1,18 @@
+---
+title: "矩阵集中不等式"
+description: "非交换 Khintchine 不等式与矩阵集中"
+status: 待翻译
+---
+
+::: {.callout-note title="翻译状态"}
+本章对应英文原稿 `probability-matrixconcentration.tex`，尚待翻译。
+:::
+
+## 非交换 Khintchine 不等式
+
+## 矩阵集中不等式
+
+## 利用内在自由性的改进
+
+## 习题 {.unnumbered}
+

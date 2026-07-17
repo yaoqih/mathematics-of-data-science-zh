@@ -1,0 +1,44 @@
+metadata:
+  language: zh-CN
+  policy: "中文译名统一；首次出现可附英文原词。"
+
+terms:
+  - en: concentration of measure
+    zh: 测度集中
+  - en: curse of dimensionality
+    zh: 维数灾难
+  - en: singular value decomposition
+    zh: 奇异值分解
+    abbr: SVD
+  - en: principal component analysis
+    zh: 主成分分析
+    abbr: PCA
+  - en: ridge regression
+    zh: 岭回归
+  - en: spectral clustering
+    zh: 谱聚类
+  - en: diffusion map
+    zh: 扩散映射
+  - en: Johnson-Lindenstrauss lemma
+    zh: Johnson-Lindenstrauss 引理
+  - en: support vector machine
+    zh: 支持向量机
+    abbr: SVM
+  - en: graph Laplacian
+    zh: 图拉普拉斯算子
+  - en: community detection
+    zh: 社群检测
+  - en: convex relaxation
+    zh: 凸松弛
+  - en: matrix concentration inequality
+    zh: 矩阵集中不等式
+  - en: compressed sensing
+    zh: 压缩感知
+  - en: restricted isometry property
+    zh: 限制等距性质
+    abbr: RIP
+  - en: nuclear norm
+    zh: 核范数
+  - en: low-rank matrix recovery
+    zh: 低秩矩阵恢复
+

@@ -1,0 +1,1446 @@
+%\chapter{A Gentle Introduction to Deep Learning}
+\chapter{A Mathematical Introduction  to Deep Learning}
+\label{c:deeplearning}
+
+%\newcommand{\loss}{{\mathcal C}}
+%\newcommand{\finf}{{f_{\inf}}}
+
+\newcommand{\bfa}{{\mathbf a}}
+\newcommand{\bfb}{{\mathbf b}}
+\newcommand{\bfh}{{\mathbf h}}
+
+\newcommand{\bfu}{{\mathbf u}}
+\newcommand{\bfv}{{\mathbf v}}
+\newcommand{\bfw}{{\mathbf w}}
+\newcommand{\bfW}{{\mathbf W}}
+\newcommand{\bfx}{{\mathbf x}}
+\newcommand{\bfy}{{\mathbf y}}
+\newcommand{\bfz}{{\mathbf z}}
+
+
+
+Deep learning has emerged as one of the most intriguing developments in modern data science, offering a powerful framework for learning complex patterns directly from data. Unlike traditional machine learning methods that rely heavily on feature engineering, deep neural networks automatically extract hierarchical representations that capture both low-level and high-level structures in data. This capability makes deep learning particularly effective for classification tasks, where the goal is to assign inputs---such as images, sounds, or text---to discrete categories. By composing multiple layers of nonlinear transformations, deep learning models can approximate highly intricate decision boundaries, often achieving impressive performance across a wide range of domains.
+
+The 2024 Nobel Prize in Physics and the 2024 Nobel Prize in Chemistry marked a significant moment of recognition for the field of deep learning and its far-reaching scientific impact. Together, these awards signal how deep-learning architectures have moved from niche algorithmic innovation to being recognized as powerful scientific tools.
+
+
+
+Despite this phenomenal empirical success and scientific recognition, the field's underlying mathematical theory is still nascent; many fundamental questions regarding optimization, generalization bounds, and the precise reasons for the efficacy of overparameterized models remain open problems at the intersection of mathematics, statistics, and computer science.
+
+
+
+
+At its core, deep learning leverages artificial neural networks with many layers---hence the term ``deep''---to model complex relationships in data. This chapter provides a mathematical perspective on deep learning, focusing on the foundational concepts and structures that underpin the field. 
+Deep learning has developed its own jargon, often coming up with new names for already well established procedures in signal and image processing, optimization, or statistics. We follow in part the very accessible article by Higham and Higham~\cite{higham2019deep} when bridging deep learning and applied mathematics. We also recommend~\cite{petersen2024mathematical} which covers several topics that we do not discuss in this chapter,  such as the generalization properties of deep neural networks.
+
+\section{Neural networks}
+
+
+Neural networks are a cornerstone of modern artificial intelligence, capable of learning patterns from data. 
+Neural networks are used in a variety of applications, including image recognition, natural language processing, and even playing complex games like Go and Chess. 
+Here we focus on using neural networks for classification.
+
+
+
+
+Suppose we have a training dataset of $n$ points in $\R^d$ consisting 
+of two classes $A$ and $B$, drawn from some underlying distribution of data with the 
+same labels. Based on this training set, we are looking to design a function 
+$F: \R^d \rightarrow \{\textrm{A,B}\}$ that will generate labels for new 
+data, for example, the black question mark in Figure~\ref{fig:classification}
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.35\textwidth]{figures/plotclass.png}
+    \caption{Labeled and unlabeled data points in $\R^2$ and a possible decision boundary.}
+    \label{fig:classification}
+\end{center}
+\end{figure}
+If the green line represents the decision boundary of $F$, then the question mark will be
+classified as a $B$. Artificial neural networks (or neural networks for short) are a way of generating this function $F$.
+
+\subsection{Perceptrons}
+
+A neural network is  composed of layers of {\em neurons}, where each neuron (or node) is a computational unit that processes input and produces an output.
+The perceptron, introduced by Frank Rosenblatt in 1958~\cite{Rosenblatt}, is one of the simplest models of a neuron. Mathematically, a perceptron can be described as:
+$$
+y = \sigma \left(\sum_{i=1}^n w_i x_i + b\right),
+$$
+where  $x_i$ are the input features, $w_i$ are the weights associated with the inputs, $b$ is the so-called bias term, $\sigma$ is an activation function (typically a Heaviside step function, but more generally it can be a nonlinear function like the sigmoid).
+
+
+
+A multilayer perceptron (MLP) extends the perceptron by stacking multiple layers of nodes. An MLP consists of an input layer, one or more hidden layers, and an output layer. Each layer $ \ell $ in an MLP is described by the following equation:
+
+$$
+a^{(\ell)} = \sigma\left(W^{(\ell)} a ^{(\ell-1)} + b^{(\ell)}\right),
+$$
+where $ a^{(\ell-1)}$ is the output of the previous layer (or the input data for the first layer),
+$W^{(\ell)}$ is the weight matrix for layer $ \ell $,
+$b^{(\ell)}$ is the bias vector for layer $\ell$,
+and $ \sigma$ is an element-wise activation function. 
+An MLP is a specific type of neural network, more specifically a subclass of feedforward neural networks. More generally, {\em neural network} is an umbrella term that includes various architectures beyond just feedforward networks.
+
+To introduce some further standard terminology, the first layer of a neural network is called the input layer, which usually just corresponds to the data. A hidden layer in a neural network is any layer of nodes that is situated between the first layer and the last layer. The term ``hidden'' refers to the fact that these layers are not directly exposed to the input data or the final output; they are ``hidden'' in the sense that they exist only within the network's architecture.
+The last layer is the output layer, typically associated with a loss function that measures the discrepancy between the predicted output and the true output.
+ The output layer shapes the data into a shape more appropriate for the downstream task. For example the output layer may transform the data from a hidden shape of, say, 1024, to a shape of 2 for a binary prediction.
+
+\subsection{General setup}
+
+We assume the following general setup: The network has $L$ layers, with layers $1$ and $L$ being the input and output layers, respectively.
+We assume that the number of nodes in the $\ell$-th layer is $n_\ell$, for $\ell = 1, 2, 3, \ldots, L$. Thus the input dimension is $n_1$ and the output dimension is $n_L$. We denote the matrix of weights at layer $\ell$ by $W^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$, where
+$w^{(\ell)}_{jk}$ is the weight that node $j$ at layer $\ell$ applies to the output from node $k$ at layer $\ell-1$. Similarly, $b^{(\ell)} \in \R^{n_l}$ is the vector of biases for layer $\ell$. Hence, the bias $b^{(\ell)}_j$ is associated with node $j$ at layer $\ell$.
+
+
+
+
+\begin{figure}
+\begin{center}
+ \includegraphics[width=0.8\textwidth]{figures/Network1}
+\caption{A neural network with two hidden layers.}
+\label{fig:NN}
+\end{center}
+\end{figure}
+
+A neural network with four layers is illustrated in Figure~\ref{fig:NN} (for simplicity the bias terms are omitted in that figure).
+$W_{kj}^{(\ell)}$ represents the connection between unit $j$ in layer $\ell$ and
+unit $k$ in layer $\ell+1$, so the rows of $W^{(\ell)}$ correspond to
+the weights going into node $k$. In this spirit, we define $W_i^{
+(\ell)}$ to be the $i^{\textrm{th}}$ row vector of $W^{(\ell)}$. In the
+example shown in Figure~\ref{fig:NN}, $W^{(1)}\in\R^{4\times 3}$,  $W^{(2)}\in\R^{2\times 4}$, and $W^{(3)}\in\R^{1\times 2}$.
+Also, $a_k^{(\ell)}$ denotes the output, or activation, of unit $k$ in layer $\ell$,
+while $z_k^{(\ell)}=\sum_{j}W_{kj}^{(\ell)}x_J$ is the sum into node $k$.
+Hence, in the above example:
+\begin{align*}
+  \ell = 1 ~&~ a_k^{(1)}  := x_k\\
+  \ell = 2 ~&~ a_k^{(2)} := \sigma_1 \big(W_k^{(1)}x \big) = \sigma_1 \big(W_
+  {k1}^{(1)}x_1 + W_{k2}^{(1)}x_2  + W_{k3}^{(1)} x_3\big)\\
+  \ell = 3 ~&~ a_k^{(3)} := \sigma_2 \big(W_k^{(2)} a^{(2)}\big) = \sigma_2 \big(W_
+  {k1}^{(2)}x_1 + W_{k2}^{(2)}x_2  + W_{k3}^{(1)} x_3 + W_
+  {k4}^{(1)} x_3\big)\\
+  \ell = 4 ~&~ a_k^{(4)} := \sigma_3 \big(W_k^{(3)} a^{(3)} \big) = \sigma_3 \big(
+  W_{k1}^{(3)} x_1 + W_{k2}^{(3)} x_2 \big)
+\end{align*}
+
+We can now represent the action of a  deep neural network with $L$ layers in the following form:
+Given an input $x \in \R^{d_1}$, let $a^{(\ell)}_j$ 
+denote the output, or activation, from neuron $j$ at layer $\ell$. We compute:
+\begin{equation}
+\label{neuralnet}
+\begin{split}
+    a^{(1)} & = x \in \R^{d_1}, \\
+    a^{(\ell)} & = \sigma_k \Big( W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}\Big) \in \R^{d_\ell}, \qquad \text{for $\ell = 2,\dots, L$,}
+\end{split}
+\end{equation}
+where, the activation functions $\sigma_\ell$ and the number of nodes $d_\ell$ may differ from layer to layer. 
+
+Suppose now that we are given a set of $N$ data points $x_1,\dots, x_N \in \R^{d_1}$ (our {\em training set}), for which we have associated target outputs $y_1,\dots, y_N$. 
+The $x_i$ might be images, each showing either a car or a bicycle, and the corresponding $y_i$ might be binary labels indicating class membership, i.e., if the depicted object in image $x_i$ is in fact a car or a bicycle.
+The task of training a neural net is to minimize
+a user-specified cost function or loss function ${\mathcal C}$ which takes as input $\{x_i\}_{i=1}^N,\{y_i\}_{i=1}^N$ and which will depend on all the weights $\{W^{(\ell)}\}_{\ell=1}^L$ and biases $\{b^{(\ell)}\}_{\ell=1}^L\big)$. One example of such a cost function is
+$${\mathcal C}\big(\{x_i\}_{i=1}^N,\{y_i\}_{i=1}^N \big) = \frac{1}{N}  \sum_{i=1}^N \| y(x_i) - a^{(L)} (x_i)  \|_2^2. $$
+We will discuss other choices of loss functions  and how such a network is typically trained (i.e, how to find the weights and biases that minimize the loss function) in Section~\ref{nn:training}.
+
+
+
+\subsection{Activation functions}
+
+
+The activation function $ \sigma $ introduces non-linearity into the model, with the intention that it should enable the network  (assuming sufficiently many nodes and layers)  to learn complex patterns. We briefly discuss some common activation functions. {\em Sigmoidal} type functions satisfy the properties $\lim_{x \to \infty } \sigma(x) = 1$   and  $\lim_{x \to -\infty } \sigma(x) = 0$. The {\em sigmoid} or {\em logistic} function
+  $$
+  \sigma(x) = \frac{1}{1 + e^{-x}},
+  $$
+an example of a sigmoid function, maps the input $ x $ to a value between 0 and 1, making it useful for binary classification problems, as we already have seen in Chapter~\ref{c:classification}.
+The {\em hyperbolic tangent} 
+  $$
+  \tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}
+  $$
+maps the input to a value between -1 and 1, and it is often used in hidden layers of a neural network.
+The {\em Rectified Linear Unit} (ReLU)
+  $$
+  \text{ReLU}(x) = \max(0, x)
+  $$
+ is the most popular activation function in deep learning. It is computationally efficient and helps mitigate the vanishing gradient problem~\cite{hochreiter1991untersuchungen,bengio1994learning}. However, it is not differentiable at the origin.
+The {\em softmax} function:
+  \begin{equation}
+   \label{softmax}   
+  \text{Softmax}(x_i) = \frac{e^{x_i}}{\sum_{j=1}^n e^{x_j}}
+    \end{equation}
+  is typically used in the output layer of a network for multi-class classification problems. It converts the raw output scores into probabilities.
+
+\begin{figure}
+\begin{center}
+    \includegraphics[width=.3\textwidth]{figures/activ_logistic}
+    \includegraphics[width=.3\textwidth]{figures/activ_tanh}
+    \includegraphics[width=.3\textwidth]{figures/activ_relu}
+    \caption{Some activation functions commonly used in deep learning: the logistic (sigmoid) function, the hyperbolic tangent (tanh), and the  Rectified Linear Unit (ReLU).}
+    \label{fig:activ}
+\end{center}
+\end{figure}
+
+
+Which activation function shall we use in which layer? 
+Except for the last layer, where the activation function is in part determined by the task at hand (e.g.\ a classification task will suggest something like a softmax activation function while a ReLU would not help in that case), choosing an activation function is done mainly via trial and error.
+
+While trial and error is often good enough for most application, one might ask if, instead of such an ad hoc approach, can we take a data driven approach and {\em learn} the activation functions like we do for the weights and biases?
+One approach to do this in a principled manner is given by Kolmogorov-Arnold Networks which have learnable activation functions. Indeed, Kolmogorov-Arnold Networks have no linear weights at all, since every weight parameter is replaced by a univariate function parametrized as a spline.
+We refer to interested reader to~\cite{liu2024kan} for details.
+
+\section{The Universal Approximation Theorem}
+
+
+Although many facets of deep learning still lack a thorough mathematical explanation, the approximation properties of (shallow) neural networks are relatively well understood.
+The Universal Approximation Theorem~\cite{hornik1990universal,hornik1991approximation,cybenko1989approximation,pinkus1999approximation,barron2002universal}
+is a fundamental result in neural network theory. It essentially states that a feedforward neural network with a single hidden layer containing a finite number of nodes can approximate any continuous function on compact subsets of $\R^n$, given appropriate parameters (weights and biases).
+
+\subsection{A ``shallow'' theorem}
+
+One of the foundational versions of the Universal Approximation Theorem (UAT) for shallow neural networks is due to George Cybenko~\cite{cybenko1989approximation}. It applies to single-hidden-layer feedforward networks with sigmoidal activation functions. We need some notation before we can present the rigorous statement.
+
+Let \( I_n = [0,1]^n \) be the unit hypercube in \( \mathbb{R}^n \), and let \( C(I_n) \) be the space of continuous real-valued functions on \( I_n \), equipped with the supremum norm \( \|f\| = \sup_{x \in I_n} |f(x)| \).
+We recall that a function \( \sigma: \mathbb{R} \to \mathbb{R} \) is called {\em sigmoidal} if \( \lim_{t \to +\infty} \sigma(t) = 1 \) and \( \lim_{t \to -\infty} \sigma(t) = 0 \).
+
+\begin{theorem}[Cybenko, 1989]: \label{th:UAT} Let \( \sigma \) be any continuous sigmoidal function. Then, the set of all finite sums of the form
+\[
+G(x) = \sum_{j=1}^N \alpha_j \sigma(\langle y_j, x\rangle + \theta_j),
+\]
+where \( N \in \mathbb{N} \), \( \alpha_j, \theta_j \in \mathbb{R} \), and \( y_j \in \mathbb{R}^n \), is dense in \( C(I_n) \). In other words, for any \( f \in C(I_n) \) and any \( \varepsilon > 0 \), there exists such a \( G \) satisfying
+\[
+|G(x) - f(x)| < \varepsilon \quad \forall x \in I_n.
+\]
+\end{theorem}
+
+This theorem implies that a single-hidden-layer neural network with a continuous sigmoidal activation function (e.g., the logistic sigmoid \( \sigma(t) = \frac{1}{1 + e^{-t}} \)) can approximate any continuous function on a compact set to arbitrary accuracy, provided sufficiently many hidden neurons are used. Note that the result extends naturally to any compact subset of \( \mathbb{R}^n \) by rescaling and shifting, and to multi-output functions component-wise.
+
+
+
+The proof relies on concepts from functional analysis, including the Hahn-Banach theorem and the Riesz representation theorem. It first establishes a more general result for ``discriminatory'' functions defined below, and then shows that continuous sigmoidal functions are discriminatory.
+
+\begin{definition}
+Let \( M(I_n) \) denote the space of finite signed regular Borel measures on \( I_n \).
+A function \( \sigma: \mathbb{R} \to \mathbb{R} \) is called {\em discriminatory} if, for any \( \mu \in M(I_n) \),
+  \[
+  \int_{I_n} \sigma(\langle y, x\rangle + \theta) \, d\mu(x) = 0 \quad \forall y \in \mathbb{R}^n, \, \forall \theta \in \mathbb{R}
+  \]
+  implies \( \mu = 0 \).
+ \end{definition}
+
+
+\begin{theorem} \label{th:UATgen} Let \( \sigma \) be any continuous discriminatory function. Then, finite sums of the form
+\[
+G(x) = \sum_{j=1}^N \alpha_j \sigma(\langle y_j, x\rangle + \theta_j)
+\]
+are dense in \( C(I_n) \).
+\end{theorem}
+
+\begin{proof}
+Let \( S \) be the subspace of \( C(I_n) \) consisting of all finite linear combinations of functions of the form \( x \mapsto \sigma(\langle y, x \rangle + \theta) \) for \( y \in \mathbb{R}^n \) and \( \theta \in \mathbb{R} \) (i.e., the span of such functions). Clearly, \( S \) is a linear subspace.
+
+Assume, for contradiction, that the closure \( \overline{S} \) (in the supremum norm) is a proper closed subspace of \( C(I_n) \). By the Hahn-Banach theorem, there exists a nonzero bounded linear functional \( L: C(I_n) \to \mathbb{R} \) such that \( L(g) = 0 \) for all \( g \in \overline{S} \) (and hence for all \( g \in S \)).
+
+By the Riesz representation theorem, since \( L \) is a bounded linear functional on \( C(I_n) \), there exists a unique \( \mu \in M(I_n) \) such that
+\[
+L(h) = \int_{I_n} h(x) \, d\mu(x) \quad \forall h \in C(I_n).
+\]
+In particular, for each fixed \( y \in \mathbb{R}^n \) and \( \theta \in \mathbb{R} \), the function \( h(x) = \sigma(\langle y, x\rangle + \theta) \) belongs to \( S \) (and thus to \( \overline{S} \)), so
+\[
+L(\sigma(\langle y, \cdot \rangle + \theta)) = \int_{I_n} \sigma(\langle y, x \rangle+ \theta) \, d\mu(x) = 0 \quad \forall y \in \mathbb{R}^n, \, \forall \theta \in \mathbb{R}.
+\]
+Since \( \sigma \) is discriminatory, this implies \( \mu = 0 \). But \( \mu = 0 \) means \( L = 0 \), contradicting the assumption that \( L \neq 0 \).
+
+Therefore, \( \overline{S} = C(I_n) \), so \( S \) is dense in \( C(I_n) \). 
+\end{proof}
+
+
+To apply Theorem~\ref{th:UATgen}  to sigmoidal functions, we need the following result:
+
+\begin{lemma}  \label{le:UAT} Any continuous sigmoidal function \( \sigma \) is discriminatory.
+\end{lemma}
+
+\begin{proof}
+Assume
+$$
+\int_{I_n} \sigma(\langle y, x \rangle+ \theta) \, d\mu(x) = 0 \quad \forall y \in \mathbb{R}^n, \, \forall \theta \in \mathbb{R}.
+$$
+We aim to show that $\mu = 0$.
+
+Fix \( y \in \mathbb{R}^n \), \( \theta \in \mathbb{R} \), and consider scaling the argument. For any \( \lambda > 0 \), replace \( y \) with \( \lambda y \) and \( \theta \) with \( \lambda \theta \):
+\[
+\int_{I_n} \sigma(\lambda (y^T x + \theta)) \, d\mu(x) = 0.
+\]
+As \( \lambda \to +\infty \), the integrand \( \sigma(\lambda (\langle y,x\rangle  + \theta)) \) converges pointwise to the step function
+\[
+\psi(x) = 
+\begin{cases} 
+1 & \text{if } \langle y, x\rangle + \theta > 0, \\
+0 & \text{if } \langle y, x\rangle + \theta < 0, \\
+\sigma(\theta) & \text{if } \langle y, x \rangle + \theta = 0 
+\end{cases}
+\]
+(since \( \sigma \) is sigmoidal with limits 1 and 0). Moreover, since \( \sigma \) is continuous and thus bounded on \( \mathbb{R} \), the convergence is bounded.
+
+By the Lebesgue dominated convergence theorem (applicable because \( I_n \) has finite Lebesgue measure and the functions are bounded),
+\[
+\lim_{\lambda \to +\infty} \int_{I_n} \sigma(\lambda (\langle y, x \rangle + \theta)) \, d\mu(x) = \int_{I_n} \psi(x) \, d\mu(x) = \mu(H_{y,\theta}) + \sigma(0) \cdot \mu(\Pi_{y,\theta}) = 0,
+\]
+where \( H_{y,\theta} = \{ x \in I_n | \langle y, x\rangle + \theta > 0 \} \) is the open half-space and \( \Pi_{y,\theta} = \{ x \in I_n | \langle y, x \rangle + \theta = 0 \} \) is the hyperplane.
+
+To isolate terms, note that by varying \( \theta \) slightly or using different scalings, we can show \( \mu(\Pi_{y,\theta}) = 0 \) for almost all hyperplanes (since hyperplanes have measure zero in general position). More rigorously, consider the pushforward measure along the line in direction \( y \).
+
+Define the linear functional \( F: C(\mathbb{R}) \to \mathbb{R} \) by
+$$
+F(g) = \int_{I_n} g(\langle y, x \rangle) \, d\mu(x),
+$$
+which is well-defined and bounded (since $\mu $ is finite). The assumption implies \( F(\sigma(\cdot + \theta)) = 0 \) for all \( \theta \), and by the scaling argument above, \( F \) vanishes on the indicators of half-lines \( (a, +\infty) \) for any \( a \in \mathbb{R} \) (by choosing appropriate \( \theta \)).
+
+Since indicators of intervals generate the Borel algebra, and simple functions (finite linear combinations of indicators) are dense in $ L^1(\mathbb{R}, \nu) $ for the induced measure $\nu$ (the pushforward of $\mu$ under the map $x \mapsto \langle y, x\rangle $), $ F$ vanishes on a dense set in the continuous functions.
+
+In fact, since $F(\exp(2\pi i t \cdot)) = 0$ for the Fourier basis (by approximating exponentials via sigmoidal superpositions or directly from the vanishing on steps), the characteristic function of the pushforward measure is zero everywhere, implying the pushforward is zero. 
+%Since this holds for all directions $y, \mu = 0$.
+%More precisely: For trigonometric functions, approximate \( \sin(m u) \) and \( \cos(m u) \) using sigmoidal sums (possible since sigmoids can approximate steps, and steps integrate to sinc functions, but the argument uses density). 
+Thus,
+$$
+\int_{I_n} e^{2\pi i m \langle y, x\rangle} \, d\mu(x) = 0 \quad \forall m \in \mathbb{Z},
+$$
+implying the Fourier transform of $\mu$ vanishes, so $\mu = 0$ by uniqueness of Fourier transforms for measures. 
+\end{proof}
+
+\begin{proof}[of Theorem~\ref{th:UAT}]
+The proof of  Theorem~\ref{th:UAT} follows now immediately by combining Theorem~\ref{th:UATgen} and Lemma~\ref{le:UAT}. 
+\end{proof}
+
+This proof demonstrates the validity of Theorem~\ref{th:UAT} without constructing explicit approximations, relying instead on separation theorems in functional analysis. Extensions (e.g.,~\cite{hornik1990universal,hornik1991approximation}) provide alternative proofs for broader classes of activations, see also~\cite{petersen2024mathematical}.
+
+
+However, since the proof is nonconstructive, it ``only'' guarantees the existence of an approximating neural network, but it does not provide a method to find the weights $ \alpha_j, y_j, \theta_j $ or the number of neurons $ N $.
+
+There exists extensive theory  establishing convergence rates for the approximation of a function $f$ by a neural network, see e.g.~\cite{mhaskar1993approximation,pinkus1999approximation,devore1998nonlinear}. For classical smoothness spaces it has been shown that to achieve an accuracy of $\eps$, the size of the network needs to increase exponentially in $d$, and this exponential dependence on $d$ is unavoidable~\cite{novak2009approximation,devore1998nonlinear}. 
+
+Thus, additional assumptions on the function $f$ are needed if one wants to avoid this curse of dimensionality. One such regularity assumption is captured by the so-called {\em Barron class}.
+Barron, in~\cite{barron2002universal}, introduces a Banach space of regular functions (now known as Barron class), defined by the semi-norm
+$\|f\|_B:= \int |\hat{f}(\omega) | |\omega| \,d\omega$. Barron shows that, for any $n$, there exists a network with $n$
+neurons such that the approximation error is of the order $1/\sqrt{n}$, when measured in the $L^2$-norm.
+
+
+
+
+
+
+
+\subsection{When is deep  better than shallow?}
+
+Adding more layers (depth) does not increase the class of functions that can be approximated in principle, since we just saw that even one hidden layer already suffices for density. 
+But it dramatically changes the {\em efficiency} and {\em representational complexity} of approximation.
+
+
+
+It is known (see e.g.~\cite{poggio2017and,yarotsky2017error,telgarsky2016benefits})
+that some functions can be approximated exponentially more efficiently by deep networks than by shallow ones. For example
+let $f(x) = x_1 x_2 \cdots x_d$ be a high-order monomial. In this case it has been shown that a shallow network needs exponentially many neurons in $d$ to approximate $f(x)$, while a deep network can approximate $f(x)$ with ${\mathcal O}(d)$ neurons using compositional structure~\cite{poggio2017and}. 
+
+However, while it is not too difficult to construct a neural network (deep or shallow) that enables some form of universal approximation power, it is important to emphasize that this sheds little light on the success of deep learning. How come (carefully fine-tuned) neural networks with a huge number of parameters (weights) are able to generalize astonishingly well?  Traditional approaches fail to explain why large neural networks generalize well in practice~\cite{zhang2016understanding,zhang2021understanding}. 
+
+Can Rademacher complexity help?
+Recall that Rademacher complexity bounds measure the worst-case capacity of an entire hypothesis class, and for large neural networks these bounds are often {\em huge}, leading to vacuous generalization bounds.
+However, the effective complexity seems to be much smaller than the worst-case class complexity. Understanding precisely when and why overparameterized networks generalize remains one of the central open questions in modern learning theory.
+
+
+
+The ``double descent phenomenon'' is a noteworthy theoretical development in this context, which helps to shed some light on why deep neural networks generalize so well despite being massively overparameterized~\cite{belkin2019reconciling}.
+It suggests that in the highly over-parameterized regime, deep networks achieve generalization by finding the most mathematically parsimonious way to interpolate the training data. Thus, the double descent curve refines our understanding of the bias-variance tradeoff in the overparametrized regime. Generalization depends not just on model size, but how the model is trained and which solutions are preferred.
+
+
+
+\subsection{Infinite depth: Neural differential equations}
+
+When we let the depth of a neural network approach infinity, we arrive at so-called 
+neural differential equations~\cite{chen2018neural}. To see this, let us consider a standard feedforward neural network with $L$ layers, where each layer applies a transformation of the form
+$$
+a^{(\ell+1)} = a^{(\ell)} + f(a^{(\ell)}, \theta_{\ell}), \quad \ell = 0, 1, \dots, L-1,
+$$
+with $a^{(0)} = x$ denoting the input and 
+$a^{(L)}$ the final hidden representation or output. This formulation corresponds to a residual network (ResNet) architecture, in which the update rule explicitly adds a residual term to the identity mapping.
+
+To interpret this recursion as a discretization scheme, introduce a continuous ``depth'' variable $t \in [0, T]$ and let each layer correspond to a discrete time point $t_\ell = \ell,\Delta t$ with step size $\Delta t = T/L$. Then the layer-wise update can be rewritten as
+$$
+a^{(\ell+1)}(t_{\ell+1}) = a^{(\ell)}(t_\ell) + \Delta t  f\big(a^{(\ell)}(t_\ell), t_\ell, \theta(t_\ell)\big).
+$$
+This is precisely the forward (explicit) Euler method applied to the initial value problem
+$$
+\frac{da(t)}{dt} = f\big(a(t), t, \theta(t)\big), \quad a(0) = x.
+$$
+Hence, in the limit as the number of layers $L \to \infty$ (and thus $\Delta t \to 0)$, the discrete-depth neural network converges formally to a {\em neural differential equation}, or more specifically, a {\em neural ordinary differential equation}. The dynamics of the hidden representation are governed by
+$$
+\frac{da(t)}{dt} = f\big(a(t), t, \theta(t)\big),
+$$
+where $f$ is a neural network parameterizing the instantaneous rate of change of $a(t)$.
+
+This continuous-depth perspective allows one to treat neural network architectures as parameterized dynamical systems. The terminal state $a(T)$ is obtained by integrating the differential equation from $t=0$ to $t=T$,
+$$
+a(T) = a(0) + \int_0^T f\big(a(t), t, \theta(t)\big) dt,
+$$
+and the parameters $\theta(t)$ are optimized to minimize a loss functional defined over the final state.
+
+From an analytical viewpoint, this interpretation reveals that the expressiveness of deep networks can be understood through the lens of continuous-time dynamical systems theory, with residual connections corresponding to first-order numerical integration schemes. 
+
+
+
+
+
+\section{Training neural networks}\label{nn:training}
+
+Training a neural network involves finding the optimal weights $W^{(\ell)}$ and biases $b^{(\ell)}$ that minimize a cost function or loss function $\cost$. 
+Due to the typically large amount of data, higher-order optimization methods are usually prohibitively expensive. The work horse for this process typically comprises gradient-based optimization algorithms, regardless of the specific network architecture. 
+
+\subsection{Loss functions}\label{s:loss}
+
+Loss functions (called cost functions in optimization or error functions in numerical analysis) are critical in guiding the learning process by quantifying how well the model's predictions align with the true targets. The choice of the loss function depends  on the specific task (e.g., regression, classification) and the characteristics of the data. For example, the mean squared error is often employed for regression tasks:
+$$
+\cost(y, \hat{y}) = \frac{1}{n} \sum_{i=1}^n ( y_i - \hat{y}_i )^2,
+$$
+The  mean absolute error is given by
+$$
+\cost(y, \hat{y}) =  \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|.
+$$
+It is also used for regression tasks, particularly when robustness to outliers is desired, since it is less sensitive to outliers than the mean squared error.
+
+The cross-entropy loss is a standard choice for classification tasks:
+$$
+\cost(y, \hat{y})  = - \sum_{i=1}^n y_i \log(\hat{y}_i).
+$$
+The multi-class cross-entropy loss generalizes binary cross-entropy to multiple classes. In detail,
+for multi-class classification, where the true target is a one-hot encoded vector $ \mathbf{y}_i $ and the predicted probabilities for each class are given by $ \hat{\mathbf{y}}_i $, the cross-entropy loss is:
+$$
+\cost(y, \hat{y})  = -\frac{1}{n} \sum_{i=1}^{n} \sum_{c=1}^{C} y_{ic} \log(\hat{y}_{ic}),
+$$
+where $ C $ is the number of classes, $ y_{ic} $ is the true label (1 or 0) for class $ c $, and $ \hat{y}_{ic} $ is the predicted probability for class $ c $.
+
+The Hinge Loss is primarily used in Support Vector Machines  but  also finds use in  neural networks.
+For binary classification, where $ y_i \in \{-1, 1\} $ and $ \hat{y}_i $ is the predicted score (not a probability), the hinge loss is defined as:
+$$
+\cost(y,\hat{y}) = \frac{1}{n} \sum_{i=1}^{n} \max(0, 1 - y_i \hat{y}_i).
+$$
+The hinge loss is used in contexts where the predictions are scores rather than probabilities, and it aims to ensure that the true class is not only predicted correctly but with a margin of at least 1. If $ y_i \hat{y}_i \geq 1 $, the loss is 0, meaning the prediction is correct with a sufficient margin.
+ If $ y_i \hat{y}_i < 1 $, the loss increases linearly, penalizing the model for incorrect or insufficiently confident predictions.
+
+
+The Kullback-Leibler (KL) Divergence measures how one probability distribution diverges from a second, expected probability distribution. It is typically used in variational autoencoders and reinforcement learning.
+For two probability distributions $ P $ (true distribution) and $ Q $ (predicted distribution), the KL divergence is defined as:
+$$
+\text{KL}(P \parallel Q) = \sum_{i=1}^{n} P(i) \log\left(\frac{P(i)}{Q(i)}\right).
+$$
+It is not symmetric, meaning $ \text{KL}(P \parallel Q) \neq \text{KL}(Q \parallel P) $.
+In deep learning, the KL divergence is often used in settings where the model needs to match its output distribution $ Q $ to a target distribution $ P $.
+
+The Huber loss attempts to combine the best properties of the mean squared error and the mean absolute error. For a prediction $ \hat{y}_i $ and target $ y_i $, it is defined as:
+$$
+\cost(y,\hat{y}) = \frac{1}{n} \sum_{i=1}^{n} C_{\delta}(y_i - \hat{y}_i ),
+$$
+where
+$$
+C_{\delta}(r) = \begin{cases}
+\frac{1}{2} r^2 & \text{for } |r| \leq \delta, \\
+\delta (|r| - \frac{1}{2} \delta) & \text{for } |r| > \delta.
+\end{cases}
+$$
+The Huber loss is typically used for regression tasks, particularly when dealing with outliers. It is less sensitive to outliers than the mean squared error.
+
+\subsection{Stochastic gradient descent}\label{ss:SGDsubsection}
+
+Training a neural network corresponds to choosing its parameters, i.e., the weights and biases, that
+minimize the cost function. 
+Given the high dimensionality and non-linearity of neural networks, finding the optimal parameters becomes a challenging task. So, how shall we do that?
+
+Enter {\em gradient descent}\,!
+The use of gradient descent is usually discouraged in classical numerical optimization and often for good reason: Gradient descent generally can have a slow rate of convergence, is sensible to the choice of step size and initialization, and can easily get stuck in saddle points and local extrema~\cite{nocedal2006numerical}. However, in many applications in data science and machine learning it suffices to compute a solution with relatively low accuracy and often one is content with finding local minima. Also, since gradient descent uses only first-order information (namely, the gradient), it can better cope with limited computing resources vis-{\`a}-vis very large datasets compared to second-order methods. Due to these considerations gradient descent has become the workhorse in training neural networks.
+
+
+Specializing the results in Chapter~\ref{s:grad} to the setting to neural networks, we interpret $f(x)$ as the network's cost function $\cost(\theta)$, with its parameters $\theta$ (the weights and biases) collected in the vector $x$.
+
+
+
+
+Deep learning uses stochastic gradient descent (SGD), which was discussed in Chapter~\ref{s:grad}, instead of standard (full-batch) gradient descent because of computational, statistical, and optimization-landscape reasons that become decisive at the scale and structure of modern neural networks.
+
+
+
+Recall that in the standard gradient descent algorithm, the gradient is computed as
+$$
+\nabla_\theta \loss(\theta) = \frac{1}{n} \sum_{i=1}^{n} \nabla_\theta \loss_i(\theta),
+$$
+where $\loss_i(\theta)$ represents the loss for the $ i $-th data point.
+
+In contrast, SGD updates the parameters using the gradient computed from a single randomly selected data point $ (x_i, y_i) $:
+$$
+\theta^{(k+1)} = \theta^{(k)} - \eta \nabla_\theta \loss_i(\theta^{(k)}).
+$$
+
+
+A common variant of SGD in deep learning is {\em mini-batch gradient descent}, where the gradient is computed over a small batch of data points instead of a single data point
+$$
+\theta^{(k+1)} = \theta^{(k)} - \eta \frac{1}{|B_k|} \sum_{i \in B_k} \nabla_\theta \loss_i(\theta^{(k)}),
+$$
+where $ B_k $ is the set of indices in the $ k $-th mini-batch, and $ |B_k| $ is the batch size. Mini-batch gradient descent  attempts to strike a balance between the computational efficiency of SGD and the stability of full-batch gradient descent. It is widely used in practice due to its ability to leverage parallelism and its effectiveness in noisy environments.
+The convergence of SGD can be analyzed in terms of the expected value of the loss function, see also Section~\ref{ss:kaczmarz} for the special case of applying SGD to a linear system of equations.
+
+
+
+The step size of gradient descent, in this context called the \emph{learning rate}, is an important design parameter. If the learning rate is too large, the noise can cause the algorithm to diverge. Conversely, if the learning rate is very small, the algorithm may converge rather slowly.
+If the learning rate $ \eta $ is sufficiently small, SGD converges to a neighborhood around a local minimum. The exact nature of this neighborhood depends on the noise characteristics and the curvature of the loss function.
+
+One way to enhance stability is to use a decaying learning rate
+$$
+\eta_k = \frac{\eta_0}{1 + \alpha k},
+$$
+where $ \eta_0 $ is the initial learning rate, and $ \alpha $ is a decay factor. 
+
+\medskip
+
+Adaptive methods such as Adam~\cite{kingma2014adam} or AdaGrad~\cite{duchi2011adaptive} adjust step sizes dynamically and this frequently leads to empirical improvements but complicates the theoretical guarantees~\cite{ward2020adagrad}.
+While Adam is often the method of choice for training speed, it has been observed in simulations that switching to SGD with momentum (see Chapter~\ref{s:grad} for a discussion of gradient descent with momentum) for the final stages of training can achieve better generalization on test data for some architectures~\cite{wilson2017marginal}.
+
+
+
+
+
+\subsection{Backpropagation}
+
+
+Backpropagation is the fundamental algorithm used for training neural networks by computing the gradients of the loss function with respect to each weight in the network. It leverages the chain rule from calculus to efficiently compute the gradient of the loss function with respect to every weight in the network.
+
+
+It will be convenient in the following to denote a neural network by a function $f(x,W)$, where $x$ are the input data and $W$ represents all the weight and bias parameters. The goal of training is to find the set of parameters $W^*$ that minimizes a loss function $\loss$. It will be helpful in our derivation of the backpropagation algorithm to make the dependence of the loss function on the
+the network parameters explicit by writing $\loss\big(f(x_i, W), y_i\big)$.
+We  are concerned with solving:
+$$W^* = \underset{W}{\arg\min} \left\{ \frac{1}{N} \sum_{i=1}^N \loss(f(x_i, W), y_i) \right\},$$
+where, as above, $y_i$ is the true output for input ${x}_i$. Backpropagation computes the gradient $\nabla_{W} L$ so that the weights can be updated using (stochastic) gradient descent:
+$$W \leftarrow W - \eta \nabla_{W} L,$$
+where $\eta$ is the learning rate.
+
+
+The goal is to compute $\frac{\partial \loss}{\partial w_{jk}^{(\ell)}}$ and $\frac{\partial \loss}{\partial b_j^{(\ell)}}$ for all weights $w_{jk}^{(\ell)}$ and biases $b_j^{(\ell)}$.
+The input  $z_j^{(\ell)}$ to neuron $j$ in layer $\ell$ is a weighted sum of the outputs from the previous layer, $a_k^{(\ell-1)}$, i.e., 
+    $$z_j^{(\ell)} = \sum_{k} w_{jk}^{(\ell)} a_k^{(\ell-1)} + b_j^{(\ell)}.$$
+Applying the chain rule, the gradient of the loss $\loss$ with respect to a weight $w_{jk}^{(\ell)}$ in layer $\ell$ is:
+$$\frac{\partial \loss}{\partial w_{jk}^{(\ell)}} = \frac{\partial \loss}{\partial z_j^{(\ell)}} \frac{\partial z_j^{(\ell)}}{\partial w_{jk}^{(\ell)}}.$$
+From the definition of $z_j^{(\ell)}$, we have
+$$\frac{\partial z_j^{(\ell)}}{\partial w_{jk}^{(\ell)}} = a_k^{(\ell-1)}.$$
+Substituting this back, and defining the term $\delta_j^{(\ell)}$
+$$\delta_j^{(\ell)} \equiv \frac{\partial \loss}{\partial z_j^{(\ell)}},$$% = \frac{\partial \loss}{\partial \text{net input}},$$
+the weight gradient becomes
+\begin{equation}
+    \label{BP-1}
+    \frac{\partial \loss}{\partial w_{jk}^{(\ell)}} = \delta_j^{(\ell)} a_k^{(\ell-1)}.
+\end{equation}
+Similarly, the bias gradient is
+\begin{equation}
+    \label{BP-2}
+\frac{\partial \loss}{\partial b_j^{(\ell)}} = \frac{\partial \loss}{\partial z_j^{(\ell)}} \frac{\partial z_j^{(\ell)}}{\partial b_j^{(\ell)}} = \delta_j^{(\ell)} \cdot 1 = \delta_j^{(\ell)}.
+\end{equation}
+
+The key challenge is to compute the error term $\delta_j^{(\ell)}$ for all layers.
+The loss $\loss$ depends directly on the output activations $a_j^{(L)}$ and the activations $a_j^{(L)}$ depend on the net inputs $z_j^{(L)}$. We have
+$$\delta_j^{(L)} = \frac{\partial \loss}{\partial z_j^{(L)}} = \frac{\partial \loss}{\partial a_j^{(L)}} \frac{\partial a_j^{(L)}}{\partial z_j^{(L)}}.$$
+
+Since $a_j^{(L)} = \sigma(z_j^{(L)})$, the second term is the derivative of the activation function
+$$\frac{\partial a_j^{(L)}}{\partial z_j^{(L)}} = \sigma'(z_j^{(L)}).$$
+Hence, the output layer error is
+\begin{equation}
+    \label{BP-3}
+\delta_j^{(L)} = \frac{\partial \loss}{\partial a_j^{(L)}} \sigma'(z_j^{(L)}).
+\end{equation}
+
+
+
+The error term $\delta_j^{(\ell)}$ for a hidden layer $\ell$ is found by relating it to the errors in the next layer, $\delta_k^{(\ell+1)}$. This is where the name {\em backpropagation} comes from.
+
+Applying the chain rule again gives
+\begin{equation}
+\label{delta0}    
+\delta_j^{(\ell)} = \frac{\partial \loss}{\partial z_j^{(\ell)}} = \sum_{k} \frac{\partial \loss}{\partial z_k^{(\ell+1)}} \frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}},
+\end{equation}
+where the sum is over all neurons $k$ in layer $\ell+1$.
+
+Substituting the definition $\delta_k^{(\ell+1)} = \frac{\partial \loss}{\partial z_k^{(\ell+1)}}$ into~\eqref{delta0} yields
+\begin{equation}
+    \label{deltaeq}
+\delta_j^{(\ell)} = \sum_{k} \delta_k^{(\ell+1)} \frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}}.
+\end{equation}
+
+Now we compute the second term. From $z_k^{(\ell+1)} = \sum_{j'} w_{kj'}^{(\ell+1)} a_{j'}^{(\ell)} + b_k^{(\ell+1)}$ and $a_j^{(\ell)} = \sigma(z_j^{(\ell)})$ we get
+$$\frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}} = \frac{\partial}{\partial z_j^{(\ell)}} \left( \sum_{j'} w_{kj'}^{(\ell+1)} a_{j'}^{(\ell)} + b_k^{(\ell+1)} \right) = w_{kj}^{(\ell+1)} \frac{\partial a_j^{(\ell)}}{\partial z_j^{(\ell)}} = w_{kj}^{(\ell+1)} \sigma'(z_j^{(\ell)}).$$
+
+Plugging this back into equation~\eqref{deltaeq} gives
+$$\delta_j^{(\ell)} = \sum_{k} \delta_k^{(\ell+1)} w_{kj}^{(\ell+1)} \sigma'(z_j^{(\ell)}).$$
+
+We now factor out the term $\sigma'(z_j^{(\ell)})$ which is independent of the summation and arrive at
+\begin{equation}
+    \label{BP-4}
+\delta_j^{(\ell)} = \Big( \sum_{k} w_{kj}^{(\ell+1)} \delta_k^{(\ell+1)} \Big) \sigma'(z_j^{(\ell)}).
+\end{equation}
+
+This is the ``Backpropagation Error Equation'': the error at layer $\ell$ is calculated by taking a weighted sum of the errors from the next layer $\ell+1$ and multiplying it by the derivative of the activation function at layer $\ell$.
+
+
+Backpropagation has two phases, a {\em forward pass}  and a {\em backward pass}.
+The forward pass consists of the following steps:
+\begin{enumerate}[(i)]
+\setlength{\itemsep}{-0.3ex}
+\item Initialize all weights $W$ and biases ${b}$.\\
+\item Propagate the input $x$ through the network, layer by layer, computing all net inputs ${z}^{(\ell)}$ and activations ${a}^{(\ell)}$ for all $\ell$.
+    $${a}^{(\ell)} = \sigma\big(W^{(\ell)} {a}^{(l-1)} + {b}^{(\ell)}\big).$$
+\item Compute the loss $\loss$ at the output layer ${a}^{(L)}$.
+\end{enumerate}
+The backward pass consists of four steps which comprise the gradient calculation and update:
+\begin{enumerate}[(i)]
+\setlength{\itemsep}{-0.3ex}
+\item Output error ($\delta^{(L)}$): Compute the error term for the output layer $L$ using equation~\eqref{BP-3}:
+    $$\delta_j^{(L)} = \frac{\partial \loss}{\partial a_j^{(L)}} \sigma'(z_j^{(L)}).$$
+\item Backpropagate error ($\delta^{(\ell)}$): Compute the error term for each preceding layer $\ell=L-1, L-2, \dots, 1$ using the errors from the layer above (equation~\eqref{BP-4}):
+    $$\delta_j^{(\ell)} = \Big( \sum_{k} w_{kj}^{(\ell+1)} \delta_k^{(\ell+1)} \Big) \sigma'(z_j^{(\ell)}).$$
+\item Calculate gradients ($\nabla_{W} \loss$ and $\nabla_{{b}} \loss$): Use the computed error terms $\delta^{(\ell)}$ to find the gradients for all weights and biases, (equations~\eqref{BP-1} and~\eqref{BP-2}):
+\begin{align*}
+    \frac{\partial \loss}{\partial w_{jk}^{(\ell)}} & = \delta_j^{(\ell)} a_k^{(\ell-1)}, \\
+    \frac{\partial \loss}{\partial b_j^{(\ell)}} & = \delta_j^{(\ell)}.
+\end{align*}
+\item Update parameters: Perform a gradient descent step to update the weights and biases
+\begin{align*}
+    W^{(\ell)} & \leftarrow W^{(\ell)} - \eta \frac{\partial \loss}{\partial W^{(\ell)}}, \\
+    {b}^{(\ell)} & \leftarrow {b}^{(\ell)} - \eta \frac{\partial \loss}{\partial {b}^{(\ell)}}.
+\end{align*}
+\end{enumerate}
+
+
+
+
+
+
+
+Backpropagation is computationally efficient because it reuses intermediate computations from the forward pass. Specifically, it computes gradients layer by layer in reverse, leveraging the fact that the gradient of the loss with respect to earlier layers can be expressed recursively in terms of gradients from later layers. This efficiency is crucial for training deep neural networks, where the number of parameters can be large, and the computation of gradients must be optimized.
+
+
+
+\subsection{Regularization}
+
+
+Training deep networks presents several challenges, which necessitate the use of some form of regularization. These challenges include:
+
+
+\noindent
+{\em Vanishing and exploding gradients:} During backpropagation, gradients can become very small or very large, making learning difficult. Techniques such as careful initialization, batch normalization, and gradient clipping as well as using ReLU as activation function are used to mitigate these issues.
+
+\noindent
+{\em Overfitting:} Deep networks with many parameters are prone to overfitting the training data. To prevent overfitting, regularization techniques are often employed. Common methods include   adding a penalty term such as $ \lambda \|W\|_2^2 $ to the loss function and a technique called \emph{dropout}: to randomly drop units from the neural network during training to prevent co-adaptation of neurons. 
+
+\noindent
+{\em Early stopping} is a particularly effective strategy in which training is halted once performance on the validation set ceases to improve. This implicitly regularizes the model and reduces the risk of fitting noise in the training data.
+
+\noindent
+{\em Data augmentation} is another technique used to avoid overfitting by increasing the diversity of the training data  without actually collecting new data. It involves applying various transformations to the existing data to create new, slightly modified versions of it. For example, in image classification, an object should be recognizable regardless of its position, orientation, or lighting conditions. By augmenting the data to include controlled variations in the image training data, such as shifts, rotations, flips, scaling, and changes in brightness or contrast,  we can help the model to generalize better to unseen data.
+
+\subsection{Practical setup for training neural networks}
+
+Training a neural network is not only a matter of choosing an architecture and an optimization algorithm; it also requires a carefully designed experimental protocol to ensure that the resulting model generalizes beyond the data it was trained on. We briefly describe best practices for setting up a reliable neural network training pipeline.
+These principles actually apply to any supervised data science learning task.
+
+A fundamental principle of {\em supervised learning} is the separation of data into disjoint subsets with distinct roles. Typically, the available dataset is divided into a {training set}, a {\em validation set}, and a {\em test set}. A common heuristic is to split the data into 70\% training, 10\% validation, and 20\% test data\footnote{While an 70-10-20 split is a typical starting point for medium-sized datasets, in the era of ``Big Data'' , it is not unusual to see 98-1-1 splits, as even 1\% of data can provide a statistically significant evaluation. Nevertheless, a more conservative split provides a better defense}.
+
+
+The training set is used to fit the model parameters via optimization algorithms such as stochastic gradient descent. The validation set is used to tune hyperparameters and make modeling decisions, while the test set is held out and used only once to obtain an unbiased estimate of the final model’s generalization performance. 
+Cross-validation (introduced in connection with ridge regression in  Definition~\ref{def:cv_ridge}) is typically used for parameter tuning.
+Crucially, the test set must not influence any aspect of model design or training.
+
+Neural networks involve numerous hyperparameters, including learning rates, batch sizes, network depth and width, regularization coefficients, and optimization settings. 
+Hyperparameter tuning is typically performed by training multiple models on the training set and evaluating their performance on the validation set. Techniques range from manual tuning and grid search to more sophisticated approaches such as random search or Bayesian optimization. Importantly, all hyperparameter choices must be finalized before evaluating performance on the test set.
+
+Data leakage occurs when information from outside the training set is inadvertently used during training or model selection, leading to overly optimistic performance estimates. Common sources of leakage include preprocessing steps (such as normalization or feature selection) performed using the full dataset, or repeated evaluation on the test set during model development.
+
+To avoid data leakage, all data-dependent preprocessing operations should be fit exclusively on the training data and then applied unchanged to the validation and test sets. Likewise, the test set should remain completely isolated until the very end of the training pipeline.
+
+Once the training and tuning process is complete, the final model is evaluated on the test set to estimate its generalization performance. This evaluation should be performed exactly once to prevent data leakage.
+
+
+
+
+\subsection{Computational complexity} 
+Training large neural networks requires significant computational resources. The development of specialized hardware (e.g., GPUs, TPUs) and distributed training techniques has helped to alleviate this problem. 
+
+However, computational complexity remains a critical concern, in particular for Large Language Models. Training these models demands immense computational resources, with cost and time scaling rapidly with model size, dataset volume, and sequence length. Architectures like Transformers involve operations that scale quadratically with input length, making efficiency a key bottleneck. 
+
+
+
+
+
+
+
+
+
+\section{Deep learning architectures}
+
+Various architectures have been developed to handle different types of data and tasks. In the previous sections we already have discussed  (fully connected) feedforward networks, also known as multilayer perceptrons. In this section we briefly survey  other widely used architectures.
+
+
+
+
+
+\subsection{Convolutional neural networks}
+
+
+Convolutional Neural Networks~\cite{fukushima1980neocognitron,lecun2002gradient} (CNNs) are the architecture that fundamentally enabled the modern breakthrough in computer vision. Indeed,
+CNNs are particularly effective for processing grid-like data such as images. They use convolutional layers to extract local patterns through learned filters. 
+
+Mathematically, a CNN is a neural network where the weight vectors in a given layer are formed by discrete convolution
+with a finite number of kernels. For one-dimensional data, this is equivalent to saying that the weight
+matrix $W^{(\ell)}$ is a Toeplitz matrix, i.e., 
+\begin{equation}\label{layertoeplitz}
+  W^{(\ell)} = 
+  \begin{pmatrix}
+    t_1       & t_2       & \ldots & t_{n}\\
+    t_2^{\ast}  & t_1       & \ddots & \vdots\\
+    \vdots & \ddots & \ddots  & t_2\\
+    t_{n}^{\ast}      & \ldots & t_2^{\ast}   &  t_1
+  \end{pmatrix},
+\end{equation}
+where for convenience we have omitted the layer dependence in the individual matrix entries in~\eqref{layertoeplitz}.
+The Toeplitz matrix can be equivalently represented by a {\em filter} or {\em kernel} $g$ defined via $g(j) = t_j$. 
+When the input is two-dimensional (such as images), the weight matrix of a CNN has the structure of a block-Toeplitz matrix with Toeplitz blocks. In either case, one can take advantage of the Toeplitz-type structure, which gives rise to fast matrix-vector multiplication via the (1D or 2D) Fast Fourier transform.
+
+CNNs typically use multiple kernels in their convolutional layers. This is motivated by the hope  that each filter will learn to detect a different kind of feature in the input. Having multiple filters allows the layer to build up a set of complementary feature maps that together describe the input from different perspectives.
+
+
+
+
+
+
+There are two main advantages to a CNN compared to a general neural network:
+\begin{enumerate}
+  \item The convolutional structure reduces the number of unknown weights; instead of having $nk$
+  weights, where $n$ is the input size and $k$ is the number of units in the
+  layer, there are only $n$ weights for $n$ units.
+  \item  Convolution is translation-invariant, since the convolution operator commutes with the translation operator. So if the item to be classified is also translation invariant, such as objects in images, or sounds in
+  audio signals, then the resulting classifier will also be translation
+  invariant.
+\end{enumerate}
+Usually this convolution is combined with subsampling, which is intended to create insensitivity
+against scaling. In the CNN literature, this is known as pooling, and there are
+several ways this is implemented, such as max pooling or average pooling. Consider a ``pooling window'' of size $k \times k$ centered or anchored at position $(i,j)$ (in the initial layer position $(i,j)$ corresponds to the pixel in the $i$-th row and $j$-th column of the input image). Max pooling selects the maximum value within the window. It acts as a non-linear feature detector, identifying the presence of a specific pattern (like an edge or texture) regardless of its exact location within the window. Average pooling computes the arithmetic mean of all values in that window. It treats the feature map as a signal and acts as a low-pass filter, smoothing out the activations
+
+Figure~\ref{fig:cnn} illustrates a common architecture for a Convolutional Neural Network (CNN) used for image classification.
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=\textwidth]{figures/cnn_flow1}
+\caption{A common architecture for a Convolutional Neural Network (CNN) used for image classification, specifically for recognizing handwritten digits. The network takes an image of a handwritten digit. The feature extraction phase involves alternating convolutional layers (in this example using a $5\times 5$ kernel) and pooling  layers (in this example using $2\times 2$ average pooling) to automatically extract features from the image. In the classification step the extracted features are flattened and passed to a fully connected network, which then classifies the input image into one of the possible output classes (digits 0 through 9).}
+\label{fig:cnn}
+\end{center}
+\end{figure}
+
+
+
+
+
+There is ample empirical evidence that 
+in early layers of the CNN, filters might detect simple local patterns (edges, corners, color gradients), while
+in deeper layers, filters respond to more complex ``global'' patterns (textures, shapes, or object parts).
+See Figure~\ref{fig:CAM} for an illustration of this observation.  Here we use a CNN with four convolutional layers. The input image to the CNN is an image of a goldfish.
+The figure displays a so-called Class Activation Map (CAM) for each layer. The CAM is a technique used for CNN's in connection with image classification to visualize which regions of an input image are most responsible for a model’s decision for a particular class~\cite{zhou2016learning}. It is intended to provide an interpretable {\em heatmap} highlighting the spatial regions that contribute most strongly to the predicted class score. A CAM is essentially a weighted sum of all the feature maps of a specific layer.  The left column in Figure~\ref{fig:CAM} shows the CAM for layers 1 to 4 (from top to bottom). The right columns depicts the CAM overlaid with the original image\footnote{The plots were generated using the software package in~\cite{torcham2020}}. It is evident how the CNN picks up localized information in the initial layers and more global features in the latter layers.
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer1_raw}
+\qquad \qquad
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer1_overlay}
+
+\bigskip
+
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer2_raw}
+\qquad \qquad
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer2_overlay}
+\bigskip
+
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer3_raw}
+\qquad \qquad
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer3_overlay}
+
+\bigskip
+
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer4_raw}
+\qquad \qquad 
+\includegraphics[width=.3\textwidth,height=0.21\textwidth]{figures/layer4_overlay} 
+\caption{The left column shows the Class Activation Map (CAM) for layers 1 (top) 2,3, and 4 (bottom). The right columns show the CAM overlaid with the original image.
+It is evident how the CNN picks up localized information in the initial layers and more global features in the latter layers.}
+\label{fig:CAM}
+\end{center}
+\end{figure}
+
+
+
+
+CNNs are widely used in computer vision tasks, such as
+image classification~\cite{lecun2002gradient,krizhevsky2012imagenet} (assigning a label to an entire image), object detection~\cite{redmon2016you} (identifying and locating objects within an image), and image segmentation~\cite{long2015fully,ronneberger2015u} (classifying each pixel in an image to a particular class), which is useful in tasks like medical image analysis.
+
+
+
+
+
+
+
+
+
+
+\subsection{Graph Neural Networks}
+
+A Graph Neural Network (GNN) is a machine learning model designed to perform inference on data structured as graphs~\cite{scarselli2008graph,Kipf2017}. A GNN learns representations by iteratively propagating and transforming information along the edges of a graph, combining local connectivity via message passing with learnable nonlinear transformations
+
+Given a graph $G=(V,E)$ with nodes $v \in V$ and edges $e \in E$,
+let $h_{v}^{(k)}$ denote the representation of node $v$ at layer $k$.
+A generic message-passing update is:
+\begin{equation}
+    \label{GNN}
+h_{v}^{(k+1)} = \sigma \Big( W  h_v^{(k)} + \underbrace{\sum_{u \in \mathcal{N}(v)} \phi(h_v^{(k)}, h_u^{(k)}, e_{uv})}_{m_v^{(k)}} \Big),
+\end{equation}
+where $\mathcal{N}(v)$ denotes neighbors of $v$, $m_v^{(k)}$ is the updated message, and $\phi$ is a learnable message function possibly depending on edge features $e_{uv}$. This preserves  permutation invariance of node orderings. 
+
+At a high level, a graph neural network layer consists of two conceptually distinct operations, repeated across layers:
+\begin{enumerate}
+
+\item {\em Message passing (neighborhood aggregation):}
+Each node $v$ receives ``messages'' from its neighbors $u \in \mathcal{N}(v)$
+based on their current features and possibly the connecting edge features.
+These messages are then aggregated (e.g. by summing, averaging, or taking a weighted combination). This corresponds to the term
+$m_v^{(k)}=\sum_{u \in \mathcal{N}(v)} \phi(h_v^{(k)}, h_u^{(k)}, e_{uv})$ in equation~\eqref{GNN}.
+\item {\em Feature update (node feature transformation):}
+The aggregated message is combined with the node’s own current feature vector, passed through a learnable transformation (often followed by a nonlinearity), yielding updated node 
+embeddings. This corresponds to the 
+term $\sigma(W  h_v^{(k)} + m_v^{(k)})$ in equation~\eqref{GNN}.
+\end{enumerate}
+By stacking multiple GNN layers, a node's final representation $h_v^{(L)}$ can capture information from its $L$-hop neighborhood (nodes up to $L$ steps away). The final representations are then used for downstream tasks like node classification, link prediction, or graph classification. 
+
+
+A popular GNN variant, is the Graph Convolutional Network (GCN)~\cite{Kipf2017}. The layer-wise propagation rule of a GCN can be expressed as:
+$$
+H^{(k)} = \sigma \left( \tilde{D}^{-\frac{1}{2}} \tilde{A} \tilde{D}^{-\frac{1}{2}} H^{(k-1)} W^{(k)} \right),
+$$
+where $H^{(k-1)} \in \mathbb{R}^{|V| \times d_{k-1}}$ is the matrix of node representations from layer $k-1$, $W^{(k)}$ is a learnable weight matrix (the model's parameters), $\sigma$ is a non-linear activation function,
+$\tilde{A} = A + I$ is the adjacency matrix with self-loops (allowing a node to include its own previous state in the aggregation), where $A$ is as defined in~\eqref{adjacencymatrix}, and
+$\tilde{D}$ is the degree matrix (as defined in~\eqref{degreematrix}) of $\tilde{A}$.
+
+The reader may wonder where the concept of a convolution enters in graph convolutional networks, which would justify their name. Spectral graph theory provides the answer. We can define the concept of a convolution on a graph in terms of the graph Laplacian
+$L = D - A$, as defined in~\eqref{graphlalpacian}.
+The graph Laplacian has an orthonormal eigendecomposition $L = U \Lambda U^T$,
+where $U$ contains the eigenvectors (graph Fourier modes), and $\Lambda$
+the eigenvalues (graph frequencies) of $L$.
+We can now  define convolution on graphs by analogy to the standard convolution theorem where $U$ plays the role of the Fourier transform on a graph. One can then show that a GCN is a  first-order approximation of  convolution on graphs~\cite{defferrard2016convolutional}.
+
+
+
+
+Graph neural networks find applications in particle physics~\cite{kipf2018neural},  molecular and chemical modeling to predict molecular properties~\cite{kearnes2016molecular},  drug discovery~\cite{bongini2021molecular}, and protein structure analysis~\cite{fout2017protein}, as well as in traffic network modeling and in recommendation systems~\cite{zhou2020graph}.
+
+\subsection{ Recurrent Neural Networks }
+
+For sequential data, Recurrent Neural Networks (RNNs)~\cite{cho2014learning} introduce {\em recurrence} by updating a hidden state $h_t$ using input $x_t$ via
+$$
+h_t = \sigma(W_h h_{t-1} + W_x x_t + b), \quad y_t = W_o h_t,
+$$
+where we emphasize that $h_t$ depends on $h_{t-1}$.
+The hidden state carries memory across time steps. Variants such as Long Short-Term Memory (LSTM)~\cite{Hochreiter1997} modify the update rule by introducing {\em gating mechanisms} to mitigate vanishing and exploding gradients, enabling modeling of longer dependencies.
+
+RNNs have been applied to natural language modeling (before transformers took over), in
+time-series forecasting (financial markets, weather prediction, physiological monitoring in healthcare), and 
+to sequential control (robotics and reinforcement learning environments with temporal structure).
+
+
+
+
+In RNNs, the influence of a past input $x_t$ on later states $h_{t+k}$ propagates through repeated multiplication by the recurrent Jacobian
+$$
+\frac{\partial h_{t+k}}{\partial h_t} = \prod_{i=1}^k \frac{\partial h_{t+i}}{\partial h_{t+i-1}}.
+$$
+
+This leads to vanishing (or sometimes exploding) gradients, making it difficult to learn dependencies over long distances in the sequence.
+While standard feed forward neural networks also can suffer from this problem as they grow (deeper for neural networks, longer for RNNs), the mathematical mechanism in RNNs makes the decay exponential relative to the sequence length. RNN multiplies the same recurrent matrix many times. This makes the vanishing/exploding behavior potentially much more systematic and severe.
+
+Although LSTMs were explicitly designed to solve the vanishing gradient problem that plagued simple RNNs, they still struggle to effectively maintain information and capture dependencies over very long sequences in practice.
+
+The fundamental design of RNNs and LSTMs requires them to process sequence data (like words in a sentence) one step at a time. The calculation for the current word's hidden state depends on the hidden state of the previous word,  meaning one cannot compute the representation for the entire sequence simultaneously. This sequential dependency makes it impossible to fully parallelize the computation across modern hardware (like GPUs or TPUs). Training RNNs and LSTMs, therefore, becomes computationally expensive and time-consuming as datasets and sequences become very large,
+because the network must be ``unrolled'' over the entire sequence and trained via backpropagation through time, leading to linear growth in computation and memory with sequence length. Additionally, the inherently sequential structure prevents parallelization across time steps, and LSTMs add further per-step computational overhead.
+
+
+\subsection{Transformer networks}
+
+The creation of Transformers was driven primarily by the two aforementioned major limitations of RNNs and their variants like LSTM networks: the inability to efficiently capture long-range dependencies and the lack of parallelization. The transformer architecture~\cite{vaswani2017attention} addresses these limitations by replacing recurrence with so-called attention mechanisms, creating a direct link between every word and every other word in the sequence, regardless of distance and allowing global context to be modeled in parallel. Transformers  have become the state-of-the-art architecture for natural language processing tasks and as such are the core architecture behind modern Large Language Models (LLMs). 
+
+
+
+We give a brief mathematical derivation of transformers, following in part the approach taken in~\cite{turner2023introduction}. A {\em token} is the fundamental unit into which input data of a transformer is divided before being processed by the model.
+For text, a token usually corresponds to a word, subword, or even a single character, depending on the chosen tokenization scheme. Similarly,  an image can be broken up into a set of patches which are then used as tokens.
+Each token is mapped to a {\em vector embedding} before entering the transformer. The embeddings can be fixed or they can be learned together with the other parameters of the model.
+Each token is mapped to a vector embedding (a technique pioneered by methods like {\em word2vec}~\cite{mikolov2013efficient}) before entering the transformer.
+
+
+Let a sequence of $n$ $d$-dimensional tokens be given as
+$$
+x_j^{(0)}, \quad j=1,\dots, n, \quad x_j^{(0)} \in \mathbb{R}^d,
+$$
+where each $x_j^{(0)}$ is a vector embedding of the $j$-th token.
+
+
+Since the core attention mechanism is invariant to the order of the input, and since the order of inputs matters for applications like NLP, 
+the network needs to be explicitly supplied with information about the position of each token. This is achieved by adding a positional encoding vector $p_j \in \R^d$ to the input embedding $x_j$:
+\begin{equation}\label{positionencoding}
+    z_j^{(0)} = x_j^{(0)} + p_j, \qquad j=1,\dots,n.
+\end{equation}
+The original Transformer uses fixed sinusoidal functions for the positional encoding. An alternative, often used in modern LLMs, is to make the positional encodings learnable parameters.
+
+The collection of inputs $z_j$ forms a matrix
+$$
+Z^{(0)} = \begin{bmatrix} z_1^{(0)}, \dots , z_j^{(0)} \end{bmatrix} \in \mathbb{R}^{d \times n}.
+$$
+The transformer will take as input the position-encoded token sequence matrix $Z^{(0)}$ and return a representation of the sequence in terms of another $d \times n$ matrix $Z^{(L)}$, where $L$ denotes the number of layers in the
+transformer.
+
+The output $Z^{(L)}$ is calculated by iteratively applying
+a transformer block
+$$
+Z^{(\ell)} = \text{transformer-block}\,(Z^{(\ell-1)}), \qquad \ell=1,\dots,L.$$
+
+
+The transformer block consists of two stages: one stage that operates along the sequence dimension and another that operates across the feature dimension.
+The first stage contains the key innovation of transformers, the so-called self-attention mechanism. 
+In this first stage, each feature is refined based on dependencies among tokens across the sequence---for instance, how a word at position $j$ depends on a previous word at positions $j'$, or how two image patches correspond to one another. This stage acts vertically across the columns of $Z^{(\ell-1)}$. In the second stage the features associated with each token are refined. This stage acts horizontally along the rows of $Z^{(\ell-1)}$. Through repeated application of the transformer block, the representation of token $j$ and feature $i$ becomes influenced by information from token $j'$ and feature $i'$. As Turner points out in~\cite{turner2023introduction}, the concept of interleaving processing across the sequence and across features is common among many machine learning architectures. For example, in
+graph neural networks one interleaves processing
+across nodes and across features.
+
+\subsubsection{Stage 1: Self-attention across the sequence}
+
+We will describe the first stage of the tranformer-block, namely the multi-head self-attention in more detail.
+
+
+\smallskip
+\noindent
+\textbf{Attention.}
+The output of the first stage of the transformer block in the $\ell$-iteration is a $d \times n$ matrix $Y^{(\ell)}$. The output is produced by aggregating information across the sequence
+independently for each feature using an operation called {\em attention}. 
+This is the fundamental operation of transformers, which proceeds as follows. The output vector at location $j$, denoted by $y^{(\ell)}_j$ is calculated
+by a weighted average of the input features $z^{(\ell-1)}$ at location $j' = 1,\dots,n$ via
+\begin{equation}\label{eq:trans1}
+y_j^{(\ell)} = \sum_{j'=1}^n  z_{j'}^{(\ell-1)} A_{j',j}^{(\ell)}  
+\end{equation}
+Here the weighting is done by a so-called attention matrix $A_{j,j'}^{(\ell)}$ of size $n \times n$. The attention matrix is normalized such that $\sum_{j'=1}^n  A_{j',j}^{(\ell)} = 1$ for all $j=1,\dots,n$. 
+
+The idea of the attention matrix is that $A_{j,j'}^{(\ell)}$ will take a large value for locations in the sequence $j'$ that are of high relevance for location $j$, and a small value in case there is little relevance between the two.
+
+We can conveniently write this correspondence
+as matrix multiplication
+$$Y^{(\ell)} = Z^{(\ell-1)}  A^{(\ell)}.$$
+
+\noindent
+\textbf{Self-attention.}
+But we have not yet explained how we decide which values to assign to the entries of the attention matrix $A_{j,j'}^{(m)}$. One of the key aspects of the transformer is that the entries of the attention matrix are determined via the input data themselves, i.e., attention is computed via {\em self-attention}.
+We could do this by measuring the similarity between two locations by the inner product between the
+features at those two locations, i.e., by considering $\langle z_{j'}^{(\ell)}, z_{j}^{(\ell)} \rangle$. And we could turn these inner products into probabilities by applying the softmax function defined in equation~\eqref{softmax}. 
+The softmax operation ensures that attention weights are nonnegative and sum to one across each row.
+So, shall we compute the attention matrix as
+$$
+A_{j',j}^{(\ell)} = \frac{\exp\big(\langle z_{j}^{(\ell)}, z_{j'}^{(\ell)} \rangle\big)}{\sum_{j''=1}^n \exp\big(\langle z_{j'}^{(\ell)}, z_{j''}^{(\ell)} \rangle\big)} \,\,\, ?
+$$
+Alas, this simple approach is doomed to fail, since it entangles information about the similarity between
+locations in the sequence with the content of the sequence itself.
+
+One possibility to
+curtail this undesirable entanglement is to  apply  a linear transformation $W$ to the sequence $z_j^{(\ell)}$. That is, shall we consider
+$$
+A_{j',j}^{(\ell)} = \frac{\exp\big(\langle W z_{j}^{(\ell)}, W z_{j'}^{(\ell)} \rangle\big)}{\sum_{j''=1}^n \exp\big(\langle W z_{j'}^{(\ell)}, W z_{j''}^{(\ell)} \rangle\big)}\,\,\, ?
+$$
+Yet, this choice is still not quite suitable, at least not for natural language processing tasks. Indeed, the inherent symmetry of the expression $\exp\big(\langle W z_{n}^{(\ell)} , W z_{n'}^{(\ell)} \rangle\big)$ contrasts with the lack of symmetry we typically encounter in the relationship between words. For instance, the word {\em marsupial} is strongly related to the word {\em mammal}. In contrast, the word {\em mammal} is only weakly associated with {\em marsupial}, since there are many other mammals and many among those  (e.g., {\em lion}, {\em elephant}, {\em whale},...) are much more frequently associated with mammals.
+
+It is easy to break this symmetry by introducing for instance two different linear transforms, let us call them $W_{k}$ and $W_q$. For convenience, we choose both matrices to be of dimension $d_k \times d$. Usually one chooses $d_k < d$ such that $W_k$ and $W_q$ project onto lower-dimensional subspaces, with the aspiration that only the most important features of $z_j^{(\ell)}$ prevail in the similarity computations. 
+Moreover, for improved numerical stability we divide the matrices in the exponents by the square-root of the dimensionality of the projected vectors. 
+With this asymmetric notion of similarity and normalization in place, we arrive at the desired formula for our attention matrix, namely
+\begin{equation}
+\label{attentionmatrix}   
+A_{j',j}^{(\ell)} = \frac{\exp\big(\langle W_k z_{j}^{(\ell)}, W_q z_{j'}^{(\ell)} \rangle /\sqrt{d_k}\big)}{\sum_{j''=1}^n \exp\big(\langle W_k z_{j'}^{(\ell)}, W_q z_{j''}^{(\ell)} \rangle /\sqrt{d_k}\big)}.
+\end{equation}
+Equations~\eqref{eq:trans1} and~\eqref{attentionmatrix}
+taken together represent what is referred to as the {\em self-attention mechanism}.  Owing to the fact that the entries of $A_{j',j}^{(\ell)}$ are non-negative and each column of $A$ sums up to 1 by construction, 
+each output vector $y_j^{\ell}$ is formed by a convex combination of the input features $z_j^{\ell-1}$.
+
+The two quantities $q_j = W_q z_j^{(\ell)}$ and $k_j = W_k z_j^{(\ell)}$ arising in the inner products of~\eqref{attentionmatrix} are typically known as the {\em queries} and the {\em keys}, respectively (where we have adopted the convention of suppressing the subscripts in the queries and the keys).
+
+
+
+
+
+
+
+The reader who is used to seeing the attention mechanism  in the form
+\begin{equation}
+    \label{attention2}
+\operatorname{Att}(Q, K, V) = \operatorname{softmax} \left( \frac{QK^\top}{\sqrt{d_k}} \right)V
+\end{equation}
+may rest assured that  we can easily recover expression~\eqref{attention2} from~\eqref{attentionmatrix}
+and~\eqref{eq:trans1}.
+To that end we first collect the queries $q_j$ and keys $k_j$ in matrices $Q = [W_q Z^{(\ell)}]^T \in \mathbb{R}^{n \times d_k}$ and $K =  [W_k Z^{(\ell)}]^T \in \mathbb{R}^{n \times d_k}$, respectively.
+This already establishes that $\operatorname{softmax} \big( QK^\top/\sqrt{d_k} \big) = A^{(\ell)}$.
+
+Why is the value-matrix $V$ (or $W_v$ for that matter) not present in~\eqref{eq:trans1} or in~\eqref{attentionmatrix}? The reason we skipped $V$ until now is that the original transformer architecture introduces another projection in the so-called multi-head self-attention (discussed in subsequent paragraphs), which as noted in~\cite{turner2023introduction}, creates unnecessary redundancy that we are avoiding here.
+
+\smallskip
+
+The transformer's self-attention can be viewed as a kernel smoother: after learned linear projections 
+$Q$,$K$,$V$ the output at query $q$
+is a normalized, similarity-weighted average of value vectors $z_j$.  This is mathematically analogous to  kernel regression estimation (cf.~Chapter~\ref{s:kernellearning} and also~\cite{nadaraya1964estimating,watson1964smooth}) with the attention score 
+$\exp (\langle q, k \rangle)$ acting as the  kernel.
+The difference is that in classical kernel regression, the kernel function, often chosen as $K(z,z') = \exp(\frac{-\|z-z'\|^2}{2\sigma^2})$, is fixed (up to hyperparameters like the kernel bandwidth $\sigma$). It defines a static notion of similarity between data points. By contrast, in a transformer’s attention, the (non-symmetric) kernel $K(z_i,z_j)=\exp(\langle q_i, k_j \rangle)=\exp(\langle W_q z_i , W_k z_j\rangle)$
+is learned and adaptive. The similarity metric itself depends on trainable parameters $W_q, W_k$.
+As training progresses, these parameters change to reflect task-specific or context-dependent notions of similarity.
+
+
+\medskip
+\noindent
+\textbf{Multi-head self-attention.}
+A single attention head must use one set of attention weights per token to encode all the different features and relationships. This forces it to average or blend various types of information, which limits its expressive power. This can be addressed by using multiple heads.
+
+The {\em multi-head attention mechanism} is a refinement that allows the model to collectively attend to information from different representation subspaces at different positions. Instead of performing a single attention function, the query, key, and value matrices are linearly projected several times with different, learned parameter matrices.
+
+
+
+
+
+
+
+Instead of a single attention operation, the transformer block employs attention in $H$ parallel 
+sets, called {\em heads}, and then
+linearly projects the output onto $d \times n$ arrays. This enables the model to capture dependencies across multiple representational subspaces simultaneously. The use of multiple heads in transformers is akin to the use of multiple channels in CNNs.
+In detail, the multi-head self-attention operation is given by
+\begin{equation}\label{multihead}
+Y^{(\ell)} = \sum_{h=1}^H V_h^{(\ell)} Z^{(\ell)}A_h^{(\ell)} ,
+\end{equation}
+where the $H$  matrices $V_h^{(\ell)}$ are of dimension $d \times d$.
+The standard multi-head presentation can be recovered
+by simply setting $V_h$ to be a low-rank matrix
+$V_h = W_h W_{v,h}$ where $W_h \in \R^{d \times d_v}$ and $W_{v,h} \in \R^{d_v \times d}$.
+In this case, the matrices $V_h^{(\ell)}$ act like (non-orthogonal) projections onto a $d_v$-dimensional linear subspace.
+The matrices $W_k^{(\ell)}, W_q^{(\ell)}$, $W_{v,h}^{(\ell)}$, and $W_v^{(\ell)}$ are  unknown parameters that need to be learned during the training.
+
+
+
+\subsubsection{Stage 2: Multi-layer perceptron across features}
+
+In the second stage of the tranformer block a {\em pointwise feed-forward network} is applied row-wise across features. This simple two-layer fully connected network  takes the form
+   $$
+   f_{\text{FFN}}(z) = \sigma(zW_1 + b_1) W_2 + b_2, \quad W_1 \in \mathbb{R}^{d \times d_{\text{ff}}},  W_2 \in \mathbb{R}^{d_{\text{ff}} \times d}.
+   $$
+
+
+\subsubsection{The transformer block}
+A transformer layer combines multi-head attention with feed-forward transformations (together with two standard tricks of the trade, namely residual connections and layer normalization, to stabilize training). Stacking $L$ such layers yields the encoder (or decoder)  of a transformer. 
+
+An encoder processes input sequence embeddings into contextual representations. A decoder generates outputs, using both self-attention and cross-attention, where queries attend over encoder outputs. More specifically, in cross-attention the Queries (Q) come from the target sequence (e.g., the sentence being generated in the Decoder), while the Keys (K) and Values (V) come from the source sequence (e.g., the sentence being translated in the encoder).
+In self-attention the model asks, ``How do the words in this sentence relate to each other?''. 
+In cross-attention the model asks, ``Which part of the input sentence is relevant to the word I am currently writing?''
+
+\bigskip
+The transition from high-dimensional internal hidden states to a discrete output (like words or tokens) occurs in the final output head. This stage is structured to map a continuous vector representation back into a probability distribution over the model's vocabulary.
+
+After the final decoder block, each token position is represented by a hidden vector $h \in \mathbb{R}^d$, where $d$ is the model dimension (e.g., 512 or 768). To map this to the vocabulary, the model applies a linear transformation
+$$u = h W_U + b,$$
+where $W_U \in \mathbb{R}^{d \times V}$is the so-called unembedding matrix, $V$ is the vocabulary size (often 30,000 to 100,000+), and the 
+$u \in \mathbb{R}^V$ are the {\em logits}. Each element $u_i$ represents the raw ``score'' for the $i$-th word in the dictionary. The logits are unconstrained real numbers. To interpret them as probabilities, the softmax function is applied
+$$P(y = i | \text{context}) = \frac{\exp(u_i / \tau)}{\sum_{j=1}^{V} \exp(u_j / \tau)},$$
+where the hyperparameter $\tau$ is called the temperature\footnote{The term is borrowed from thermodynamics, similarly to how it was used in Section~\ref{sec:MarkovChains}.%} In a physical system, higher temperature allows particles to occupy higher-energy states that would otherwise be inaccessible.
+}, which controls the ``sharpness'' of the resulting probability distribution across every single unique token in the model's vocabulary. A low $\tau$ ($\tau < 1$) makes the model more deterministic, while a high $\tau$ ($\tau > 1$) increases randomness.
+
+
+
+
+
+
+\bigskip
+The transformer architecture underlies a number of well known models such as BERT~\cite{devlin2019bert} (encoder-only), GPT~\cite{radford2018improving}, Gemini~\cite{team2023gemini}, and Claude~\cite{anthropic2024claude3} (generally understood to be decoder-only) and of course the original Transformer~\cite{vaswani2017attention} (encoder–decoder). Regarding expressivity, it has been shown that transformers are universal approximators of sequence-to-sequence functions under mild assumptions~\cite{yun2019transformers}.
+
+\medskip
+While attention-based architectures have become ubiquitous in machine learning, our mathematical understanding of the reasons for their effectiveness remains limited.
+There is no comprehensive theory yet describing how architectural elements such as depth, width, attention heads, and positional encodings jointly determine expressivity or enable emergent algorithmic structure.
+Also, the quadratic scaling of the self-attention mechanism creates a significant computational bottleneck for long-sequence data.
+Progress will likely require new tools from functional analysis, dynamical systems, information theory, and statistical learning theory, as well as closer links between theory and empirical behavior.
+
+
+
+
+\subsection{Learning low-dimensional structure with autoencoders}
+
+
+
+In previous chapters we encountered different approaches 
+to dimension reduction: PCA finds 
+the optimal linear subspace by minimizing the $\ell_2$-reconstruction error, the  Johnson-Lindenstrauss lemma guarantees nearly isometric embeddings in logarithmically  small dimensions, and diffusion maps reveal the intrinsic geometry of a data manifold  through the eigenfunctions of a Markov operator. Each of these methods imposes  structure on the embedding---linearity, isometry, or smoothness with respect to a 
+diffusion process---and derives guarantees from that structure.
+
+Autoencoders offer a complementary perspective based on neural networks. Rather than prescribing the form of the embedding analytically, they  \emph{learn} an encoder--decoder pair from data by minimizing a reconstruction  objective. The latent representation that emerges occupies the same conceptual space as the principal components or diffusion coordinates: a 
+low-dimensional summary of high-dimensional data~\cite{hinton2006reducing,bengio2013representation}. What changes is the hypothesis class. By using nonlinear, multi-layer mappings, autoencoders can capture structure 
+that lies beyond the reach of PCA.
+
+
+\begin{definition}[Autoencoder]
+An \emph{autoencoder} consists of an \emph{encoder} $f_\phi : \mathbb{R}^d \to 
+\mathbb{R}^k$, where $k \ll d$, and a \emph{decoder} $g_\psi : \mathbb{R}^k \to \mathbb{R}^d$, each 
+parameterized by weights $\phi$ and $\psi$ drawn from some neural network 
+architecture. Given a dataset $\{x_1, \ldots, x_n\} \subset \mathbb{R}^d$, the 
+parameters are found by minimizing the \emph{reconstruction loss}
+\begin{equation}
+    \mathcal{L}(\phi, \psi) 
+    = \frac{1}{n} \sum_{i=1}^{n} \| x_i - g_\psi(f_\phi(x_i)) \|^2.
+    \label{eq:ae_loss}
+\end{equation}
+The composition $\Pi = g_\psi \circ f_\phi : \mathbb{R}^d \to \mathbb{R}^d$ is 
+called the \emph{reconstruction map}, and the image $f_\phi(x_i) \in \mathbb{R}^k$ 
+is the \emph{latent code} or \emph{latent representation} of $x_i$.
+\end{definition}
+
+The architecture of the encoder and decoder is flexible.  Typically, both are deep  networks with multiple hidden layers and pointwise nonlinearities. The bottleneck layer of dimension $k$ 
+forces the network to compress information, producing a low-dimensional 
+representation as a byproduct of learning to reconstruct, as illustrated in Figure~\ref{fig:autoencoder}.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.6\textwidth]{figures/VAE}
+\caption{Schematic depiction of the architecture of an autoencoder.}
+\label{fig:autoencoder}
+\end{center}
+\end{figure}
+
+It is instructive to consider {\em linear
+autoencoders}. A \emph{linear autoencoder} constrains both $f_\phi$ and $g_\psi$ to be linear maps:
+$$
+    f_\phi(x) = Wx, \quad g_\psi(z) = Vz,
+$$
+where $W \in \mathbb{R}^{k \times d}$ and $V \in \mathbb{R}^{d \times k}$. The 
+reconstruction loss becomes
+\begin{equation}
+    \mathcal{L}(W, V) = \frac{1}{n}\sum_{i=1}^n \|x_i - VWx_i\|^2 
+    = \|X - XW^\top V^\top\|_F^2 / n,
+    \label{eq:linear_ae_loss}
+\end{equation}
+where $X \in \mathbb{R}^{n \times d}$ is the data matrix with rows $x_i^\top$.
+A straightforward calculations shows that the  global minimizers of this objective are  precisely the PCA subspaces~\cite{baldi1989neural}.
+
+However, the power of autoencoders lies in their nonlinear generalizations. When $f_\phi$ and 
+$g_\psi$ are nonlinear maps---realized as multi-layer networks---the autoencoder can 
+in principle learn to exploit nonlinear structure in the data manifold.
+
+The Universal Approximation Theorem  implies that 
+sufficiently wide or deep encoders and decoders can approximate any continuous 
+function on a compact set. This expressivity comes at a cost: unlike PCA, nonlinear 
+autoencoders have non-convex loss landscapes, and gradient-based training finds only  local minima in general.
+
+Vanilla autoencoders as described so far are purely discriminative: they learn a 
+deterministic encoder--decoder pair without placing any structure on the latent 
+space. Indeed, without regularization, the learned latent space may not have any useful  geometric structure: nearby points in $\mathbb{R}^d$ need not map to nearby codes in $\mathbb{R}^k$. Several structured variants address these issues. Arguably the most successful approach to date is the variational autonecoder that we will describe next.
+
+
+
+
+
+\subsubsection{Variational autoencoders}
+
+In a standard autoencoder, the encoder maps each data point 
+to a single code, and there is no mechanism preventing the latent codes from  collapsing into isolated clusters with large empty regions between them. Decoding 
+a point from such an empty region produces meaningless output. A so-called {\em variational autoencoder} (VAE) tries to prevent this by imposing a probabilistic model on 
+the latent space, and thereby aims to enable both principled inference and generation of new samples~\cite{kingma2013auto,diederik2019introduction}.
+
+A \emph{latent variable model} posits that each observed data point $x \in 
+\mathbb{R}^d$ is generated by first sampling an unobserved \emph{latent variable} 
+$z \in \mathbb{R}^k$ from a prior distribution $p(z)$, and then sampling $x$ 
+from a conditional distribution $p_\psi(x | z)$ parameterized by $\psi$. 
+The joint distribution is
+$$
+p_\psi(x, z) = p_\psi(x | z) \, p(z),
+$$
+and the marginal likelihood of an observation is
+\begin{equation}
+    p_\psi(x) = \int_{\mathbb{R}^k} p_\psi(x | z) \, p(z) \, dz.
+    \label{eq:marginal_likelihood}
+\end{equation}
+The canonical choice is a standard Gaussian prior $p(z) = \mathcal{N}(0, I_k)$
+and a Gaussian or Bernoulli likelihood $p_\psi(x | z)$ parameterized by a
+neural network. The goal of learning is to find $\psi$ maximizing the
+log-likelihood $\sum_{i=1}^n \log p_\psi(x_i)$.
+
+The fundamental difficulty is that the integral \eqref{eq:marginal_likelihood}
+is intractable for nonlinear $p_\psi(x | z)$; one cannot evaluate it in
+closed form, and naive Monte Carlo estimation has prohibitively high variance
+in high dimensions. The VAE resolves this by introducing a tractable
+\emph{approximate posterior}.
+
+We proceed as follows. For any distribution $q(z | x)$, Jensen's inequality applied to the concave
+logarithm gives
+\begin{align}
+    \log p_\psi(x) 
+    &= \log \int p_\psi(x | z) \, p(z) \, dz \notag \\
+    &= \log \int \frac{p_\psi(x | z) \, p(z)}{q(z | x)} \, q(z | x) \, dz \notag \\
+    &= \log \, \mathbb{E}_{q(z | x)}\!\left[\frac{p_\psi(x | z) \, p(z)}{q(z | x)}\right] \notag \\
+    &\geq \mathbb{E}_{q(z | x)}\!\left[\log \frac{p_\psi(x | z) \, p(z)}{q(z | x)}\right] \notag \\
+    &= \mathbb{E}_{q(z | x)}\bigl[\log p_\psi(x | z)\bigr] 
+       - \text{KL}\bigl(q(z | x) \,\|\, p(z)\bigr).
+    \label{eq:elbo_derivation}
+\end{align}
+The right-hand side of \eqref{eq:elbo_derivation} is called the \emph{evidence lower 
+bound} (ELBO), also written $\mathcal{L}_{\mathrm{ELBO}}(x; \phi, \psi)$. 
+The gap between the log-likelihood and the ELBO is exactly the KL divergence 
+between the approximate and true posterior:
+\begin{equation}
+    \log p_\psi(x) - \mathrm{ELBO}(\phi, \psi; x) 
+    = \text{KL}\bigl(q_\phi(z | x) \,\|\, p_\psi(z | x)\bigr) \geq 0.
+    \label{eq:elbo_gap}
+\end{equation}
+This identity has two 
+important consequences. First, the ELBO is indeed a lower bound on the 
+log-likelihood for every choice of $q$. Second, the bound is tight (i.e., 
+$\mathrm{ELBO} = \log p_\psi(x)$) if and only if $q_\phi(z | x) = 
+p_\psi(z | x)$ almost surely, that is, when the approximate posterior 
+equals the true posterior. Maximizing the ELBO therefore simultaneously pushes 
+toward higher likelihood and toward a better approximation of the posterior. 
+
+This is the key for the variational autoencoder, which parameterizes the approximate posterior as a
+Gaussian with a diagonal covariance:
+\begin{equation}
+    q_\phi(z | x) = \mathcal{N}\bigl(\mu_\phi(x),\, 
+    \mathrm{diag}(\sigma_\phi^2(x))\bigr),
+    \label{eq:vae_encoder}
+\end{equation}
+where $\mu_\phi : \mathbb{R}^d \to \mathbb{R}^k$ and $\sigma_\phi^2 : 
+\mathbb{R}^d \to \mathbb{R}^k_{>0}$ are neural networks with shared weights 
+up to the final layer (the \emph{encoder}). The likelihood is parameterized as
+\begin{equation}
+    p_\psi(x | z) = \mathcal{N}\bigl(g_\psi(z),\, \tau^2 I_d\bigr),
+    \label{eq:vae_decoder}
+\end{equation}
+where $g_\psi : \mathbb{R}^k \to \mathbb{R}^d$ is a neural network 
+(the \emph{decoder}) and $\tau^2 > 0$ is a fixed or learned variance. The 
+parameters $(\phi, \psi)$ are trained to maximize the ELBO summed over the 
+dataset, i.e,
+\begin{equation}
+    \max_{\phi,\psi} \,\, \sum_{i=1}^n \underbrace{\Bigl[
+        \mathbb{E}_{q_\phi(z | x_i)}\bigl[\log p_\psi(x_i | z)\bigr]
+        - \text{KL}\bigl(q_\phi(z | x_i) \,\|\, p(z)\bigr)
+    \Bigr]}_{\mathrm{ELBO}(\phi, \psi; x_i)}.
+    \label{eq:vae_objective}
+\end{equation}
+
+The ELBO term in~\eqref{eq:vae_objective} decomposes into two competing terms,
+each with a distinct interpretation:
+
+\begin{enumerate}
+    \item Reconstruction term: 
+    $\mathbb{E}_{q_\phi(z | x_i)}[\log p_\psi(x_i | z)]$. 
+    With the Gaussian likelihood \eqref{eq:vae_decoder}, this equals 
+    $-\frac{1}{2\tau^2}\mathbb{E}[\|x_i - g_\psi(z)\|^2] + \mathrm{const}$, 
+    so maximizing it encourages the decoder to reconstruct $x_i$ accurately 
+    from codes $z$ sampled from the encoder distribution. This is the 
+    probabilistic analog of the deterministic autoencoder loss.
+
+    \item KL regularization term: 
+    $-\text{KL}(q_\phi(z | x_i) \,\|\, p(z))$. 
+    This penalizes the encoder for producing a posterior $q_\phi(z | x_i)$ 
+    that deviates too far from the prior $\mathcal{N}(0, I_k)$. It prevents 
+    the encoder from collapsing to a deterministic map (which would reduce 
+    the VAE to a standard autoencoder) and regularizes the latent space to 
+    be well-covered by the prior.
+\end{enumerate}
+
+Without the KL regularization term, the model could simply assign each input to a very distant narrow point in latent space to minimize reconstruction error, leading to a ``fractured''latent space. The KL term forces the clusters to overlap and stay centered, with the goal that
+points close to each other in the latent space decode to visually or structurally similar outputs.
+
+
+
+\bigskip
+
+
+
+Autoencoders have found broad application across scientific and engineering domains, owing to their ability to learn compact, task-relevant representations without labeled data~\cite{balle2016end,vincent2010stacked,an2015variational,gomez2018automatic}.
+The latent codes learned by an autoencoder can serve as features for downstream supervised tasks, especially in settings where labeled data is scarce~\cite{way2018extracting,broecker2025multimodal}.
+Autoencoders now frequently appear as components of larger systems, rather than standalone dimension-reduction tools. Examples include privacy-preserving and federated learning pipelines, anomaly detection systems, and generative models. 
+
+While in generative AI autoencoders have been outperformed by diffusion models in terms of quality of the generated data~\cite{song2020score,ho2020denoising}, 
+latent diffusion models often rely on high-quality autoencoder-style compression as a preprocessing step, underscoring the continued relevance of learned low-dimensional representations even when the final objective is generative rather than descriptive~\cite{preechakul2022diffusion,rombach2022high}.
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+
+\begin{myexercise}(Linear classification with the perceptron). The perceptron is a simple linear classifier for binary classification. Given a dataset
+$$
+{(x_i, y_i)}_{i=1}^n \subset \mathbb{R}^d \times {-1, +1},
+$$
+the perceptron algorithm iteratively updates a weight vector $w \in \mathbb{R}^d$ and bias $b \in \mathbb{R}$ as follows:
+\begin{enumerate}
+\item Initialize $w = 0, b = 0$.
+\item For each misclassified point $x_i$ (i.e., $y_i(w^T x_i + b) \le 0)$ update:
+$$   w \gets w + y_i x_i, \quad b \gets b + y_i $$
+\end{enumerate}
+(a) Prove that if the data are {\em linearly separable}, there exists a finite number of updates after which the perceptron algorithm finds a separating hyperplane.\\
+(b) Let $R = \max_i |x_i|$ and $\gamma$ the margin of separation. Show that the number of updates is at most $(R/\gamma)^2$.
+\end{myexercise}
+
+\begin{myexercise}
+Let $d \in \mathbb{N}$, and let
+$$
+f(x) = \sum_{i=1}^\infty c_i ,\sigma_{\mathrm{ReLU}}(\langle a_i, x\rangle + b_i),
+\quad x \in \mathbb{R}^d,
+$$
+where
+$$
+\|a_i\| = 1, \quad |b_i| \le 1, \quad \text{and} \quad \|c\|_1 : < \infty.
+$$
+Show that for every $N \in \mathbb{N}$, there exists a one-hidden-layer ReLU neural network $f_N$ with $N$ neurons such that
+$$
+\|f - f_N\|_{L^2(B_1^d)} \le \frac{C \|c\|_1}{\sqrt{N}},
+$$
+where $C>0$ is an absolute constant. Conclude that infinite ReLU networks with $\ell^1$-summable coefficients admit dimension-independent approximation rates $O(N^{-1/2})$.
+\end{myexercise}
+
+\begin{myexercise} (Why the sigmoidal assumption in the UAT is important).
+Let $\sigma:\mathbb{R}\to\mathbb{R}$ be a polynomial. 
+\begin{enumerate}[label=(\alph*)]
+\item Show that any function in 
+$$\mathcal{N}_\sigma =
+   \left\{
+   x\mapsto \sum_{j=1}^m a_j \sigma(w_j\cdot x + b_j)
+   \right\}
+   $$
+   is a polynomial in $x$.
+
+\item Conclude that $\mathcal{N}_\sigma$ is not dense in $C([0,1]^n)$.
+
+\item Explain why this shows that the nonpolynomial assumption in the classical UAT is not merely technical.
+\end{enumerate}
+\end{myexercise}
+
+
+\begin{myexercise}
+Assume $\sigma$ is a sigmoidal activation.
+\begin{enumerate}[label=(\alph*)]
+\item Suppose all weight vectors $w_j$ are constrained to satisfy $\|w_j\| = 1$. Is $\mathcal{N}_\sigma$ still dense in $C([0,1]^n)$?
+\item Suppose all biases $b_j$ are set to zero. Is universality preserved?
+\item Discuss which constraints destroy universality and which merely affect efficiency.
+\end{enumerate}
+
+\end{myexercise}
+
+
+\begin{myexercise}(Universal approximation in other norms).
+Let $1 \le p < \infty$. 
+\begin{enumerate}[label=(\alph*)]
+\item Show that if $\mathcal{N}_\sigma$ is dense in $C([0,1]^n)$, then it is dense in $L^p([0,1]^n)$.
+\item Give an example of a function in $L^p$ that is not continuous but can still be approximated in $L^p$ by neural networks.
+\end{enumerate}
+
+\end{myexercise}
+
+
+\begin{myexercise}
+Backpropagation and the ``vanishing gradient'':
+Consider a simple $L$-layer neural network where each layer has a single neuron. The output is $y = a_L$, where
+$a_l = \sigma(z_l)$
+$z_l = w_l a_{l-1} + b_l$
+$\sigma(z) = \frac{1}{1 + e^{-z}}$ is the sigmoid activation.\\
+(a) Using the chain rule, derive the expression for the gradient of the loss $\mathcal{L}$ with respect to the first weight $w_1$, i.e., $\frac{\partial \mathcal{L}}{\partial w_1}$.\\
+(b) The derivative of the sigmoid function $\sigma'(z)$ is maximized at $z=0$. What is this maximum value? \\
+(c) Explain why, as the number of layers $L$ increases, the gradient $\frac{\partial \mathcal{L}}{\partial w_1}$ tends toward zero if the weights are initialized near 1.
+\end{myexercise}
+
+
+\begin{myexercise}
+Batch normalization transforms a mini-batch of activations $X = \{x_1, \dots, x_m\}$ to a new batch $\hat{X}$ by
+$$\hat{x}_i = \frac{x_i - \mu_B}{\sqrt{\sigma_B^2 + \epsilon}}$$
+(a) Prove that for any input batch $X$, the transformed batch $\hat{X}$ has a mean of 0 and a variance of 1.\\
+(b) If we add a learnable scale $\gamma$ and shift $\beta$ such that $y_i = \gamma \hat{x}_i + \beta$, what happens to the representation if the network learns $\gamma = \sqrt{\sigma_B^2 + \epsilon}$ and $\beta = \mu_B$?
+\end{myexercise}
+
+\begin{myexercise}(The efficiency of depth).
+This exercise is about an empirical comparison of the number of parameters required by a shallow network versus a deep network to approximate a high-frequency repeating pattern.
+
+We want to approximate a nested sawtooth function $f(x)$ on the interval $[0, 1]$. A sawtooth function $S(x)$ is defined as
+$$S(x) = \begin{cases} 2x & 0 \le x < 0.5 \\ 2(1-x) & 0.5 \le x \le 1 \end{cases}.$$
+
+We are interested in the $k$-th composition, $f(x) = S(S(S(\dots S(x) \dots )))$, which creates $2^{k-1}$ ``teeth'' or oscillations. For this problem, we will target $k=4$, which results in 8 oscillations.
+
+\begin{itemize}
+\item  Shallow approximation:
+According to the UAT, a single hidden layer can approximate this. Create a neural network with one hidden layer and ReLU activation. Find the minimum number of neurons $N$ required to achieve a Mean Squared Error (MSE) below $0.01$.
+Calculate the total number of trainable parameters (weights + biases) for this network. Note: For a single hidden layer with $N$ neurons: total parameters $= (1 \times N) + N + (N \times 1) + 1 = 3N + 1$.
+\item Deep approximation:
+A remarkable property of ReLU units is that they can ``mirror'' the sawtooth shape perfectly through nesting.
+Create a deep network where each hidden layer has only 2 neurons, but you have $L$ layers ($L$ should correspond to the number of compositions $k$).
+Train this network on the same sawtooth data.
+Calculate the total number of trainable parameters. Note: For $L$ layers of width 2: Total Parameters $\approx L \times (2^2 + 2) \approx 6L$.
+\end{itemize}
+
+Compare the mean squared error for these different network architectures and parameters.
+\end{myexercise}
+
+
+\begin{myexercise}(Another ``depth vs width'' exploration).
+Consider the function
+$$
+f(x) = \sin(8\pi x), \qquad x \in [0,1].
+$$
+
+Approximate $f$ using two neural network architectures with ReLU activation:
+\begin{enumerate}
+\item[(a)] A shallow network: one hidden layer with $m$ neurons
+\item[(b)] A deep network: $L$ hidden layers, each with a small fixed width.
+\end{enumerate}
+
+\smallskip
+\noindent
+Part (a): Shallow network approximation:
+
+\vspace*{-2mm}
+\begin{enumerate}
+\item Construct a fully connected neural network with
+one input neuron, one hidden layer of width $m$, 
+ReLU activation, and one linear output neuron.
+
+\item Train the network to approximate $f$ using mean squared error loss on a uniform grid of training points in $[0,1]$.
+
+\item For $m \in \{5, 10, 20, 40, 80\}$, train the network until convergence, record the final training error, and plot the approximation $x \mapsto \hat f_m(x)$.
+\end{enumerate}
+
+
+\smallskip
+\noindent
+Part (b): Deep network approximation:
+
+\vspace*{-2mm}
+\begin{enumerate}
+\item Construct a fully connected neural network with
+one input neuron, $L$ hidden layers, each of width 4, ReLU activation, and one linear output neuron.
+
+\item Train the network as above.
+
+\item For $L \in \{2, 4, 8, 16\}$ train the network, record the final training error and plot the approximation $x \mapsto \hat f_L(x)$.
+\end{enumerate}
+
+For each trained model, compute the total number of trainable parameters.
+Create a plot of approximation error vs number of parameters, with shallow and deep networks on the same axes.
+Identify which architecture achieves a given target error (e.g. $10^{-3})$ with fewer parameters.
+
+
+
+
+  
+\end{myexercise}
+
+
+
+\begin{myexercise}
+Implement and compare the performance for a  network with three hidden layers using different activation functions: sigmoid, tanh, ReLU, and Leaky ReLU on MNIST digit classification. \\
+(a) Plot the gradient norms at each layer during training for each activation function. Which exhibits the worst vanishing gradient problem? \\
+(b) Compare final test accuracy and training time for each activation function.    
+\end{myexercise}

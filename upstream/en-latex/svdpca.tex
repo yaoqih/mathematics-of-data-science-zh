@@ -1,0 +1,1152 @@
+\chapter{Singular Value Decomposition and Principal Component Analysis}
+\label{c:svd}
+
+
+
+Data is most often represented as a matrix, even network data and graphs are often naturally represented by their adjacency matrix. For this reason Linear Algebra is one of the key tools in data analysis. Perhaps more surprising is the fact that spectral properties of matrices representing data play a crucial role in data analysis. We illustrate this importance with a discussion of the Singular Value Decomposition (SVD) and Principal Component Analysis (PCA) that are often used for data compression, denoising, and dimension reduction. Tools from random matrix theory are then utilized to better understand the performance of SVD and PCA in the high dimensional regime.
+
+\section{Singular Value Decomposition}
+
+
+The SVD is like a mathematical Swiss Army knife, with its many uses across different areas including linear algebra, operator theory, functional analysis, optimization, numerical analysis, statistics, and information theory. The SVD is also one of the most useful tools for analyzing data. We recommend~\cite{HJ90} and~\cite{Golub_MatrixComputations} as base references in linear algebra and for the SVD.
+
+
+
+
+
+
+Given a matrix $A\in\RR^{m\times n}$, the SVD of $A$ is defined as
+\begin{equation}\label{eq:SVD:PCAnotes}
+ A = U \Sigma V^\top  ,
+\end{equation}
+where $U\in O(m)$, $V\in O(n)$ are orthogonal matrices (meaning that $U^\top  U = UU^\top   =\Id_{m\times m}$ and $V^\top  V = VV^\top   = \Id_{n\times n}$) and $\Sigma\in\RR^{m\times n}$ is a matrix with non-negative entries on its diagonal and otherwise zero entries.
+
+The columns of $U$ and $V$, denoted by $u_k$ and $v_k$, are referred to as the left and right singular vectors of $A$, respectively and the diagonal elements of $\Sigma$ are the singular values of $A$, denoted
+by $\sigma_1 \geq \sigma_2 \geq \sigma_r > 0$. 
+In particular, $\operatorname{rank}(A)=r$, that is, the number of non-zero singular values $r$ is the rank of $A$.
+Through the SVD, any matrix can be written as a sum of rank-1 matrices
+\begin{equation}\label{eq:svdrank1sum}
+A = \sum_{k=1}^r \sigma_k u_k v_k^\top  .
+\end{equation}
+
+Furthermore, it is straightforward to show that the left singular vectors $u_1,\dots,u_m$ are eigenvectors of the matrix $A A^\top  $, the 
+right singular vectors $v_1,\dots,v_n$ are eigenvectors of the matrix $A^\top   A$, and the squared singular values $\sigma_1,\dots,\sigma_r$ are the non-zero eigenvalues of the matrices $A A^\top  $ and $A^\top   A$, respectively.
+
+\begin{remark}
+The SVD of a complex valued matrix $A \in \mathbb{C}^{m\times n}$ is given by $A = U \Sigma V^*$, where $U \in \mathbb{C}^{m\times m}$ and $V \in \mathbb{C}^{n\times n}$ are unitary matrices ($UU^* = U^* U = \Id_{m\times m}$ and $VV^* = V^*V = \Id_{n\times n}$) and $\Sigma$ is the same as in the real case (i.e., $\Sigma\in\RR^{m\times n}$ is a matrix with non-negative entries on its diagonal and otherwise zero entries). We focus our presentation on the SVD of real valued matrices as they are more common in data science, but everything can be straightforwardly extended to the complex case.
+\end{remark}
+
+\begin{remark}
+ Say $m\leq n$, it is easy to see that we can also think of the SVD as having $U\in\RR^{m\times n}$ where $UU^\top  =\Id$, $\Sigma \in\RR^{n\times n}$ a diagonal matrix with non-negative entries and $V\in O(n)$. Furthermore, if $\rank A = r$, then the ``thin'' SVD of $A$ is given by $A=U\Sigma V^\top  $, where $U \in \R^{m \times r}$, $\Sigma \in \R^{r 
+ \times r}$, and $V \in \R^{n \times r}$.
+\end{remark}
+
+
+
+
+\subsection{Matrix norms}
+
+A very powerful modeling tool in data science is given by low rank matrices. In fact, we will devote the whole Chapter~\ref{c:lowrank} to this topic. As already suggested in the expansion~\eqref{eq:svdrank1sum} the SVD will play an important role in this, being used to provide low rank approximation of data matrices.
+
+In order to be able to talk about low rank approximations of matrices, we need a notion of distance between matrices. Just like with vectors, the distance between matrices can be measured using a suitable norm of the difference. One popular norm is the Frobenius norm, or the Hilbert-Schmidt norm, defined as
+\begin{equation}
+\|A\|_F = \sqrt{\sum_{i,j} a_{ij}^2},
+\end{equation}
+where $a_{ij}$ are the entries of the matrix $A$. This norm is simply the Euclidean norm of a vector of length $mn$ comprised of the matrix elements. The Frobenius norm can also be expressed in terms of the singular values. To see this, first express the Frobenius norm in terms of the trace of $A^\top   A$ as
+\begin{equation}\label{eq:SVD:frob}
+\|A\|_F^2 = \sum_{i,j} a_{ij}^2 = \tr(A^\top   A),
+\end{equation}
+where we recall that the trace of a square matrix $A$ is defined as
+\begin{equation}
+\tr(A) = \sum_{i} a_{ii}.
+\end{equation}
+A particularly important property of the trace is that for any $A$ of size $m \times n$ and $B$ of size $n\times m$
+\begin{equation}\label{eq:SVD:trace}
+ \tr(AB) = \tr(BA).
+\end{equation}
+Note that this implies that, e.g., $\tr(ABC) = \tr(CAB)$, but it does not imply that, e.g., $\tr(ABC) = \tr(ACB)$ which is not true in general.
+Now, plugging the SVD (\ref{eq:SVD:PCAnotes}) into (\ref{eq:SVD:frob}) gives
+\begin{equation}\label{eq:SVD:MF}
+\|A\|_F^2 = \tr(A^\top   A) = \tr(V \Sigma^\top   U^\top   U \Sigma V^\top  ) = \tr(\Sigma^\top   \Sigma) = \sum_{k=1}^r \sigma_k^2,
+\end{equation}
+where we used the orthogonality of $U$ and $V$ and the trace property (\ref{eq:SVD:trace}). We conclude that the Frobenius norm of a matrix equals the Euclidean norm of its vector of singular values.
+
+A different way to define the size of a matrix is by viewing it as an operator and measuring by how much it can dilate vectors. For example, the operator 2-norm is defined as
+\begin{equation}
+\|A\|_2 = \sup_{\|x\|=1}\|A x\|.
+\end{equation}
+This operator norm can also be succinctly expressed in terms of the singular values. Indeed, for any $x \in \mathbb{R}^n$
+\begin{equation}
+Ax = \sum_{k=1}^r \sigma_k u_k (v_k^\top   x).
+\end{equation}
+Using the orthogonality of the left singular vectors $u_k$ we get
+\begin{equation}
+\|Ax \|^2 = \sum_{k=1}^r \sigma_k^2 \langle v_k , x \rangle^2 \leq \sigma_1^2 \sum_{k=1}^r \langle v_k, x \rangle^2 \leq \sigma_1^2 \sum_{k=1}^n \langle v_k, x \rangle^2 = \sigma_1^2 \|x\|^2,
+\end{equation}
+where the last equality is due to the orthogonality of the right singular vectors $v_k$. Moreover, we get equality by choosing $x=v_1$. We conclude that the 2-norm is simply the largest singular value
+\begin{equation}
+\|A\|_2 = \sigma_1.
+\end{equation}
+
+Before proceeding we briefly recall H\"older's inequality
+\begin{proposition}\label{prop:holderineq}
+For $p,q\in(0,\infty)$ such that $\frac1p+\frac1q=1$, and $x,y\in\RR^n$, we have
+\[
+\sum_{k=1}^n|x_ky_k| \leq \left( \sum_{k=1}^n|x_k|^p \right)^{\frac1p} \left( \sum_{k=1}^n|y_k|^q \right)^{\frac1q}.
+\]
+The following useful form is equivalent:
+\begin{equation}\label{eq:HolderRS}
+\left(\sum_{k=1}^n|c_k||a_k|^r|b_k|^s\right)^{r+s} \leq \left( \sum_{k=1}^n|c_k||a_k|^{r+s} \right)^{r} \left( \sum_{k=1}^n|c_k||b_k|^{r+s} \right)^{s},
+\end{equation}
+for non-negative $r$ and $s$.
+\end{proposition}
+
+\subsection{Existence of the SVD}
+The matrix 2-norm plays an important role in proving that any matrix has an SVD.
+\begin{theorem}
+If $A$ is a real $m \times n$ matrix, then there
+exist orthogonal matrices
+$$U = [u_1, \ldots , u_m] \in O(m) \;\; \text{and} \;\; V = [v_1,\ldots, v_n] \in O(n)$$
+such that
+$$U^\top  AV = \operatorname{diag}(\sigma_1,\ldots,\sigma_p) \in \mathbb{R}^{m\times n},\;\; p = \min\{m,n\}$$
+where $\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_p \geq 0$.
+\end{theorem}
+
+\begin{proof}
+We will use induction to prove the existence of SVD. Let $x \in \mathbb{R}^n$ and $y\in \mathbb{R}^m$ be
+unit 2-norm vectors that satisfy $Ax = \sigma y$ where $\sigma = \|A\|_2$, the 2-norm of $A$. There
+exist matrices $V_2 \in \mathbb{R}^{n\times (n-1)}$ and $U_2 \in \mathbb{R}^{m\times (m-1)}$ such that $V =
+[x, V_2] \in \mathbb{R}^{n\times n}$ and $U = [y, U_2] \in \mathbb{R}^{m\times m}$ are orthogonal matrices (this follows from a simple result in linear algebra that given a basis of a subspace, it is possible to extend it to a basis of the whole space). Consider now the matrix $U^\top   A V$ which has the following structure
+$$U^\top   A V = \left[\begin{array}{cc}
+                      \sigma & w^\top   \\
+                      0 & B \\
+                    \end{array}
+ \right] = A_1.$$
+A short explanation: we can write $U^\top  AV = [y, U_2]^\top   A [x, V_2]$. Thus, the top left element in
+the resulting matrix is $y^\top   A x = y^\top   \sigma y = \sigma$ (because $Ax = \sigma y$ and $\|y\|=1$).
+The leftmost column underneath $\sigma$ is all 0's, as we have $U_2^\top   Ax = \sigma U_2^\top  
+y = 0$ by orthogonality of $U_2$ and $y$. The topmost column to the right of $\sigma$ is some vector $w^\top  $, and the bottom right of
+the matrix is represented by a smaller matrix $B\in \mathbb{R}^{(m-1)\times (n-1)}$.
+Since
+$$\left\|A_1 \left[
+          \begin{array}{c}
+            \sigma \\
+            w \\
+          \end{array}
+        \right]
+ \right\|^2 = \left\|\left[
+          \begin{array}{c}
+            \sigma^2 + \|w\|^2 \\
+            Bw \\
+          \end{array}
+        \right]\right\|^2 \geq (\sigma^2 + \|w\|^2)^2$$
+we have $\|A_1\|_2^2 \geq (\sigma^2 + \|w\|^2)$. However, $\|A_1\|^2  = \|A\|_2^2 = \sigma^2$, because the matrix 2-norm is invariant under orthogonal transformations. Therefore, $\|w\|^2 = 0$ and $$U^\top   A V = \left[\begin{array}{cc}
+                      \sigma & 0 \\
+                      0 & B \\
+                    \end{array}
+ \right].$$ The proof is completed by applying induction on the smaller
+matrix $B$, resulting in the next largest $\sigma$ on the diagonal in each iteration, and we
+eventually end up with $U^\top  AV = \operatorname{diag}(\sigma_1, \ldots, \sigma_p)$ with $\sigma_1 \geq \cdots \geq \sigma_p \geq 0$.
+\end{proof}
+
+
+
+\subsection{Low rank matrix approximation}\label{ss:lowranksvd}
+
+
+A very important property of the SVD is that it provides the best low rank approximation of a matrix, when the approximation error is measured in terms of either the operator norm or the Frobenius norm. Specifically, for any $0 \leq s \leq r$ consider the rank-$s$ matrix $A_s = \sum_{k=1}^s \sigma_k u_k v_k^\top  $. Then, among all matrices of rank $s$, $A_s$ best approximates $A$ in terms of the operator norm (or Frobenius norm) error. When measuring error using the operator norm, the approximation error equals $\sigma_{s+1}$, which is the largest singular value among the remaining $r-s$ smallest singular values
+\begin{equation}
+\|A - A_s \|_2 = \inf_{B \in \mathbb{R}^{m\times n}, \operatorname{rank}(B) \leq s} \|A - B \|_2 = \sigma_{s+1}.
+\end{equation}
+A similar result holds for the Frobenius norm, with the approximation error given in terms of the remaining $r-s$ smallest singular values as
+\begin{equation}
+\|A - A_s \|_F = \inf_{B \in \mathbb{R}^{m\times n}, \operatorname{rank}(B) \leq s} \|A - B \|_F = \sqrt{\sum_{k=s+1}^r \sigma_k^2}.
+\end{equation}
+In fact, $A_s$ is the best low rank approximation for any univariate matrix norm satisfying $\|U A V\| = \| A \|$ for any $U \in O(m), V\in O(n)$, that is, norms that are invariant to multiplication by orthogonal matrices \cite{mirsky1960symmetric}.
+
+We prove the low rank approximation property for the operator norm case\footnote{Both, Theorem~\ref{th:lowrankoperator} and Theorem~\ref{th:rank_k_Frob} are also known as Eckart-Young-Mirsky Theorem~\cite{Golub_MatrixComputations}.}.
+\begin{theorem}\label{th:lowrankoperator}
+Let the SVD of a matrix $A\in \mathbb{R}^{m\times n}$ be $A = U \Sigma V^\top  $. If $s < r = \operatorname{rank}(A)$ and we have the rank-$s$ matrix $A_s$,
+$$A_s = \sum_{k=1}^s \sigma_k u_kv_k^\top  $$
+then
+$$\min_{\operatorname{rank}(B) \leq s} \|A - B \|_2 = \|A - A_s \|_2 =  \sigma_{s+1}.$$
+\end{theorem}
+\begin{proof}
+Since $A_s$ and $A$ have the same left and right singular vectors and the same $s$ leading singular values, it follows that $U^\top   A_s V = \operatorname{diag}(\sigma_1,\ldots,\sigma_s,0,\ldots,0)$ and $U^\top   (A - A_s) V = \operatorname{diag}(0,\ldots,0,\sigma_{s+1},\ldots,\sigma_p)$, where $p=\min\{m,n\}$. This implies $\|A-A_s\|_2 = \sigma_{s+1}$, the largest remaining singular value.
+Now, suppose we have a matrix $B \in \mathbb{R}^{m\times n}$ with $\operatorname{rank}(B) = s$. We can find an orthonormal
+basis for the null space of $B$, i.e. orthonormal vectors $x_1, \ldots, x_{n-s}$ such that $\operatorname{null}(B) =
+\operatorname{span}\{x_1,\ldots,x_{n-s}\}$. By a dimension argument, we have that
+$$\operatorname{span}\{x_1,\ldots,x_{n-s}\}\cap \operatorname{span}\{v_1,\ldots,v_{s+1}\} \neq \{0 \},$$
+since these are two subspaces of $\mathbb{R}^n$ of dimension $n-s$ and $s+1$. Take a unit vector $z$ in this intersection; for this vector, we know that $Bz = 0$ and $Az = \sum_{k=1}^{s+1} \sigma_k u_k (v_k^\top   z)$. Therefore,
+$$\|A-B\|_2^2 \geq \|(A-B)z\|^2 = \|Az\|^2 =  \sum_{k=1}^{s+1} \sigma_k^2 (v_k^\top   z)^2 \geq \sigma_{s+1}^2 \sum_{k=1}^{s+1} (v_k^\top   z)^2 = \sigma_{s+1}^2$$
+which completes the proof.
+\end{proof}
+
+For the Frobenius norm case, the low rank approximation property follows from von Neumann's trace inequality \cite{vonNeumann1937some}:
+\begin{theorem}
+\label{th:vonNeumann}
+If $A$ and $B$ are complex-valued $n\times n$ matrices with singular values $\sigma_1(A),\ldots, \sigma_n(A)$ and $\sigma_1(B),\ldots, \sigma_n(B)$, then $$|\tr(AB)| \leq \sum_{k=1}^n \sigma_k(A) \sigma_k(B).$$
+\end{theorem}
+The reader is referred to \cite{mirsky1975trace} for a proof of Theorem \ref{th:vonNeumann}. We are now ready to prove that the SVD provides the best low rank approximation in the Frobenius norm.
+\begin{theorem}\label{th:rank_k_Frob}
+Let the SVD of a matrix $A\in \mathbb{R}^{m\times n}$ be $A = U \Sigma V^\top  $. If $s < r = \operatorname{rank}(A)$ and we have the rank-$s$ matrix $A_s$,
+$$A_s = \sum_{k=1}^s \sigma_k u_k v_k^\top  $$
+then
+$$\min_{\operatorname{rank}(B) \leq s} \|A - B \|_F = \|A - A_s \|_F =  \sqrt{\sum_{k=s+1}^r \sigma_k^2}.$$
+\end{theorem}
+\begin{proof}
+Let $B$ be any matrix with $\operatorname{rank}(B) = s < r = \operatorname{rank}(A)$. Notice that
+$$\|A - B\|_F^2 = \|A\|_F^2 + \|B\|_F^2 - 2\tr(A^\top   B) = \sum_{k=1}^r \sigma_k^2(A) + \sum_{k=1}^s \sigma_k^2(B) - 2\tr(A^\top   B).$$
+By von Neumann's trace inequality (whose statement for square matrices implies the general case of rectangular matrices)
+$$\tr(A^\top   B) \leq \sum_{k=1}^s \sigma_k(A) \sigma_k(B).$$
+Therefore,
+\begin{eqnarray*}
+\|A - B\|_F^2 &\geq&  \sum_{k=1}^r \sigma_k^2(A) + \sum_{k=1}^s \sigma_k^2(B) - 2\sum_{k=1}^s \sigma_k(A) \sigma_k(B) \\
+&=& \sum_{k=s+1}^r \sigma_k^2(A) + \sum_{k=1}^s (\sigma_k(A) - \sigma_k(B))^2 \\
+&\geq& \sum_{k=s+1}^r \sigma_k^2(A),
+\end{eqnarray*}
+which establishes the lower bound. Finally, the lower bound is clearly attained for $B = A_s$.
+\end{proof}
+
+
+The low rank approximation property has a wide ranging implication on data compression. The storage size of an $m\times n$ data matrix is $mn$. If that matrix is of rank $r$, then storage size reduces from $mn$ to $(n+m+1)r$ (for storing $r$ left and right singular vectors and values). For $r \ll \min\{n,m\}$ this reduction can be quite dramatic. For example, if $r=10$ and $n=m=10^6$, then storage reduces from $10^{12}$ entries to just $2\cdot 10^7$. But even if the matrix is not precisely of rank $r$, but only approximately, in the sense that $\sigma_{r+1} \ll \sigma_1$, then we are guaranteed by the above approximation results to incur only a small approximation error due to compression using the top $r$ singular vectors and values. In many cases, the singular values of large data matrices decay very quickly, motivating this type of low rank approximation which oftentimes is the only way to handle massive data sets that otherwise cannot be stored and/or manipulated efficiently. Remarkably, even treating an image as a matrix of pixel intensity values and compressing it this way yields good image compression and de-noising algorithms (as it mitigates the noise corresponding to singular values that are truncated). This is illustrated using a photo of size $1224 \times 1632$ pixels taken at Prospect Garden in Princeton University on April 28, 2015 by Amit Singer.
+
+
+\begin{figure}
+\begin{center}
+\subcaptionbox{}{
+\includegraphics[width = 0.42\textwidth, angle=270]{./figures/Prospect.jpg}}
+\subcaptionbox{}{
+\includegraphics[width = 0.42\textwidth, angle=270]{./figures/Prospect_r10.jpg}}
+\subcaptionbox{}{
+\includegraphics[width = 0.42\textwidth, angle=270]{./figures/Prospect_r100.jpg}}
+\caption{The Prospect Garden in Princeton University. (a) Original image, (b) rank-10 approximation, (c) rank-100 approximation.}
+\label{fig:princeton}
+\end{center}
+\end{figure}
+
+The original photo, see Figure~\ref{fig:princeton}(a),  is considered as three matrices (one for each RGB color channel). The main features of the image appear already in the rank-10 approximation, Figure~\ref{fig:princeton}(b), although many fine details are clearly missing and there are also some visible artifacts (such as striping, smearing, etc.). The rank-100 approximation, Figure~\ref{fig:princeton}(c), has exceptional resemblance with the original photo. Of course there are still differences between the two images (such as artifacts on the curbstone) but these are less visible to the naked eye on first inspection. Note that compression using $r=10$ and $r=100$ require less than $1\%$ and $10\%$, respectively, storage of the original image. The decay of the singular values of the three matrices is illustrated in Figure~\ref{fig:rapiddecay}. We use a logarithmic scale due to the rapid decay of singular values. Notice that the singular values of the three matrices are very similar.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width = 0.7\textwidth]{./figures/log_svals_RGB.jpg}
+\caption{The decay of the singular values of the three matrices, one for each RGB color channel for the photo shown in Figure~\ref{fig:princeton}.
+Notice that the singular values of the three matrices (shown in red, green, and blue) are very similar. We use a logarithmic scale due to the rapid decay of singular values.}
+\label{fig:rapiddecay}
+\end{center}
+\end{figure}
+
+\begin{remark}
+The computational complexity of computing the SVD of a matrix of size $m\times n$ with $m \geq n$ is $\OOO(mn^2)$. This cubic scaling could be prohibitive for massive data matrices. In Chapter~\ref{s:RSVD} we discuss numerical algorithms that use randomization to efficiently compute the low rank approximation of such large matrices more efficiently.
+\end{remark}
+
+\begin{remark}
+The SVD plays a critical role in sensitivity analysis of linear systems of the form $Ax=b$. In particular, the error is bounded in terms of the condition number $\kappa(A)$ which is the ratio of the largest singular value and the smallest singular value. A rigorous treatment of this important topic is beyond the scope of this book and can be found in other texts on numerical linear algebra~\cite{Golub_MatrixComputations}.
+\end{remark}
+
+\subsection{Spectral Decomposition}
+
+If $M\in\RR^{n\times n}$ is symmetric then it admits a spectral decomposition
+\[
+ M = V\Lambda V^\top  ,
+\]
+where $V\in O(n)$ is a matrix whose columns $v_k$ are the eigenvectors of $M$ and $\Lambda$ is a diagonal matrix whose diagonal elements $\lambda_k$ are the eigenvalues of $M$. Similarly, we can write
+\[
+ M = \sum_{k=1}^n\lambda_k v_k v_k^\top  .
+\]
+
+When all of the eigenvalues of $M$ are non-negative we say that $M$ is positive semidefinite and write $M\succeq 0$. In that case we can write
+\[
+ M = \left( V \Lambda^{1/2} \right) \left( V \Lambda^{1/2} \right)^\top  .
+\]
+A decomposition of $M$ of the form $M=UU^\top  $ (such as the one above) is called a Cholesky decomposition (oftentimes, in a Cholesky decomposition, the matrix $U$ is required to be triangular, here we do not make this requirement).
+
+For symmetric matrices, the operator 2-norm is also known as the spectral norm, given by
+\[
+ \|M\| = \max_k \left|\lambda_k(M)\right|.
+\]
+
+
+
+\subsection{Quadratic forms}
+
+In both this and following chapters, we will be interested in solving problems of the type
+\[
+ \max_{\substack{V\in \RR^{n\times d} \\ V^\top  V = \Id_{d\times d}}} \tr\left(V^\top   M V \right),
+\]
+where $M$ is a symmetric $n\times n$ matrix.
+
+Note that this is equivalent to
+\begin{equation}\label{eq:0:evalue:vard}
+ \max_{\substack{v_1,\dots,v_d \in \RR^{n} \\ v_i^\top  v_j = \delta_{ij}}} \sum_{k=1}^d v_k^\top   M v_k,
+\end{equation}
+where $\delta$ is the Kronecker delta ($\delta_{ij}=1$ for $i=j$ and $\delta_{ij}=0$ otherwise).
+
+When $d=1$ this reduces to the more familiar
+\begin{equation}\label{eq:0:evalue:var}
+ \max_{\substack{v\in \RR^n \\ \|v\|_2 = 1}} v^\top   M v.
+\end{equation}
+
+It is easy to see (for example, using the spectral decomposition of $M$) that~\eqref{eq:0:evalue:var} is maximized by the leading eigenvector of $M$ and
+\[
+\max_{\substack{v\in \RR^n \\ \|v\|_2 = 1}} v^\top   M v = \lambda_{\max} (M).
+\]
+
+Furthermore~\eqref{eq:0:evalue:vard} is maximized by
+taking $v_1,\dots,v_d$ to be the $d$ leading eigenvectors of $M$ and its value is simply the sum of the $d$ largest eigenvalues of $M$. This follows, for example, from a Theorem of Fan (see page 3 of~\cite{Fan_variational_evalue_UAU}).  A fortunate consequence is that the solution to~\eqref{eq:0:evalue:vard} can be computed sequentially: we can first solve for $d=1$, computing $v_1$, then update the solution for $d=2$ by simply computing $v_2$ without changing the first vector.
+
+\begin{remark}
+All of the tools and results above have natural analogues when the matrices have complex entries (and are Hermitian instead of symmetric).
+\end{remark}
+
+\subsection{SVD and the Moore-Penrose Pseudoinverse}
+\label{ss:pinv}
+
+
+The SVD is intimately connected to the Moore-Penrose pseudoinverse  of a matrix~\cite{ben2003generalized}. The Moore-Penrose pseudoinverse (named after mathematicians E.~H.~Moore and Roger Penrose) of $A$, denoted as $A^\dagger$, is a generalization of the matrix inverse to matrices that may not be square, or if square, may not have full rank. For an invertible matrix, the pseudoinverse is identical to the standard inverse. However, for a rectangular or rank-deficient square matrix, the pseudoinverse provides a unique solution that satisfies a set of four specific conditions known as the Penrose conditions,
+ that uniquely define the pseudoinverse $A^\dagger$ for any matrix $A$. These conditions are a generalization of the properties of a standard matrix inverse. A matrix $A^\dagger$ is the pseudoinverse of $A$ if and only if it satisfies all four of the following equations:
+\begin{align}
+\label{eq:pinvproperties}
+\begin{split}
+  AA^\dagger A & =  A, \\
+  A^\dagger AA^\dagger  & =  A^\dagger, \\
+  (AA^{\dagger})^{T} & =  AA^\dagger, \\
+  (A^{\dagger} A)^\top   & =  A^\dagger A.
+  \end{split}
+\end{align}
+These conditions ensure that the pseudoinverse acts ``as much as possible'' as an inverse for matrices that are not invertible, including rectangular or rank-deficient square matrices.  The above four conditions are equivalent to the matrices $A A^\dagger$ and $A^\dagger A$ being orthogonal projectors onto the range of $A$ and the range of $A^\top  $ respectively.
+
+
+
+
+The primary purpose of the pseudoinverse is to find  ``best-fit'' solution to a system of linear equations $Ax=b$ when a unique solution does not exist. In cases where the system has multiple solutions, the pseudoinverse provides the one with the minimum Euclidean norm. For systems with no exact solution (an overdetermined system), it provides the least-squares solution, which minimizes the error $\|Ax - b\|$. This makes the pseudoinverse a tremendously useful tool in fields like numerical mathematics, statistics, machine learning, and signal processing. We will explore this in more detail for example in Chapter~\ref{ss:ridge}.
+
+The SVD provides a straightforward and computationally stable way to calculate $A^\dagger$. 
+Given $A = U \Sigma V^\top  $, we can represent $\Sigma$ in block form as
+$$\Sigma = 
+\begin{bmatrix} \Sigma_r & \mathbf{0}_{r \times (n-r)} \\ \mathbf{0}_{(m-r) \times r} & \mathbf{0}_{(m-r) \times (n-r)} 
+\end{bmatrix},
+$$
+where $\Sigma_r = \text{diag}(\sigma_1, \sigma_2, \dots, \sigma_r)$ is an $r \times r$ diagonal matrix containing the non-zero singular values. The pseudoinverse of $A$ is given by the formula. 
+\begin{equation}\label{pinv}
+A^\dagger = V \Sigma^\dagger U^\top  ,
+\end{equation}
+where the matrix $\Sigma^\dagger$ is given by
+$$\Sigma^\dagger = 
+\begin{bmatrix} \Sigma_r^{-1} & \mathbf{0}_{r \times (m-r)} \\ \mathbf{0}_{(n-r) \times r} & \mathbf{0}_{(n-r) \times (m-r)} 
+\end{bmatrix},
+$$
+with $\Sigma_r^{-1} = \text{diag}\left(\frac{1}{\sigma_1}, \frac{1}{\sigma_2}, \dots, \frac{1}{\sigma_r}\right)$.
+
+This method is particularly powerful because it works for any matrix---square or rectangular, full rank or rank-deficient---and is numerically robust, avoiding the issues with ill-conditioned matrices that can plague other inversion methods. Indeed, in the practical computation of $\Sigma^\dagger$ one usually chooses a threshold $\tau$, such that all singular values less than $\tau$ are treated as zero. 
+
+The SVD and the pseudoinverse  play a central role in linear regression and least squares problems, see Chapter~\ref{c:linreg_ls}.
+
+
+
+
+
+\section{Principal Component Analysis and dimension reduction}\label{s:PCA}
+
+When faced with a high dimensional dataset, a natural approach is to attempt to reduce its dimension, either by projecting it to a lower dimensional space or by finding a better representation for the data using a small number of meaningful features. Beyond data compression and visualization, dimension reduction facilitates downstream analysis such as clustering and regression that perform significantly better in lower dimensions. We will explore a few different ways of reducing the dimension, both linearly and non-linearly.
+
+We start with the classical Principal Component Analysis (PCA). PCA continues to be one of the most effective and simplest tools for exploratory data analysis. It dates back to a 1901 paper by Karl Pearson~\cite{Pearson_PCA_1901} and was rediscovered several times by different research communities where it is also known under different names such as the proper orthogonal decomposition (POD) and the Karhunen–Lo\`eve transform (KLT) among others.
+
+Suppose we have $n$ data points $x_1,\dots,x_n$ in $\RR^p$, and we are interested in (linearly) projecting the data to $d< p$ dimensions. This is particularly useful if, say, one wants to visualize the data in two or three dimensions ($d=2, 3$). There are a couple of seemingly different criteria we can use to choose this projection:
+
+\begin{enumerate}
+ \item Find the $d$-dimensional affine subspace for which the projections of $x_1,\dots,x_n$ on it best approximate the original points $x_1,\dots,x_n$.
+
+ \item Find the $d$-dimensional projection of $x_1,\dots,x_n$ that preserves as much variance of the data as possible.
+\end{enumerate}
+
+As we will see below, these two approaches are equivalent and they correspond to Principal Component Analysis.
+
+Before proceeding, we recall a couple of simple statistical quantities associated with $x_1,\dots,x_n$, that will reappear below.
+
+Given $x_1,\dots,x_n$ we define its sample mean as
+\begin{equation}
+ \mu_n = \frac1{n}\sum_{k=1}^n x_k,
+\end{equation}
+and its sample covariance as
+\begin{equation}
+ \Sigma_n = \frac1{n-1}\sum_{k=1}^n \left(x_k-\mu_n\right)\left(x_k-\mu_n\right)^\top  .
+\end{equation}
+
+\begin{remark}
+If $x_1,\dots, x_n$ are independently sampled from a distribution, $\mu_n$ and $\Sigma_n$ are unbiased estimators for the mean and the covariance of the distribution, respectively.
+\end{remark}
+
+
+\subsubsection{PCA as the best $d$-dimensional affine fit}
+
+
+We start with the first interpretation of PCA and then show that it is equivalent to the second. We are trying to approximate each $x_k$ by
+\begin{equation}\label{eq:PCA:01}
+ x_k \approx \mu + \sum_{i=1}^d \left(\beta_k\right)_iv_i,
+\end{equation}
+where $v_1,\dots,v_d$ is an orthonormal basis for the $d$-dimensional subspace, $\mu \in \RR^p$ represents the translation, and $\beta_k \in \mathbb{R}^d$ corresponds to the coefficients of $x_k$. Without loss of generality we take
+\begin{equation}\label{eq:bk_sum_0}
+\sum_{k=1}^n \beta_k = 0,
+\end{equation}
+as any joint translation of $\beta_k$ can be absorbed into $\mu$.
+
+If we represent the subspace by $V = [v_1\cdots v_d]\in\RR^{p\times d}$ then we can rewrite~\eqref{eq:PCA:01} as
+\begin{equation}\label{eq:PCA:01}
+ x_k \approx \mu + V\beta_k,
+\end{equation}
+where $V^\top  V=\Id_{d\times d}$, because the vectors $v_i$ are orthonormal.
+
+We will measure goodness of fit in terms of least squares and attempt to solve
+\begin{equation}\label{eq:PCA:goodnessoffit0}
+ \min_{\substack{\mu,\ V,\ \beta_k \\ V^\top  V=\Id}} \sum_{k=1}^n \left\| x_k - \left( \mu + V\beta_k \right)  \right\|_2^2
+\end{equation}
+
+We start by optimizing for $\mu$. It is easy to see that the first order condition for $\mu$ corresponds to
+\[
+ \nabla_\mu \sum_{k=1}^n \left\| x_k - \left( \mu + V\beta_k \right)  \right\|_2^2 = 0 \Longleftrightarrow \sum_{k=1}^n \left( x_k - \left( \mu + V\beta_k \right) \right) = 0.
+\]
+Thus, the optimal value $\mu^\ast$ of $\mu$ satisfies
+\[
+\left( \sum_{k=1}^n x_k \right) - n\mu^\ast - V\left( \sum_{k=1}^n \beta_k \right)=0.
+\]
+Since we assumed in~\eqref{eq:bk_sum_0} that $\sum_{k=1}^n \beta_k = 0$, we have that the optimal $\mu$ is given by
+\[
+ \mu^\ast = \frac1n \sum_{k=1}^n x_k = \mu_n,
+\]
+the sample mean.
+
+We can then proceed to finding the solution for \eqref{eq:PCA:goodnessoffit0} by solving
+\begin{equation}\label{eq:PCA:goodnessoffit1}
+ \min_{\substack{V,\ \beta_k \\ V^\top  V=\Id}} \sum_{k=1}^n \left\| x_k - \mu_n -  V\beta_k   \right\|_2^2.
+\end{equation}
+
+Let us proceed by optimizing for $\beta_k$. The problem almost fully decouples in each $k$, the only constraint coupling them being~\eqref{eq:bk_sum_0}. We will ignore this constraint, solve the decoupled problems, and verify that it is automatically satisfied. Hence we focus on, for each $k$,
+\begin{equation}\label{eq:PCA:goodnessoffit12}
+ \min_{\beta_k} \left\| x_k - \mu_n - V\beta_k   \right\|_2^2 =
+ \min_{\beta_k} \Big\| x_k - \mu_n - \sum_{i=1}^d \left(\beta_k \right)_i v_i   \Big\|_2^2.
+\end{equation}
+Since $v_1,\dots,v_d$ are orthonormal, it is easy to see that the solution is given by $\left(\beta_k^\ast \right)_i = v_i^\top  \left( x_k - \mu_n\right)$ which can be succinctly written as $\beta_k^* = V^\top  \left(x_k - \mu_n\right)$, which satisfies~\eqref{eq:bk_sum_0}. Thus, \eqref{eq:PCA:goodnessoffit1} is equivalent to
+\begin{equation}\label{eq:PCA:goodnessoffit13}
+ \min_{V^\top  V=\Id} \sum_{k=1}^n \left\| \left( x_k - \mu_n \right) -  VV^\top  \left(x_k - \mu_n\right)   \right\|_2^2.
+\end{equation}
+
+Note that
+\begin{eqnarray*}
+ \left\| \left( x_k - \mu_n \right) -  VV^\top  \left(x_k - \mu_n\right)   \right\|_2^2 & = & \left( x_k - \mu_n \right)^\top  \left( x_k - \mu_n \right) \\ & &  - 2\left( x_k - \mu_n \right)^\top  VV^\top  \left(x_k - \mu_n\right) \\ & &  +\left(x_k - \mu_n\right)^\top  V\left(V^\top  V\right)V^\top  \left(x_k - \mu_n\right) \\
+ & = & \left( x_k - \mu_n \right)^\top  \left( x_k - \mu_n \right) \\ & &  - \left( x_k - \mu_n \right)^\top  VV^\top  \left(x_k - \mu_n\right).
+\end{eqnarray*}
+
+Since $\left( x_k - \mu_n \right)^\top  \left( x_k - \mu_n \right)$ does not depend on $V$, minimizing \eqref{eq:PCA:goodnessoffit13} is equivalent to
+\begin{equation}\label{eq:PCA:goodnessoffit13_max}
+ \max_{V^\top  V=\Id} \sum_{k=1}^n \left( x_k - \mu_n \right)^\top  VV^\top  \left(x_k - \mu_n\right).
+\end{equation}
+
+A few algebraic manipulations using properties of the trace yields:
+\begin{eqnarray*}
+ \sum_{k=1}^n \left( x_k - \mu_n \right)^\top  VV^\top  \left(x_k - \mu_n\right) & = &\sum_{k=1}^n \tr\left[  \left( x_k - \mu_n \right)^\top  VV^\top  \left(x_k - \mu_n\right)  \right] \\
+ & = & \sum_{k=1}^n\tr\left[  V^\top  \left(x_k - \mu_n\right)\left( x_k - \mu_n \right)^\top  V  \right] \\
+ & = & \tr\left[  V^\top  \sum_{k=1}^n\left(x_k - \mu_n\right)\left( x_k - \mu_n \right)^\top  V  \right] \\
+ & = & (n-1)\tr\left[  V^\top   \Sigma_n V  \right].
+\end{eqnarray*}
+This means that the solution to \eqref{eq:PCA:goodnessoffit13_max} is given by the solution of
+\begin{equation}\label{eq:PCA:goodnessoffit13_min}
+ \max_{V^\top  V=\Id} \tr\left[  V^\top   \Sigma_n V  \right].
+\end{equation}
+As we saw above (recall \eqref{eq:0:evalue:vard}) the solution is given by $V=\left[v_1,\cdots,v_d\right]$ where $v_1,\dots,v_d$ correspond to the $d$ leading eigenvectors of $\Sigma_n$.
+
+\subsubsection{PCA as the $d$-dimensional projection that preserves the most variance}
+
+We now show that the alternative interpretation of PCA, of finding the $d$-dimensional projection of $x_1,\dots,x_n$ that preserves the most variance, also arrives to the optimization problem \eqref{eq:PCA:goodnessoffit13_min}.
+We aim to find an orthonormal basis $v_1,\dots,v_d$ (organized as $V=\left[v_1,\dots,v_d\right]$ with $V^\top  V = \Id_{d\times d}$) of a $d$-dimensional space such that the projection of $x_1,\dots,x_n$ onto this subspace has the most variance. Equivalently we can ask for the points
+\[
+ \left\{   \left[\begin{array}{c} v_1^\top  x_k  \\ \vdots \\ v_d^\top  x_k\end{array}\right]   \right\}_{k=1}^n,
+\]
+to have as much variance as possible. Hence, we are interested in solving
+\begin{equation}\label{eq:PCA:maxvariance_min}
+\max_{V^\top  V=\Id} \sum_{k=1}^n\left\|  V^\top  x_k - \frac1n \sum_{r=1}^n V^\top  x_r   \right\|^2.
+\end{equation}
+Note that
+\[
+\sum_{k=1}^n\left\|  V^\top  x_k- \frac1n \sum_{r=1}^n V^\top  x_r   \right\|^2 = \sum_{k=1}^n\left\|  V^\top  \left(x_k-\mu_n\right)   \right\|^2 = (n-1) \tr\left(V^\top  \Sigma_n V\right),
+\]
+showing that \eqref{eq:PCA:maxvariance_min} is equivalent to \eqref{eq:PCA:goodnessoffit13_min} and that the two interpretations of PCA are indeed equivalent.
+
+\subsubsection{Finding the Principal Components}
+
+When given a dataset $x_1,\dots,x_n\in\RR^p$, in order to compute the Principal Components one needs to compute the leading eigenvectors of
+\[
+\Sigma_n = \frac1{n-1}\sum_{k=1}^n \left(x_k-\mu_n\right)\left(x_k-\mu_n\right)^\top  .
+\]
+A na\"ive way of doing this is to construct $\Sigma_n$ (which takes $\OOO(np^2)$ work) and then finding its spectral decomposition (which takes $\OOO(p^3)$ work). This means that the computational complexity of this procedure is $\OOO\left( \max \left\{ np^2, p^3  \right\} \right)$ (e.g.\ see~\cite{HJ90} or~\cite{Golub_MatrixComputations}).
+
+An alternative is to use the Singular Value Decomposition~\eqref{eq:SVD:PCAnotes}. Let $X = \left[x_1 \cdots x_n  \right]$, and recall that
+\[
+\Sigma_n = \frac{1}{n-1} \left( X - \mu_n\1^\top   \right) \left( X - \mu_n\1^\top   \right)^\top  .
+\]
+
+Let us take the SVD of $\frac{1}{\sqrt{n-1}}\left(X - \mu_n\1^\top  \right) = U_L D U_R^\top  $ with $U_L \in O(p)$, $D$ diagonal, and $U_R^\top  U_R = \Id$. Then,
+\[
+\Sigma_n = \frac{1}{n-1} \left( X - \mu_n\1^\top   \right) \left( X - \mu_n\1^\top   \right)^\top   = U_L D U_R^\top   U_R D U_L^\top   = U_L D^2 U_L^\top  ,
+\]
+meaning that $U_L$ corresponds to the eigenvectors of $\Sigma_n$. Computing the SVD of $X - \mu_n\1^\top  $ takes $\OOO(\min \{n^2p,p^2n\})$ work but if one is interested in simply computing the top $d$ eigenvectors then this computational cost reduces to $\OOO(dnp)$. This can be further improved with randomized algorithms. In Chapter~\ref{s:RSVD} we will discuss randomized algorithms that compute an approximate solution in $\OOO\left( pn\log d +(p+n)d^2  \right)$ time, see also~\cite{HMT11,Rokhlin_Szlam_Tygert_randPCA,Musco_Musco_BlockLanczos}.
+
+Numerical stability is another important reason why computing the principal components using the SVD is preferable. Since the eigenvalues of $\Sigma_n$ are
+proportional to the squares of the singular values of $X-\mu_n \1^\top  $, problems arise when the ratio of singular
+values exceeds $10^8$, causing the ratio of the corresponding eigenvalues of $\Sigma_n$ to be larger than $10^{16}$. In this case, the smaller eigenvalue would be rounded to zero (due to machine precision), which is certainly
+not desirable.
+
+
+
+\subsubsection{Example: The eigenspace of handwritten digits (MNIST)}
+
+Every aspiring data scientist will at some point experiment with the MNIST dataset, a collection of handwritten digits created by researchers Burges, Cortes, and LeCun from data by the National Institute of Standards and Technology (NIST)~\cite{lecun1998mnist}. The most common version of MNIST has 60,000 training images and 10,000 test images, each image containing $28 \times 28$ grayscale pixels. MNIST has become a highly influential, frequently used benchmark in the data science/machine learning community\footnote{See~\cite{hardt2022patterns} for more information about MNIST. The book also contains a lot of useful information about other benchmark datasets.}.
+
+We will apply PCA to the MNIST dataset to analyze whether a high-dimensional space (784 dimensions in this case) can be compressed into a low-dimensional {\em latent space} that is still able to capture the ``essence'' of these handwritten digits. To process the data via PCA, we first flatten each image into a vector $x\in\R^{784}$. The resulting data matrix $X$ has a size of $60000\times784$. In this matrix, each row is a single handwritten digit (an observation), while each column represents the intensity of a specific pixel location (a feature).
+
+Before performing PCA, we compute the mean digit $\bar{x}$, which represents the ``average'' handwriting across the entire dataset. By subtracting this mean from every row $X_{\text{centered}} =X - \bar{x}$, we shift the coordinate system so that the origin lies at the center of the data cloud. This ensures that the first principal component truly represents the direction of maximum variance. When we compute the SVD of $X_{\text{centered}}$, the right singular vectors (the columns of V) are the Principal Components. We can reshape these $784 \times 1$ vectors back into $28 \times 28$ images, sometimes called {\em eigen-digits}, to visualize what the algorithm has ``learned.'' The first twelve eigen-digits are depicted in Figure~\ref{fig:pcamnist}.
+
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width = 0.9\textwidth]{figures/MNIST_PCA}
+\caption{The first twelve principal components of the MNIST images.}
+\label{fig:pcamnist}
+\end{center}
+\end{figure}
+
+\subsubsection{Which $d$ should we pick?}
+
+Given a dataset, if the objective is to visualize it then picking $d=2$ or $d=3$ might make the most sense. However, PCA is useful for many other purposes, for example: \begin{enumerate}
+\item Denoising: often times the data belongs to a lower dimensional space but is corrupted by high dimensional noise. In such cases, PCA helps reduce the noise while keeping the signal.
+\item Downstream analysis: One may be interested in running an algorithm (clustering, regression, etc.) that would be too computationally expensive or too statistically insignificant to run in high dimensions. Dimension reduction using PCA may help there.
+\end{enumerate}
+In these applications (and many others) it is not clear how to pick $d$. A fairly popular heuristic is to try to choose the cut-off at a component that has significantly more variance than the one immediately after. Since the total variance is $\tr(\Sigma_n) = \sum_{k=1}^p \lambda_k$, the proportion of variance in the $i$'th component is nothing but $\frac{\lambda_i}{\tr(\Sigma_n)}$. A plot of the values of the ordered eigenvalues, also known as a scree plot, helps to identify a reasonable choice of $d$. It is common to then try to identify an ``elbow'' on the scree plot to choose the cut-off, as illustrated in Figure~\ref{fig:elbow}(a). Figure~\ref{fig:elbow}(b) shows the scree plot for the MNIST example, where the elbow is less well defined, as often happens in practice. In this case, the point of maximum curvature of the graph can serve as a surrogate for the elbow.
+
+\begin{figure}[h]
+ \begin{center}
+ \subcaptionbox{}{\includegraphics[width = 55mm,height=38.6mm]{figures/PCA_elbow1}}
+ \quad 
+ \subcaptionbox{}{ \includegraphics[width = 57mm,height=39mm]{figures/mnist_elbow}}
+    \caption{(a) A plot of the values of the ordered eigenvalues (depicted is an idealized scenario) helps to identify a reasonable choice of the number of principal components. (b) The ordered eigenvalues for the MNIST example.}
+    \label{fig:elbow}   
+\end{center}
+\end{figure}
+
+
+
+Figure~\ref{fig:pcamnist1} shows the choice of different values of $k=d$ for the PCA approximation of MNIST, illustrated via some typical example digits.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width = 0.7\textwidth]{figures/mnistorig}
+\includegraphics[width = 0.7\textwidth]{figures/mnist20}
+\includegraphics[width = 0.7\textwidth]{figures/mnist40}
+\includegraphics[width = 0.7\textwidth]{figures/mnist80}
+\includegraphics[width = 0.7\textwidth]{figures/mnist120}
+\includegraphics[width = 0.7\textwidth]{figures/mnist160}
+\caption{MNIST approximation via PCA with different cutoffs.}
+\label{fig:pcamnist1}
+\end{center}
+\end{figure}
+
+
+In the next section we will look into Random Matrix Theory to better understand the behavior of the eigenvalues of $\Sigma_n$ and gain insight into choosing cut-off values.
+
+
+
+\section{PCA in high dimensions and Mar\v{c}enko-Pastur law}
+
+Let us assume that the data points $x_1,\dots,x_n\in\RR^p$ are independent draws of a zero mean Gaussian random variable $g\sim \NNN(0,\Sigma)$ with some covariance matrix $\Sigma \in \RR^{p\times p}$. In this case, when we use PCA we are hoping to find a low dimensional structure in the distribution, which should correspond to the large eigenvalues of $\Sigma$ (and their corresponding eigenvectors). For that reason, and since PCA depends on the spectral properties of $\Sigma_n$, we would like to understand whether the spectral properties of the sample covariance matrix $\Sigma_n$ (eigenvalues and eigenvectors) are close to those of $\Sigma$, also known as the population covariance.
+
+Since $\EE\Sigma_n = \Sigma$, if $p$ is fixed and $n\to \infty$ the law of large numbers guarantees that indeed $\Sigma_n\to \Sigma$. However, in many modern applications it is not uncommon to have $p$ of the same order as $n$ (or, sometimes, even larger). For example, if our dataset is composed of images then $n$ is the number of images and $p$ the number of pixels per image; it is conceivable that the number of pixels and the number of images are comparable. Unfortunately, in that case, it is no longer clear that $\Sigma_n\to \Sigma$. Dealing with this type of difficulties is an important goal of high dimensional statistics.
+
+For simplicity we will try to understand the spectral properties of
+\[
+S_n = \frac1n X X^\top  ,
+\]
+where $x_1,\dots,x_n$ are the columns of $X$. Since $x\sim \NNN(0,\Sigma)$ we know that $\mu_n \to 0$ (and, clearly, $\frac{n}{n-1}\to 1$), hence the spectral properties of $S_n$ will be essentially the same as $\Sigma_n$.\footnote{In this case, $S_n$ is actually the maximum likelihood estimator for $\Sigma$.}
+
+Let us start by looking into a simple example, $\Sigma = \Id$. In that case, the distribution has no low dimensional structure, as the distribution is rotation invariant. Figure~\ref{fig:pastur1} depicts a normalized histogram (left panel) and a scree plot (right panel) of the eigenvalues of a realization of $S_n$ (when $\Sigma = \Id$) for $p = 500$ and $n=1000$. The red line is the eigenvalue distribution predicted by the Mar\v{c}enko-Pastur distribution~\eqref{eq:MPdist_PCA1}, that we will discuss below.
+
+\begin{figure}[h]
+ \begin{center}
+\includegraphics[width = 0.49\textwidth]{./figures/MarcenkoPastur_p500_n1000_hist.png}
+\includegraphics[width = 0.49\textwidth]{./figures/MarcenkoPastur_p500_n1000_scree.png}
+\end{center}
+\caption{A normalized histogram (left panel) and a scree plot (right panel) of the eigenvalues of a realization of $S_n$ (when $\Sigma = \Id$) for $p = 500$ and $n=1000$. The red line is the eigenvalue distribution predicted by the Mar\v{c}enko-Pastur distribution}
+\label{fig:pastur1}
+\end{figure}
+
+As one can see, there are many eigenvalues considerably larger than $1$, as well as many eigenvalues significantly smaller than $1$. Notice that, if given this profile of eigenvalues of $\Sigma_n$ one could potentially be led to believe that the data has low dimensional structure, when in truth the distribution it was drawn from is isotropic.
+
+Understanding the distribution of eigenvalues of random matrices is at the core of Random Matrix Theory (there are many good books on Random Matrix Theory, e.g.~\cite{bai2010spectral,Tao_topicsRMT,Anderson_Guionnet_Zeitouni_IntroRandomMatrices}). This particular limiting distribution was first established in 1967 by Mar\v{c}enko and Pastur~\cite{Marchenko_Pastur_1967} and is now referred to as the Mar\v{c}enko-Pastur distribution. They showed that, if $p$ and $n$ both grow indefinitely to $\infty$ with their ratio fixed $p/n = \gamma \leq 1$, the sample distribution of the eigenvalues of $S_n$ (like the histogram above), in the limit, will be
+
+\begin{equation}\label{eq:MPdist_PCA1}
+dF_\gamma(\lambda) = \frac1{2\pi} \frac{\sqrt{\left( \gamma_+ - \lambda \right)\left( \lambda - \gamma_- \right)}}{\gamma \lambda} 1_{\left[ \gamma_-, \gamma_+  \right]}(\lambda) d\lambda,
+\end{equation}
+with support $\left[ \gamma_-, \gamma_+  \right]$, where $\gamma_- = (1-\sqrt{\gamma})^2$, $\gamma_+= (1+\sqrt{\gamma})^2$, and $\gamma = p/n$. This is plotted as the red line in the figure above.
+
+\begin{remark}
+We will not provide the proof of the Mar\v{c}enko-Pastur law here (you can see, for example,~\cite{Bai_MarchenkPastur_manyproofs} for several different proofs of it), but an approach to a proof is using the so-called moment method. The central idea is to note that one can compute moments of the eigenvalue distribution in two different ways and note that (in the limit) for any $k$,
+\[
+\frac1p \EE \tr \left[ \left( \frac1n XX^\top   \right)^k \right] =  \frac1p \EE \tr \left( S_n^k \right) =\EE\frac1p \sum_{i=1}^p \lambda_i^k(S_n) = \int_{\gamma_-}^{\gamma_+} \lambda^k dF_\gamma(\lambda),
+\]
+and that the quantities $\frac1p \EE \tr \left[ \left( \frac1n XX^\top   \right)^k \right]$ can be estimated (these estimates rely essentially on combinatorics). The distribution $dF_\gamma(\lambda)$ can then be computed from its moments.
+\end{remark}
+
+
+
+
+
+\subsection{Spike models and the BBP phase transition}
+
+What if there actually is some (linear) low dimensional structure in the data? When can we expect to capture it with PCA? A particularly simple, yet relevant, example to analyze is when the covariance matrix $\Sigma$ is a rank-1 perturbation of the identity matrix and is of the form $\Sigma = I + \beta uu^\top  $, where $u$ is a unit norm vector and $\beta > 0$. This is a particular case of a spike model.
+
+One way to think about this spike model is that each data point $x$ consists of a signal part $\sqrt{\beta}g_0 u$ where $g_0$ is a scalar standard Gaussian $\NNN(0,1)$ (i.e. a normally distributed multiple of a fixed vector $\sqrt{\beta}u$) and a noise part $g\sim\NNN(0,I)$ (independent of $g_0$). Then $x = g + \sqrt{\beta}g_0 u$ is a Gaussian random variable
+\begin{equation}
+ \label{eq:spikymodel}  
+ x\sim \NNN(0,I + \beta uu^\top  ).
+\end{equation}
+Whereas the signal part $\sqrt{\beta}g_0 u$ resides on a central line in the direction of $u$, the noise part is high dimensional and isotropic. We therefore refer to $\beta$ as the signal-to-noise ratio (SNR). Indeed, $\beta$ is the ratio of the signal variance (in the $u$-direction) to the noise variance (in each direction).
+
+A natural question is whether this rank-$1$ perturbation can be seen in $S_n = \frac{1}{n} XX^\top  $, where the columns of $X$ are now given by~\eqref{eq:spikymodel}. In other words, is it possible to detect the direction of the line $u$ from noisy measurements in high dimension? Let us build some intuition with an example. Figure~\ref{fig:pastur2} shows the histogram of the eigenvalues of a random realization of $S_n$ for $p=500$, $n=1000$, $u$ is the first element of the canonical basis $u=e_1$, and $\beta = 1.5$:
+
+\begin{figure}
+\begin{center}
+\includegraphics[width = 0.9\textwidth]{figures/MarchenkoPastur_p500_n1000_SNR15.png}
+\end{center}
+\caption{The histogram of the eigenvalues of a random realization of the spike model $S_n$ for $p=500$, $n=1000$,  $u$ is the first element of the canonical basis $u=e_1$, and $\beta = 1.5$}
+\label{fig:pastur2}
+\end{figure}
+
+
+The histogram suggests that there is an eigenvalue of $S_n$ that ``pops out'' of the support of the Mar\v{c}enko-Pastur distribution (below we will estimate the location of this eigenvalue, and that estimate corresponds to the red ``x''). It is worth noting that the largest eigenvalues of $\Sigma$ is simply $1+\beta = 2.5$ while the largest eigenvalue of $S_n$ appears considerably larger than that. 
+
+Let us try now the same experiment with $\beta = 0.5$, see Figure~\ref{fig:pastur3} for the result. It appears that, for $\beta = 0.5$, the histogram of the eigenvalues is indistinguishable from when $\Sigma = \Id$. In particular, no eigenvalue is separated from the Mar\v{c}enko-Pastur distribution.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width = 0.9\textwidth]{figures/MarchenkoPastur_p500_n1000_SNR05.png}
+\end{center}
+\caption{The histogram of the eigenvalues of a random realization of the spike model $S_n$ for $p=500$, $n=1000$, $u$ is the first element of the canonical basis $u=e_1$, and $\beta = 0.5$}
+\label{fig:pastur3}
+\end{figure}
+
+
+
+This motivates the following question:
+
+\smallskip
+\noindent
+{\em  Question:}
+For which values of $\gamma$ and $\beta$ do we expect to see an eigenvalue of $S_n$ popping out of the support of the Mar\v{c}enko-Pastur distribution, and what is the limiting value that we expect it to take?
+
+\medskip
+
+As we will see below, there is a critical value of $\beta$, denoted $\beta_c$, below which we do not expect to see a change in the distribution of eigenvalues and above which we expect one of the eigenvalues to pop outside of the support. This phenomenon is known as the BBP phase transition (after Baik, Ben Arous, and P\'ech\'e~\cite{BPP_MC_BPP_2005}). There are many very nice papers about this and similar phenomena, including~\cite{Paul_Marchenko_Pastur_BPP_TechReport,Johnston_MC_BPP,BPP_MC_BPP_2005,Paul_Marchenko_Pastur_BPP_ActualPaper,Baik_Silverstein_BPP_05,Karoui_BPP_05,BenaychGeorges_Nadakuditi_PCA,BenaychGeorges_Nadakuditi_SVD}.\footnote{Notice that the Mar\v{c}enko-Pastur theorem does not imply that all eigenvalues are actually in the support of the Mar\v{c}enko-Pastur distribution, it just rules out that a non-vanishing proportion are. However, it is possible to show that indeed, in the limit, all eigenvalues will be in the support (see, for example,~\cite{Paul_Marchenko_Pastur_BPP_TechReport}).}
+
+In what follows we will find the critical value $\beta_c$ and estimate the location of the largest eigenvalue of $S_n$ for any $\beta$. While the argument we will use can be made precise (and is borrowed from~\cite{Paul_Marchenko_Pastur_BPP_TechReport}) we will be ignoring a few details for the sake of exposition. In other words, the argument below can be transformed into a rigorous proof, but it is not one at the present form.
+
+We want to understand the behavior of the leading eigenvalue of the sample covariance matrix
+\[
+S_n = \frac1n\sum_{i=1}^n x_ix_i^\top  .
+\]
+Since $x \sim \NNN(0,I+\beta uu^\top  )$ we can write $x = (I + \beta uu^\top  )^{1/2} z$ where $z \sim \NNN(0,I)$ is an isotropic Gaussian. Then,
+\[
+S_n = \frac{1}{n} \sum_{i=1}^n (I + \beta uu^\top  )^{1/2} z_i z_i^\top   (I + \beta uu^\top  )^{1/2} = (I + \beta uu^\top  )^{1/2} Z_n (I + \beta uu^\top  )^{1/2},
+\]
+where $Z_n = \frac{1}{n} \sum_{i=1}^n z_i z_i^\top  $ is the sample covariance matrix of independent isotropic Gaussians. The matrices $S_n = (I + \beta uu^\top  )^{1/2} Z_n (I + \beta uu^\top  )^{1/2}$ and $Z_n (I + \beta uu^\top  )$ are related by a similarity transformation, and therefore have exactly the same eigenvalues. Hence, it suffices to find the leading eigenvalue of the matrix $Z_n(I + \beta uu^\top  )$, which is a rank-1 perturbation of $Z_n$ (indeed, $Z_n(I + \beta uu^\top  ) = Z_n + \beta Z_n uu^\top  $). We already know that the eigenvalues of $Z_n$ follow the Mar\v{c}enko-Pastur distribution, so we are left to understand the effect of a rank-1 perturbation on its eigenvalues.
+
+To find the leading eigenvalue $\lambda$ of $Z_n(I + \beta uu^\top  )$, let $v$ be the corresponding eigenvector, that is,
+\[
+Z_n(I + \beta uu^\top  ) v = \lambda v.
+\]
+Subtract $Z_n v$ from both sides to get
+\[
+\beta Z_n uu^\top   v = (\lambda I - Z_n)v.
+\]
+Assuming $\lambda$ is not an eigenvalue of $Z_n$, we can multiply by $(\lambda I - Z_n)^{-1}$ to get\footnote{Intuitively, $\lambda$ is larger than all the eigenvalues of $Z_n$, because it corresponds to a perturbation of $Z_n$ by a positive definite matrix $\beta uu^\top  $; yet, a formal justification is beyond the present discussion.}
+\[
+\beta (\lambda I - Z_n)^{-1} Z_n uu^\top   v = v.
+\]
+Our assumption also implies that $u^\top   v \neq 0$, for otherwise $v=0$.
+Multiplying by $u^\top  $ gives
+\[
+\beta u^\top   (\lambda I - Z_n)^{-1} Z_n u (u^\top   v) = u^\top   v.
+\]
+Dividing by $\beta u^\top   v$ (which is not 0 as explained above) yields
+\begin{equation}\label{eq:SVD:spike1}
+u^\top   (\lambda I - Z_n)^{-1} Z_n u = \frac{1}{\beta}.
+\end{equation}
+Suppose $w_1,\ldots,w_p$ are orthonormal eigenvectors of $Z_n$ (with corresponding eigenvalues $\lambda_1,\ldots, \lambda_p$), and expand $u$ in that basis:
+\[ u = \sum_{i=1}^p \alpha_i w_i.\]
+Plugging this expansion in (\ref{eq:SVD:spike1}) gives
+\begin{equation}
+\sum_{i=1}^p \frac{\lambda_i}{\lambda-\lambda_i} \alpha_i^2 = \frac{1}{\beta}\label{eq:SVD:spike2}
+\end{equation}
+For large $p$, each $\alpha_i^2$ concentrates around its mean value $\mathbb{E}[\alpha_i^2]=\frac{1}{p}$ (again, this statement can be made rigorous), and \eqref{eq:SVD:spike2} becomes
+\begin{equation}
+\lim_{p\to \infty} \frac{1}{p}\sum_{i=1}^p \frac{\lambda_i}{\lambda-\lambda_i} = \frac{1}{\beta}
+\end{equation}
+Since the eigenvalues $\lambda_1,\ldots,\lambda_p$ follow the Mar\v{c}enko-Pastur distribution, the limit on the left hand side can be replaced by the integral
+\begin{equation}
+\int_{\gamma_{-}}^{\gamma_{+}} \frac{t }{\lambda-t}\,d F_\gamma(t) = \frac{1}{\beta}
+\end{equation}
+Using an integral table (or an integral software), we find that
+\begin{equation}
+\frac{1}{\beta} = \int_{\gamma_{-}}^{\gamma_{+}} \frac{t }{\lambda-t}\,d F_\gamma(t) =\frac{1}{4 \gamma} \left[2 \lambda -(\gamma_{-}+\gamma_{+})- 2 \sqrt{(\lambda-\gamma_{-})(\lambda-\gamma_{+})}\right]. \label{eq:SVD:Integral}
+\end{equation}
+
+For $\lambda=\gamma_{+}$, that is, when the top eigenvalue touches the right edge of the Mar\v{c}enko-Pastur distribution,  \eqref{eq:SVD:Integral} becomes $\frac{1}{4 \gamma} (\gamma_{+}-\gamma_{-})$. This is the critical point that one gets the pop out of the top eigenvalue from the bulk of the Mar\v{c}enko-Pastur distribution. To calculate the critical value $\beta_c$, we recall that $\gamma_{-}=(1-\sqrt{\gamma})^2$ and $\gamma_{+}=(1+\sqrt{\gamma})^2$, hence
+\begin{equation}
+\frac{1}{\beta_c} = \frac{1}{4 \gamma} \left((1+\sqrt{\gamma})^2-(1-\sqrt{\gamma})^2\right).
+\end{equation}
+Therefore, the critical SNR is
+\begin{equation}
+\label{eq:SVD:critical}
+\beta_{c}= \sqrt{\gamma}=\sqrt{\frac{p}{n}}.
+\end{equation}
+When $\beta > \sqrt{\frac{p}{n}}$ one can observe the pop out of the top eigenvalue from the bulk.
+
+Eq.~(\ref{eq:SVD:critical}) illustrates the interplay of the SNR $\beta$, the number of samples $n$, and the dimension $p$. Low SNR, small sample size, and high dimensionality are all obstacles for detecting linear structure in noisy high dimensional data.
+
+More generally, inverting the relationship between $\beta$ and $\lambda$ given by \eqref{eq:SVD:Integral} (which simply amounts to solving a quadratic), we find that the largest eigenvalue $\lambda$ of the sample covariance matrix $S_n$ has the limiting value
+\begin{equation}
+\label{eq:SVD:pop}
+\lambda \to \left\{\begin{array}{ccc}
+                     (\beta + 1)\left(1 + \frac{\gamma}{\beta} \right) & &  \text{for }\;\; \beta \geq \sqrt{\gamma}, \\
+                      &  & \\
+                     (1+\sqrt{\gamma})^2 & & \text{for }\;\; \beta < \sqrt{\gamma}.
+                   \end{array}
+  \right.
+\end{equation}
+In the finite sample case $\lambda$ will be fluctuating around that value.
+
+Notice that the critical SNR value, $\beta_{c} = \sqrt{\gamma}$ is buried deep inside the support of the Mar\v{c}enko-Pastur distribution, because $\sqrt{\gamma} < \gamma_{+} = (1+\sqrt{\gamma})^2$. In other words, the SNR does not have to be greater than the operator norm of the noise matrix in order for it to pop out. We see that the noise effectively pushes the eigenvalue to the right (indeed, $\lambda > \beta$).
+
+
+The asymptotic squared correlation $|\langle u, v\rangle |^2$ between the top eigenvector $v$ of the sample covariance matrix and true signal vector $u$ can be calculated in a similar fashion. The limiting correlation value turns out to be
+\begin{equation}
+\label{eq:SVD:corr}
+|\langle v, u \rangle|^2 \to \left\{\begin{array}{ccc}
+                                      \frac{1-\frac{\gamma}{\beta^2}}{1+\frac{\gamma}{\beta^2}} & & \text{for }\;\; \beta \geq \sqrt{\gamma} \\
+                                       & & \\
+                                      0 & & \text{for }\;\; \beta < \sqrt{\gamma}
+                                    \end{array}
+ \right.
+\end{equation}
+Notice that the correlation value tends to 1 as $\beta \to \infty$, but is strictly less than 1 for any finite SNR.
+
+
+
+\subsection{Wigner matrices}\label{subsection:WignerMatrices}
+
+Another very important random matrix model is the Wigner matrix (and it will make appearances in Chapters~\ref{c:probability-gaussiananalysis},~\ref{c:probability-matrixconcentration} and~\ref{c:community}). Given an integer $n$, a standard Gaussian Wigner matrix $W\in\RR^{n\times n}$ is a symmetric matrix with independent $\NNN(0,1)$ off-diagonal entries (except for the fact that $W_{ij}=W_{ji}$) and jointly independent $\NNN(0,2)$ diagonal entries. In the limit, the eigenvalues of $\frac1{\sqrt{n}}W$ are distributed according to the so-called semi-circular law
+\begin{equation}\label{eq:WignerSC}
+ dSC(x) = \frac1{2\pi}\sqrt{4-x^2}1_{[-2,2]}(x)dx,
+\end{equation}
+and there is also a BBP like transition for this matrix ensemble~\cite{Feral_Peche_BPPWigner}. More precisely, if $v$ is a unit-norm vector in $\RR^n$ and $\xi\geq 0$ then the largest eigenvalue of $\frac1{\sqrt{n}}W+\xi vv^\top  $ satisfies
+
+\begin{itemize}
+ \item If $\xi \leq 1$ then
+ \[
+  \lambda_{\max}\left(\frac1{\sqrt{n}}W+\xi vv^\top   \right) \to 2,
+ \]
+ \item and if $\xi > 1$ then
+ \begin{equation}\label{eq:1spike_Wigner:PCA1}
+  \lambda_{\max}\left(\frac1{\sqrt{n}}W+\xi vv^\top   \right) \to \xi + \frac1{\xi}.
+ \end{equation}
+\end{itemize}
+
+The typical correlation, with $v$, of the leading eigenvector $v_{\max}$ of $\frac1{\sqrt{n}}W+\xi vv^\top  $ is also known:
+\begin{itemize}
+ \item If $\xi \leq 1$ then
+ \[
+  \left| \left\langle v_{\max},v \right\rangle \right|^2 \to 0,
+ \]
+ \item and if $\xi > 1$ then
+ \[
+    \left| \left\langle v_{\max},v \right\rangle \right|^2 \to 1-\frac{1}{\xi^2}.
+ \]
+\end{itemize}
+
+From a statistical viewpoint, a central question is to understand for different distributions of matrices, when it is possible to detect and estimate a spike in a random matrix~\cite{AlexAmeliaAfonsoAnkur_PCA}. When the underlying random matrix corresponds to the adjacency matrix of a random graph and the spike to a bias on the distribution of the graph edges, corresponding to structural properties of the graph, the estimates above are able to predict important phase transitions in community detection in networks, as we will see in Chapter~\ref{c:community}.
+
+\subsection{Rank and covariance estimation}
+The spike model and random matrix theory thus offer a principled way for determining the number of principal components, or equivalently of the rank of the hidden linear structure: simply count the number of eigenvalues to the right of the Mar\v{c}enko-Pastur distribution. In practice, this approach for rank estimation is often too simplistic for several reasons. First, for actual datasets, $n$ and $p$ are finite, and one needs to take into account non-asymptotic corrections and finite sample fluctuations \cite{kritchman2008determining,kritchman2009non}. Second, the noise may be heteroskedastic (that is, noise variance is different in different directions). Moreover, the noise statistics could also be unknown and it can be non-Gaussian \cite{liu2018pca}. In some situations it might be possible to estimate the noise statistics directly from the data and to homogenize the noise (a procedure sometimes known as ``whitening'') \cite{leeb2018optimal}. These situations call for careful analysis, and many open problems remain in the field.
+
+Another popular method for rank estimation is using permutation methods. In permutation methods, each column of the data matrix is randomly permutated, so that the low-rank linear structure in the data is destroyed through scrambling, while only the noise is preserved. The process can be repeated multiple times, and the statistics of the singular values of the scrambled data matrices are then used to determine the rank. In particular, only singular values of the original (unscrambled) data matrix that are larger than the largest singular value of the scrambled matrices (taking fluctuations into account of course) are considered as corresponding to signal and are counted towards the rank. The mathematical analysis of permutation methods is another active field of research \cite{dobriban2017permutation,dobriban2018deterministic}.
+
+In some applications, the objective is to estimate the low rank covariance matrix of the clean signal $\Sigma$ from the noisy measurements. We saw that in the spike model, the eigenvalues of the sample covariance matrix are inflated due to noise. It is therefore required to shrink the computed eigenvalues of $S_n$ in order to obtain a better estimate of the eigenvalues of $\Sigma$. That is, if $$S_n = \sum_{i=1}^p \lambda_i v_i v_i^\top  $$ is the spectral decomposition of $S_n$, then we seek an estimator of $\Sigma$, denoted $\hat{\Sigma}$ of the form $$\hat{\Sigma} = \sum_{i=1}^p \eta(\lambda_i) v_i v_i^\top  .$$
+The scalar nonlinearity $\eta : \mathbb{R}^+ \to \mathbb{R}^+$ is known as the shrinkage function.  An obvious shrinkage procedure is to estimate $\beta = \eta(\lambda)$ from the computed $\lambda$ by inverting (\ref{eq:SVD:pop}) (and setting $\beta=0$ for $\lambda < \gamma_{+}$). It turns out that this particular shrinker is optimal in terms of the operator norm loss. However, for other loss functions (such as the Frobenius norm loss), the optimal shrinkage function takes a different form \cite{donoho2018optimal}. The reason why the shrinker depends on the loss function is that the eigenvectors of $S_n$ are not perfectly correlated with those of $\Sigma$ but rather make some non-trivial angle, as in (\ref{eq:SVD:corr}). In other words, the eigenvectors are noisy, and it may require more aggressive shrinkage to account for that error in the eigenvector. It can be shown that the eigenvector $v$ of the sample covariance is uniformly distributed in a cone around $u$ whose opening angle is given by (\ref{eq:SVD:corr}). While we can improve the estimation of the eigenvalue via shrinkage, it is however unclear how to improve the estimation of the eigenvector (without any a priori knowledge about it). Finally, we remark that eigenvalue shrinkage also plays an important role in denoising.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section*{Exercises}
+\addcontentsline{toc}{section}{Exercises}
+
+\begin{myexercise}
+The $p$-norm of a matrix $A$ is defined as
+$$\|A\|_p = \sup_{x\neq 0} \frac{\|Ax\|_p}{\|x\|_p} = \sup_{\|x\|_p=1} \|Ax\|_p.$$
+Prove the following properties of the matrix $p$-norm:
+\begin{enumerate}
+\item $\|AB\|_p \leq \|A\|_p \|B\|_p$ for any $A \in \mathbb{R}^{m\times n}$ and $B\in \mathbb{R}^{n\times k}$.
+\item $\|A\|_1 = \max_{1\leq j \leq n} \sum_{i=1}^m |a_{ij}|$.
+\item $\|A\|_\infty =  \max_{1 \leq i \leq m} \sum_{j=1}^n |a_{ij}|$. \\
+Notice that the last two properties imply $\|A\|_\infty = \|A^\top  \|_1$.
+\item $\|A\|_2^2 \leq \|A\|_1 \|A\|_\infty$.
+\end{enumerate}
+\end{myexercise}
+
+
+\begin{myexercise}
+The Schatten $p$-norm of an $m\times n$ matrix $A$ is given by the $\ell_p$ norm ($p\geq 1$) of its vector of singular values, namely,
+$$\|A\|_p = \left(\sum_{k=1}^{\min\{m,n \}} \sigma_k^p\right)^{1/p}.$$
+A matrix norm $\| \cdot \|$ that satisfies $\|QAZ\| = \|A\|$ for all $Q$ and $Z$ orthogonal matrices is called a unitarily invariant norm.
+\begin{enumerate}
+\item Show that the Schatten $p$-norm is unitarily invariant.
+\item Note that the case $p=1$ is sometimes called the nuclear norm of the matrix, the case $p=2$ is the Frobenius norm, and $p=\infty$ is the operator norm. Verify that the nuclear norm of $A$, denoted $\|A\|_*$, is given by
+$$\|A\|_{*} = \tr\left(\sqrt{A^\top   A} \right).$$
+\end{enumerate}   
+\end{myexercise}
+
+\begin{myexercise}
+Show that any unitarily invariant matrix norm is dependent only on the singular values of the matrix.   
+\end{myexercise}
+
+
+\begin{myexercise}
+Given a square $n\times n$ matrix $A$ whose SVD is $A=U\Sigma V^\top  $, show that its closest (in the Frobenius norm) orthogonal matrix $O$ is given by $W=UV^\top  $. That is, show that
+    $$\|A - UV^\top  \|_F = \min_{WW^\top  =W^\top  W=\Id} \|A-W\|_F,$$ where
+    $A=U\Sigma V^\top  $.
+    In other words, $W$ is obtained from the SVD of $A$ by dropping the diagonal matrix $\Sigma$. Use this observation to conclude what is the optimal rotation (and possibly reflection) that aligns two sets of points $p_1,p_2,\ldots,p_n$ and $q_1,\ldots,q_n$ in $\mathbb{R}^d$, that is, find $W$ that minimizes $\sum_{i=1}^n \|Wp_i-q_i\|^2$. This is known as the orthogonal Procrustes problem, see also  \cite{arun1987least,fan1955some,keller1975closest}.    
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Low rank approximation]\label{prob:low_rank_inequality}
+    Let $A \in \R^{m \times n}$ and $k$ be an integer such that $1 \leq k \leq \rank(A)$.
+    \begin{enumerate}[(a)]
+        \item Prove that there exists a matrix $B \in \R^{m \times n}$ of rank $k$ such that
+        \begin{equation*}
+            \norm{A-B} \leq \frac{\norm{A}_F}{\sqrt{k}}.
+        \end{equation*}
+        
+        \item Does the statement (a) hold if the operator norm on the left hand side is replaced with the Frobenius norm $\|A - B \|_F$? 
+    \end{enumerate}
+\end{myexercise}
+
+
+
+\begin{myexercise}
+For the spike model, show that the asymptotic squared correlation $|\langle v,u \rangle|^2$ between the eigenvector $v$ of the sample covariance matrix and the ``true" signal vector $u$ is given by (\ref{eq:SVD:corr}).
+\begin{hint}
+    Use MAPLE or an integral table to calculate the integral $$\int_{\gamma_-}^{\gamma_+} \frac{t^2 \,dF_\gamma(t)}{(\lambda-t)^2},$$
+    where $dF_\gamma(t)$ is the Mar\v{c}enko-Pastur measure.
+\end{hint}
+
+    
+\end{myexercise}
+
+
+
+
+
+\begin{myexercise}
+Confirm Wigner's semi-circle law using computer simulations (take, e.g., $n=400$).
+\end{myexercise}
+
+\begin{myexercise}
+Show that the asymptotic largest eigenvalue of a rank-1 perturbation of a Wigner matrix is given by (\ref{eq:1spike_Wigner:PCA1}).    
+\end{myexercise}
+
+\begin{myexercise}
+ Let $dSC(x) = \frac1{2\pi}\sqrt{4-x^2}1_{[-2,2]}(x)$ be the semi-circle distribution. Prove that if $X$ is distributed according to $dSC(x)$ then
+    $$\mathbb{E}[X^k] = \left\{\begin{array}{cc}
+   C_{\frac{k}{2}} & \text{if}\;\; k \;\;\text{even}, \\
+0 & \text{if}\;\;k\;\;\text{odd},
+  \end{array} \right.$$
+where $C_n$ is the $n$-th Catalan number, $C_n = \frac{1}{n+1} {2n \choose n}$.    
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Equivalent definitions of spectral/operator norms]
+    Given a matrix $M \in \R^{m \times n}$, prove that all of the following quantities are equal:
+    \begin{enumerate}[(a)]
+        \item $\sup_{\norm{v}_2 = 1} \norm{Mv}_{2}$, the \emph{operator norm} of $M$, which is commonly denoted by $\norm{M}$;
+        \item $\sup_{v \neq 0} \frac{\norm{Mv}_{2}}{\norm{v}_2}$;
+        \item $\sup_{\norm{u}_2 = \norm{v}_2 = 1} u^\top M v$;
+        \item $\sigma_1(M)$, the largest singular value of $M$;
+        \item $\sqrt{\lambda_1(M M^\top)}$, the square root of the largest eigenvalue of $M M^\top$;
+        \item $\sqrt{\lambda_1(M^\top M)}$, the square root of the largest eigenvalue of $M^\top M$.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Maximal entry bound]\label{prob:max_entry}
+    Given a matrix $X \in \R^{n \times m}$, show that for any $i \in [n]$ and $j \in [m]$ we have 
+    \begin{equation*}
+        - \norm{X} \leq \abs{X_{ij}} \leq \norm{X}.
+    \end{equation*}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Symmetrization of matrices]\label{prob:symmetrization}
+    We are going to explore three ways in which an $m \times n$ (with $m \leq n$) real-valued matrix $M$ can be symmetrized.
+    \begin{enumerate}[(a)]
+        \item Let $A$ be an $m \times m$ matrix defined by
+        \begin{equation*}
+            A \coloneqq M M^\top.
+        \end{equation*}
+        Check that $A$ is symmetric, and show that its $m$ eigenvalues are given by: $\sigma_1(M)^2, \sigma_2(M)^2, \ldots, \sigma_m(M)^2$.
+
+        \item Show that $A$ and $B \coloneqq M^\top M$ have the same non-zero eigenvalues, up to multiplicities.
+        
+        \item Let $C$ be an $(m+n) \times (m+n)$ matrix defined by
+        \begin{equation*}
+            C \coloneqq \begin{pmatrix} 0_{m \times m} & M \\ M^\top & 0_{n \times n} \end{pmatrix},
+        \end{equation*}
+        where $0_{r \times r}$ is an $r \times r$ all-zeros matrix. Check that $C$ is symmetric, and show that its $m+n$ eigenvalues are given by:
+        $$\text{a) }\, \sigma_1(M), \ldots, \sigma_m(M); \, \text{b) }
+        -\sigma_1(M), \ldots, -\sigma_m(M); \, 
+        \text{c) $n-m$ of them are 0}.$$    
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Gershgorin circle theorem]\label{prob:gershgorin}
+    Let $A \in \R^{n \times n}$ be a symmetric matrix with entries $(a_{ij})_{i,j\in[n]}$. For $i\in [n]$ let $R_{i}$ be the sum of the absolute values of the non-diagonal entries in the $i$-th row:
+    \begin{equation*}
+        R_{i}=\sum _{j\neq {i}}\left|a_{ij}\right|.
+    \end{equation*}
+    Prove that every eigenvalue of $A$ lies within at least one of the Gershgorin discs $D(a_{ii},R_{i})$, i.e. for any eigenvalue $\lambda$ of $A$ we can find $i \in [n]$ such that $\abs{\lambda - a_{ii}} \leq R_i$.
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level\level\sep Quadratic form optimization]\label{prob:quadratic_form}
+    Let $A \in \R^{n\times n}$ be a symmetric matrix with eigenvalues $\lambda_1\geq  \ldots \geq \lambda_n$. Given $r \in \brac{1, 2, \ldots, n}$, consider the following optimization problem:
+    \begin{equation*}
+        \max_{v_1,\ldots,v_r \in \R^n} \sum_{i=1}^r v_i^\top A v_i \quad \text{s.t.}\quad v_i^\top v_j = \delta_{ij} \text { for } 1 \leq i,j \leq r,
+    \end{equation*}
+    where $\delta_{ij}$ is the Kronecker delta defined as
+    \begin{equation*}
+        \delta_{ij} = \begin{cases}
+            1 & i = j, \\
+            0 & i \neq j.
+        \end{cases}
+    \end{equation*}
+    \begin{enumerate}[(a)]
+        \item Show that $\trace(A)$ is the solution of the problem when $r = n$.
+        \item Determine the solution of the problem in terms of the eigenvalues of $A$ when $r < n$.
+    \end{enumerate}
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Courant-Fischer minimax formula for symmetric matrices]\label{prob:courant_fischer_formula}
+    Let $A \in \R^{n \times n}_{\text{sym}}$ ($n \times n$ real symmetric matrix). Prove that for any $k \in [n]$:
+    \begin{equation*}
+        \lambda_k(A) = \max_{\substack{V \subseteq \R^n\\ \dim(V) = k}} \min_{\substack{v \in V\\ \norm{v} = 1}} v^\top A v
+        \qquad\text{and}\qquad
+        \lambda_k(A) = \min_{\substack{V \subseteq \R^n\\ \dim(V) = n-k+1}} \max_{\substack{v \in V\\ \norm{v} = 1}} v^\top A v.
+    \end{equation*}
+\end{myexercise}
+\begin{hint}
+    Any $V$ with $\dim(V) = n-k+1$ intersects with the subspace spanned by the top $k$ eigenvectors of $A$.
+\end{hint}
+
+\begin{myexercise}[\level\level\sep Consequences of Courant-Fischer]\label{prob:courant_fischer_consequences}
+    Let $X, Y \in \R^{m \times n}$ ($m \times n$ real matrices), with $m \leq n$.
+    \begin{enumerate}[(a)]
+        \item Using Problem~\ref{prob:symmetrization}(c) extend the Courant-Fischer formula to hold for asymmetric matrices: for any $k \in [m]$
+        \begin{equation*}
+            \sigma_k(X) = \max_{\substack{V \subseteq \R^n\\ \dim(V) = k}} \min_{\substack{v \in V\\ \norm{v} = 1}} \norm{X v}
+            \quad\text{and}\quad            
+            \sigma_k(X) = \min_{\substack{V \subseteq \R^n\\ \dim(V) = n-k+1}} \max_{\substack{v \in V\\ \norm{v} = 1}} \norm{X v}.
+        \end{equation*}
+        
+        \item Show the Eckart–Young–Mirsky Theorem for Spectral norm: given any rank-$r$ matrix $B$ with $r < m$,
+        \begin{equation*}
+            \norm{X-B} \geq \sigma_{r+1}(X).
+        \end{equation*}
+
+        \item Show Weyl's inequality for singular values: for all $1 \leq i, j \leq m$ satisfying $i+j-1 \leq m$ we have
+        \begin{equation*}
+            \sigma_{i+j-1}(X+Y) \leq \sigma_i(X) + \sigma_j(Y).
+        \end{equation*}
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Inner product between matrices]\label{prob:matrix_inner_product}
+    For any two matrices $A, B \in \R^{n \times n}$, consider the map
+    \begin{equation*}
+        \bran{A, B} \coloneqq \trace\brap{A B^\top}.
+    \end{equation*}
+    \begin{enumerate}[(a)]
+        \item Prove that $\bran{\cdot, \cdot}$ is an inner product on the space of $n \times n$ matrices.
+
+        \item Show that $\norm{A}_F^2 = \bran{A, A}$.
+
+        \item Deduce the \textit{matrix Cauchy-Schwarz inequality}: $\bran{A, B} \leq \norm{A}_F \norm{B}_F$.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Rotation minimization]\label{prob:rotation_min}
+    Let $A, B \in \R^{m\times n}$ be two arbitrary matrices. Find the solution, in terms of $A$ and $B$, or their SVD decompositions, of the following optimization problem:
+    \begin{equation*}
+        \argmin_{\Omega \in O(m)} \norm{\Omega A-B}_{F}.
+    \end{equation*}
+    Here $O(m)$ denotes the set of all $m\times m$ orthogonal matrices.
+\end{myexercise}
+
+\begin{myexercise}[\level\sep Polar decomposition]\label{prob:polar_decomposition}
+    Let $A \in \R^{n\times n}$. Prove that there exists a positive semi-definite matrix $P$ and an orthogonal matrix $Q$ such that $A = PQ$.
+\end{myexercise}
+
+\begin{myexercise}[\level\level\sep Power method]\label{prob:power_method}
+    Let $A \in \R^{n\times n}$ be a symmetric positive semi-definite matrix with eigenvalues $\lambda_1 \geq \ldots \geq \lambda_n \geq 0$ and associated eigenvectors $v_1, \ldots, v_n \in \R^n$ (that form an orthonormal basis). In this exercise, the goal is to show that the power method converges exponentially fast.
+    
+    \begin{enumerate}[(a)]
+        \item Let $y_0 \in \R^n$ be an initial vector that satisfies $A y_0 \neq 0$. Define the power method iteration for $k \geq 0$: 
+        \begin{equation*}
+            y_{k+1} = \frac{A y_k}{\norm{A y_k}}.
+        \end{equation*}
+        Prove that these iterations are well-definied, i.e. that $\norm{A y_k} \neq 0$ for any $k \geq 1$.
+        
+        \item Define the Rayleigh quotient as $\xi_k = y_k^\top A y_k$ and its relative error by 
+        \begin{equation*}
+            \err(\xi_k) = \frac{ \lambda_1 - \xi_k}{\lambda_1}.
+        \end{equation*}
+        If $A$ is diagonal, i.e., $A = \diag(\lambda_1, \dots, \lambda_n)$ and $\lambda_1 = 1$, show that we can represent the error as
+        \begin{equation*}
+            \err(\xi_k) = \frac{\sum_{i=2}^n w_i^2 \lambda_i^{2k} (1 - \lambda_i)}{w_1^2 + \sum_{i=2}^n w_i^2 \lambda_i^{2k}},
+        \end{equation*}
+        where $w_i = \bran{y_0, v_i}$ for all $i \in [n]$.
+
+        \item If $A$ is diagonal with $1 = \lambda_1 > \lambda_2 > \lambda_3$, and we start from $y_0$ such that $w_1 \neq 0$ and $w_2 \neq 0$, show that
+        \begin{equation*}
+            \frac{\err(\xi_{k+1})}{\err(\xi_k)} \to \brap{\frac{\lambda_2}{\lambda_1}}^{2} \quad \text{as $k\to \infty$}.
+        \end{equation*}
+        
+        \item Generalize the result in (c) for an arbitrary matrix (not necessarily diagonal) having $\lambda_1 > \lambda_2 > \lambda_3$.
+    \end{enumerate}
+\end{myexercise}
+
+\begin{myexercise}\label{ex:mse_unbiased}
+This exercise relates to Theorem~\ref{th:mle}. Show that
+an unbiased estimator of $\sigma^2$ is given by
+$\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n-p}\|y - X\hat{\beta}_{\text{LS}}\|^2$.
+\end{myexercise}
+
+
+\begin{myexercise}[\level\level\sep Moore-Penrose Pseudoinverse]\label{prob:pseudoinverse}
+    \begin{enumerate}[(a)]
+        \item Let $\Sigma$ be an $n\times m$ rectangular diagonal matrix ($\Sigma_{ij}=0$ for $i\neq j$) with non-negative entries. Find an $m\times n$ rectangular diagonal matrix $\Sigma^+$ that is a pseudoinverse of $\Sigma$.
+        
+        \item Given a general $n \times m$ matrix $A$, consider the singular value decomposition of $A = U\Sigma V^\top  $ with $U$ and $V$ being orthogonal matrices, and $\Sigma$ being (rectangular) diagonal. Prove that the matrix $A^+$, given by $A^{+} = V\Sigma^+U^\top  $, is a pseudoinverse of $A$.
+        
+        \item Prove that if $A$ is an invertible $n \times n$ matrix, then $A^{-1}$ is a pseudoinverse of $A$.
+        
+        \item Prove that if $A$ has full column rank (its columns are linearly independent) then its pseudoinverse is given by
+        \begin{equation*}
+            A^{+} = \brap{A^\top   A}^{-1} A^\top  .
+        \end{equation*}
+        
+        \item Prove that the pseudoinverse is unique.
+    \end{enumerate}
+\end{myexercise}
+
+
+
+\begin{myexercise}[\level\level\level\sep BBP for spiked Wigner model]\label{prob:spiked_wigner}
+    In this chapter we analyzed the BBP transition for the Wishart model, i.e., when we observe $Y = \frac{1}{n} XX^\top$, where $X$ is an $p \times n$ matrix with columns drawn independently from $\NN(0, I_p + \beta u u^\top)$. We will explore the similar type of phase transition for another model.
+    
+    Let $W$ be an $n \times n$ Wigner matrix, $v$ be a unit-norm vector in $\R^n$ and $\xi \geq 0$. We define the \textit{spiked Wigner model} as observing $Y = \frac{1}{\sqrt n} W + \xi v v^\top$, with the aim of recovering the \textit{signal} $v$.
+    This model exhibits the following phase transition (as $n \to \infty$) for
+    \begin{enumerate}
+        \item the largest eigenvalue $\lambda_{\max}$ of $Y$:
+        \begin{equation*}
+            \lambda_{\max} \rightarrow \begin{cases}
+                2 &\text{if } \xi \leq 1,\\
+                \xi+\frac{1}{\xi} &\text{if } \xi > 1;\\
+            \end{cases}
+        \end{equation*}
+        
+        \item the leading eigenvector $v_{\max}$ of $Y$:
+        \begin{equation*}
+            \abs{\bran{v_{\max}, v}}^2 \rightarrow \begin{cases}
+                0 &\text{if } \xi \leq 1,\\
+                1-\frac{1}{\xi^2} &\text{if } \xi > 1.\\
+            \end{cases}
+        \end{equation*}
+    \end{enumerate}
+    
+    To measure the quality of the recovery procedure we define the \textit{mean squared error} of an estimate $w \in \R^n$ as
+    \begin{equation*}
+        \mse(w) =  \E\bras{\norm{w w^\top - v v^\top}^2}.
+    \end{equation*}
+    
+    Find the asymptotic behavior of the mean squared error for the PCA estimator, i.e., the value of
+    \begin{equation*}
+        \lim_{n\to \infty} \mse(v_{\max})
+    \end{equation*}
+    as a function of $\xi$. 
+\end{myexercise}
+\begin{remark}
+    The mean square error defined as above might appear unnatural for this problem since one can measure the difference between two vectors using $\ell_2$ norm (up to a sign). However, this type of MSE definition can be more useful when the perturbation is not rank-one and non-symmetric (e.g., in low-rank matrix estimation problems). Additionally, it addresses the issue of sign invariance in the model, where the observation remains the same whether the signal is $v$ or $-v$, and therefore,  we can recover the vector only up to a sign.
+\end{remark}
+
+
+
+\begin{myexercise}
+This exercise is about PCA. We use the classical iris data set as an example (see \verb|https://en.wikipedia.org/wiki/Iris_flower_data_set|
+for an explanation of that dataset). You can download a subset of the iris dataset from the UCI Machine Learning Repository).
+
+The dataset contains fifty flowers and for each flower there are four measurements: sepal length, sepal width, petal length and petal width.
+We want to understand via PCA
+how these four measurements are related to each other. Are they essentially independent of each other or are some of them (weakly or strongly) correlated?
+
+\noindent
+(a) Assume you loaded the iris data in Matlab into a data matrix $X$ of size $4 \times 50$. You can examine the structure of the data using plotmatrix: \\
+\verb| [~,ax]=plotmatrix(X');|  \\
+\verb| ax(1,1).YLabel.String='Sepal L';| \\
+\verb| ax(2,1).YLabel.String='Sepal W';| \\
+\verb| ax(3,1).YLabel.String='Petal L';|\\
+\verb| ax(4,1).YLabel.String='Petal W';|\\
+\verb| ax(4,1).XLabel.String='Sepal L';|\\
+\verb| ax(4,2).XLabel.String='Sepal W';|\\
+\verb| ax(4,3).XLabel.String='Petal L';|\\
+\verb| ax(4,4).XLabel.String='Petal W';|\\
+
+Which measurements are related and which ones are not-related? Compare your findings based on this visual inspection with your findings based on computing the variance and covariance of the data.
+
+\noindent
+(b) Next carry out a principal component analysis by projecting the data onto the eigenvectors of the (centered) covariance matrix of the data.
+How much of the variation in the data is captured by the individual components? 
+\end{myexercise}
+
+
+\begin{myexercise}
+\textbf{(PCA for Dimensionality Reduction).} In this exercise we work with the MNIST dataset.\\
+(a) Standardize the data.\\
+(b) Apply PCA and retain enough components to explain 95\% variance.\\
+(c) Visualize the first two principal components for a sample of images.
+\end{myexercise}
+
+\begin{myexercise}\textbf{(Image Compression with Truncated SVD).} A grayscale image is represented by a matrix $A \in \R^{m \times n}$. Take a gray-scale image of your choice (not too small, at least of size $256\times 256$). \\
+(a) Compute the rank-$k$ approximation using the SVD
+for each $k=1,\dots,p$, where $p =\min(m,n)$.
+Measure the relative Frobenius error and plot the reconstruction error as a function of $k$. For which range of $k$ do you see no visual distortion of the compressed image?
+\end{myexercise}    
