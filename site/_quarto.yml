@@ -14,7 +14,6 @@ book:
     - Afonso S. Bandeira
     - Amit Singer
     - Thomas Strohmer
-  date: last-modified
   search: true
   page-navigation: true
   chapters:
@@ -53,9 +52,10 @@ bibliography: references.bib
 
 format:
   html:
+    include-in-header: includes/mathjax.html
     theme:
-      light: [cosmo, styles/theme.scss]
-      dark: [darkly, styles/theme-dark.scss]
+      light: [styles/theme.scss, styles/theme-common.scss]
+      dark: [styles/theme-dark.scss, styles/theme-common.scss]
     css: styles/print.css
     toc: true
     toc-depth: 3

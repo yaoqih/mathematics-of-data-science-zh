@@ -1,20 +1,714 @@
 ---
 title: "测度集中与高斯分析"
-description: "高斯分部积分、插值、比较原理与 Gordon 定理"
-status: 待翻译
+description: "高斯分部积分、比较原理、Gordon 定理与测度集中"
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `probability-gaussiananalysis.tex`，尚待翻译。
-:::
+# 测度集中与高斯分析 {#c:probability-gaussiananalysis}
+
+本章将在第 [\[c:surprises\]](#c:surprises){reference-type="ref" reference="c:surprises"} 章的基础上大幅推进：我们会看到测度集中现象的更多典型表现，并以高斯分析为主线，建立一套贯穿全书的工具，其中包括著名的 Gordon 逃逸网格定理。本章的讲法主要受到两部优秀文献 [@vanHandel_LectureNotesProb_14; @Ramon-StFlour-2022] 的启发。
+
+*记号约定*：本章尽量用 $g$ 表示各向同性高斯向量，用 $X$、$Y$ 表示具有一般协方差结构的高斯向量。
 
 ## 高斯分部积分与 Wick 公式
 
-## 高斯插值、Poincaré 不等式与集中性
+我们先从高斯分析的基础讲起。第一个工具看似只是普通的分部积分，却是处理高斯随机变量时极为有力的恒等式：高斯分部积分。
 
-## 高斯比较原理
+::: lemma
+[]{#lemma:GIbP label="lemma:GIbP"} 设 $g$ 是由 $n$ 个独立同分布的 $\NNN(0,1)$ 随机变量组成的向量，即 $g\sim\NNN(0,I_{n\times n})$。若可微函数 $\psi:\RR^n\to\RR$ 至多按指数速度增长，[^1] 那么对任意 $i\in[n]$，都有
+$$\EE[g_i \psi(g)] = \EE\left[ \frac{\partial \psi}{\partial x_i}(g) \right].$$
+:::
 
-## Gordon 定理
+::: proof
+*证明.* 先考虑一元函数 $\phi$。普通的分部积分给出
+$$\begin{eqnarray*}
+\EE [ g_i \phi(g_i) ] & = & \int_{-\infty}^\infty x\phi(x) \frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}}dx \\
+& = & - \int_{-\infty}^\infty \phi(x) \frac{d}{dx}\left(\frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}}\right)dx  \\
+& = & \int_{-\infty}^\infty \frac{d}{dx} \phi(x) \frac{\exp\left(-\frac{x^2}{2}\right)}{\sqrt{2\pi}} dx = \EE \left[  \phi'(g_i) \right],
+\end{eqnarray*}$$
+这里仅需 $\phi$ 可微且至多按指数速度增长。现在令
+$\phi(x)=F(g_1,\dots,g_{i-1},x,g_{i+1},\dots,g_n)$，并对除 $g_i$ 外的其余分量作条件化，结论便立即得到。 ◻
+:::
 
-## 习题 {.unnumbered}
+这一恒等式很容易推广到非各向同性的高斯向量。为便于后续引用，我们将推广结果记为如下推论。
 
+::: corollary
+[]{#cor:GIbP label="cor:GIbP"} 设 $X$ 是协方差矩阵为 $\Sigma$ 的 $n$ 维中心高斯向量，即 $X\sim\NNN(0,\Sigma)$。若 $\varphi:\RR^n\to\RR$ 可微且至多按指数速度增长，则对任意 $j\in[n]$，
+$$\EE[X_j \varphi(X)] = \sum_{k=1}^n  \Sigma_{jk}  \EE\left[\frac{\partial \varphi}{\partial x_k}(X)\right].$$
+:::
+
+::: proof
+*证明.* 因为 $\Sigma\succeq0$，可将 $X$ 写成 $X=\Sigma^{\frac12}g$，其中 $g$ 的各分量独立且服从 $\NNN(0,1)$。定义 $\psi(g)=\varphi(\Sigma^{\frac12}g)$，再应用引理 [\[lemma:GIbP\]](#lemma:GIbP){reference-type="ref" reference="lemma:GIbP"}，得到
+$$\begin{eqnarray*}
+\EE[X_j \varphi(X)] & = & \EE\left[\left(\Sigma^{\frac12}g\right)_{j} \varphi(\Sigma^{\frac12}g)\right] = \EE\left[\left(\Sigma^{\frac12}g\right)_{j} \psi(g)\right] \\
+& = & \EE\left[ \left(\sum_{i=1}^n \Sigma^{\frac12}_{ji}g_i \right) \psi(g) \right]
+=
+ \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[ g_i   \psi(g) \right] \\
+ & = & 
+ \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[   \frac{\partial \psi}{\partial x_i}(g) \right] = \sum_{i=1}^n \Sigma^{\frac12}_{ji} \EE\left[ \sum_{k=1}^n \frac{\partial \varphi}{\partial x_k}(X) \Sigma^{\frac12}_{ki} \right] \\
+ & = & \sum_{k=1}^n \left( \sum_{i=1}^n \Sigma^{\frac12}_{ji} \Sigma^{\frac12}_{ki} \right) \EE\left[\frac{\partial \varphi}{\partial x_k}(X) \right] = \sum_{k=1}^n  \Sigma_{jk}  \EE\left[\frac{\partial \varphi}{\partial x_k}(X) \right],
+\end{eqnarray*}$$
+第三行第一个等号使用了引理 [\[lemma:GIbP\]](#lemma:GIbP){reference-type="ref" reference="lemma:GIbP"}；最后一个等号则来自矩阵乘法以及 $\Sigma^{\frac12}$ 的对称性。 ◻
+:::
+
+::: lemma
+[]{#lemma:gaussianmoments label="lemma:gaussianmoments"} 设 $g$ 是一维标准高斯随机变量，则
+$$\EE g^{2p} = (2p-1)!!,$$
+其中 $(2p-1)!!=(2p-1)(2p-3)\cdots3\cdot1$。此外，
+$$\left[\EE g^{2p}\right]^{\frac1{2p}} \leq \sqrt{2p}.$$
+:::
+
+::: proof
+*证明.* 这是高斯分部积分（引理 [\[lemma:GIbP\]](#lemma:GIbP){reference-type="ref" reference="lemma:GIbP"}）的直接应用。取 $\phi(g)=g^{2p-1}$，便有
+$\EE[g\cdot g^{2p-1}]=\EE[(2p-1)g^{2p-2}]$。反复使用这一递推关系，并结合 $\EE g^2=1$，即可得到 $\EE g^{2p}=(2p-1)!!$。由 $(2p-1)!!\leq(2p)^p$ 已能推出所需不等式，不过下面这个直接论证也很有启发性。
+
+由 $\EE[g^{2p}]=\EE[(2p-1)g^{2p-2}]$，再用 Jensen 不等式
+$\EE[g^{2p-2}]\leq\left(\EE[g^{2p}]\right)^{\frac{2p-2}{2p}}$，可得
+$$\EE[g^{2p}] \leq (2p-1) \left(\EE[g^{2p}]\right)^{\frac{2p-2}{2p}}.$$
+整理即得 $\left(\EE[g^{2p}]\right)^{1/p}\leq2p-1$。 ◻
+:::
+
+后面我们需要计算高斯随机矩阵的迹矩，这归根结底是在求高斯变量多项式的期望。原则上，对每个单项式逐次使用高斯分部积分，就能算出任意独立标准高斯变量多项式的期望，正如引理 [\[lemma:gaussianmoments\]](#lemma:gaussianmoments){reference-type="ref" reference="lemma:gaussianmoments"} 所示。然而，直接展开很快就会变得杂乱。Wick 公式[^2] 恰好为这类计算提供了一种清晰的组合组织方式。在陈述它之前，我们先定义配对划分。
+
+::: definition
+[]{#def:pairpartition label="def:pairpartition"} 给定正整数 $k$，以 $\PP_2[k]$ 表示将 $[k]$ 划分成若干二元子集的所有划分组成的集合。若 $k$ 为奇数，则 $\PP_2[k]$ 为空。再给定定义在 $[k]$ 上的函数 $u$ 和配对划分 $\nu\in\PP_2[k]$：若对每一对 $\{i,j\}\in\nu$ 都有 $u(i)=u(j)$，就称 $u$ 与 $\nu$ 相容，并记作 $u\sim\nu$。
+:::
+
+::: lemma
+[]{#lemma:Wicksformula label="lemma:Wicksformula"} 设 $g_1,\dots,g_n$ 是独立同分布的标准高斯随机变量，且 $u:[p]\to[n]$，则
+$$\EE[g_{u(1)}\cdots g_{u(p)}] = \sum_{\nu\in \PP_2[p]} 1_{u \sim \nu}.$$
+这里 $\PP_2[p]$ 是所有配对划分的集合，而 $u\sim\nu$ 表示函数 $u$ 与划分 $\nu$ 相容，参见定义 [\[def:pairpartition\]](#def:pairpartition){reference-type="ref" reference="def:pairpartition"}。
+:::
+
+::: proof
+*证明.* 当 $p$ 为奇数时，等式两边都为零，所以只需考虑 $p$ 为偶数的情形。我们对 $p$ 作归纳。$p=2$ 时结论显然成立。设 $p\geq4$ 为偶数，利用高斯分部积分可得
+$$\begin{eqnarray*}
+\EE[g_{u(1)}\cdot g_{u(2)} \cdots g_{u(p)}] & = & \EE\left[\frac{\partial}{\partial g_{u(1)}} g_{u(2)} \cdots g_{u(p)}\right] \\
+&=& \EE\left[\sum_{i=2}^p g_{u(2)} \cdots g_{u(i-1)} 1_{u(1)=u(i)} g_{u(i+1)}\cdots g_{u(p)}\right] \\
+&=&\sum_{i=2}^p 1_{u(1)=u(i)} \EE\left[ g_{u(2)} \cdots g_{u(i-1)} g_{u(i+1)}\cdots g_{u(p)}\right]. \\
+\end{eqnarray*}$$
+右侧每个期望都只含 $p-2$ 个因子，因此可以使用归纳假设：
+$$\begin{eqnarray*}
+\EE[g_{u(1)}\cdot g_{u(2)} \cdots g_{u(p)}]  & = & \sum_{i=2}^p 1_{u(1)=u(i)} \sum_{\nu'\in\PP_2([p]\setminus\{1,i\})} 1_{u_{|[p]\setminus\{1,i\}}\sim\nu'} \\
+& = & \sum_{i=2}^p \sum_{\nu'\in\PP_2([p]\setminus\{1,i\} )} 1_{u\sim(\nu'\cup\{1,i\}) } = \sum_{\nu\in \PP_2[p]} 1_{u \sim \nu},
+\end{eqnarray*}$$
+其中 $u_{|[p]\setminus\{1,i\}}$ 表示 $u$ 在集合 $[p]\setminus\{1,i\}$ 上的限制。上式的组合含义很直接：先选出与位置 $1$ 配对的位置 $i$，再对剩余位置作任意配对，这恰好无遗漏、无重复地枚举了 $\PP_2[p]$。 ◻
+:::
+
+## 高斯插值、Poincaré 不等式与集中现象
+
+本节从高斯分析中的一个经典工具开始：高斯插值。后文会多次借助它，在两个高斯模型之间连续过渡，并把分布之间的比较转化为对插值参数求导。
+
+::: lemma
+[]{#lemma:gaussianinterpolation label="lemma:gaussianinterpolation"} 设 $X$、$Y$ 是相互独立的 $n$ 维中心高斯向量，协方差矩阵分别为 $\Sigma^X$ 和 $\Sigma^Y$。对 $t\in[0,1]$ 定义
+$$\begin{equation}
+\label{eq:interpolationGI}
+Z_t = \sqrt{t}X + \sqrt{1-t}Y,
+\end{equation}$$
+并设 $f:\RR^n\to\RR$ 二次可微且至多按指数速度增长，则
+$$\begin{equation}
+\frac{d}{dt} \EE \left[ f(Z_t) \right] = \frac12 \sum_{i,j=1}^n \left( \Sigma^X_{ij} - \Sigma^Y_{ij} \right) \EE \left[ \frac{\partial^2 f}{\partial x_i\partial x_j}(Z_t)\right].
+\end{equation}$$
+:::
+
+在证明之前，先解释这个看似有些特殊的参数化。若 $X$ 与 $Y$ 同分布，则任意 $t$ 下的 $Z_t$ 仍与它们同分布；同时，这一选择使协方差沿线段线性变化：
+$\Cov(Z_t)=t\Cov(X)+(1-t)\Cov(Y)$。这里因为 $\EE X=0$，所以 $\Cov(X)=\EE XX^T$。
+
+::: proof
+*证明.* 核心是使用高斯分部积分，即推论 [\[cor:GIbP\]](#cor:GIbP){reference-type="ref" reference="cor:GIbP"}。由链式法则，并交换求导与取期望的次序，
+$$\begin{eqnarray}
+\frac{d}{dt} \EE \left[ f(Z_t) \right]& = &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac{d}{dt}(Z_t)_i\right] \nonumber \\ &= &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\left(\frac1{2\sqrt{t}}X_i-\frac1{2\sqrt{1-t}}Y_i\right)\right]  \\ &= &  \EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{t}}X_i\right]-\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{1-t}}Y_i\right].
+\end{eqnarray}$$
+
+对第一项，先关于 $Y$ 条件化，再对随机变量 $\sqrt tX$ 应用推论 [\[cor:GIbP\]](#cor:GIbP){reference-type="ref" reference="cor:GIbP"}，得到
+$$\begin{eqnarray*}
+\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(Z_t)\frac1{2\sqrt{t}}X_i\right] & = & \frac1{2t}\EE \left[ \sum_{i=1}^n\frac{\partial f}{\partial x_i}(\sqrt{t}X + \sqrt{1-t}Y)\sqrt{t}X_i\right] \\ & = & \frac1{2t} \sum_{j=1}^n \left( t\Sigma^{X}\right)_{ij} \EE \left[ \sum_{i=1}^n\frac{\partial^2 f}{\partial x_j \partial x_i }(\sqrt{t}X + \sqrt{1-t}Y)\right]\\ & = & \frac1{2} \sum_{i,j=1}^n \Sigma^{X}_{ij} \EE \left[ \frac{\partial^2 f}{\partial x_j \partial x_i }(Z_t)\right].
+\end{eqnarray*}$$
+第二项完全类似，只需将 $X,t,\Sigma^X$ 分别换成 $Y,1-t,\Sigma^Y$；两项相减即得结论。 ◻
+:::
+
+高斯插值在后文至少承担两项重要任务。第一，结合微积分基本定理，它能把 $\EE f(X)$ 与 $\EE f(Y)$ 的差写成一条插值路径上的导数积分；这正是第 [1.3](#sec:gaussiancomparisonineqs){reference-type="ref" reference="sec:gaussiancomparisonineqs"} 节各种高斯比较不等式背后的关键机制。第二，它能导出集中不等式。粗略地说，我们在包含两个完全相同副本的 $(X,X)$ 与包含两个独立副本的 $(X,X')$ 之间插值，从而定量刻画两个独立副本为何仍表现相近，这便产生了测度集中。下面的高斯协方差恒等式是这一思想的第一次出现；随后在高斯 Poincaré 不等式与高斯集中定理中还会再次看到它。
+
+::: lemma
+[]{#lemma:gaussiancovarianceidentity label="lemma:gaussiancovarianceidentity"} 设 $\phi,\psi:\RR^n\to\RR$ 可微且至多按指数速度增长，并令 $g$、$g'$ 是两个独立同分布的 $n$ 维 $\NNN(0,I)$ 向量。定义
+$$\begin{equation}
+\label{eq:interpolationCI}
+g_{(t)} = tg + \sqrt{1-t^2}g'.
+\end{equation}$$
+则
+$$\cov(\phi(g),\psi(g)) = \int_{0}^1 \EE \langle \nabla\phi(g),\nabla\psi(g_{(t)}) \rangle dt.$$
+:::
+
+先说明式 [\[eq:interpolationCI\]](#eq:interpolationCI){reference-type="eqref" reference="eq:interpolationCI"} 与式 [\[eq:interpolationGI\]](#eq:interpolationGI){reference-type="eqref" reference="eq:interpolationGI"} 中两种插值的关系。后一种插值连接两个随机向量的分布，并以协方差的线性组合为参数；协方差恒等式中的插值则连接一个随机向量与它的独立同分布副本，其参数恰好是 $g$ 与 $g_{(t)}$ 之间的协方差。如下述证明所示，可以仍用 $Z_t=\sqrt tX+\sqrt{1-t}Y$ 来研究式 [\[eq:interpolationCI\]](#eq:interpolationCI){reference-type="eqref" reference="eq:interpolationCI"}，只需令 $X$、$Y$ 为两个 $2n$ 维高斯随机向量，协方差分别满足
+$$\begin{equation}
+\label{eq:2diffinterpolations}
+X \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & 0_{n\times n} \\  0_{n\times n} & I_{n\times n} \end{array}\right]\right) \text{ and } Y \sim \NNN\left( 0, \left[\begin{array}{cc} I_{n\times n} & I_{n\times n} \\  I_{n\times n} & I_{n\times n} \end{array}\right]\right),
+\end{equation}$$
+这是因为对每个 $t\in[0,1]$，$Z_t$ 与 $\left[\begin{array}{c}g\\g_{(t)}\end{array}\right]$ 具有相同的概率分布。
+
+::: proof
+*证明.* 定义 $\ell(t)=\EE[\phi(g)\psi(g_{(t)})]$。由于
+$$\ell(0)=\left(\EE\phi(g)\right)\left(\EE\psi(g)\right)
+\quad\text{且}\quad
+\ell(1)=\EE[\phi(g)\psi(g)],$$
+所以
+$$\cov(\phi(g),\psi(g))=\ell(1)-\ell(0)=\int_0^1\ell'(t)dt.$$
+接下来用引理 [\[lemma:gaussianinterpolation\]](#lemma:gaussianinterpolation){reference-type="ref" reference="lemma:gaussianinterpolation"} 计算 $\ell'(t)$。采用上面的构造：令 $Z_t=\sqrt tX+\sqrt{1-t}Y$，其中独立高斯向量 $X,Y$ 的分布由式 [\[eq:2diffinterpolations\]](#eq:2diffinterpolations){reference-type="eqref" reference="eq:2diffinterpolations"} 给出。对每个 $t\in[0,1]$，$Z_t$ 与 $\left[\begin{array}{c}g\\g_{(t)}\end{array}\right]$ 同分布。因此，若定义 $f:\RR^{2n}\to\RR$ 为
+$$f\left(\left[\begin{array}{c}y\\z\end{array}\right]\right)=\phi(y)\psi(z),\qquad y,z\in\RR^n,$$
+则 $f(Z_t)$ 与 $\phi(g)\psi(g_{(t)})$ 同分布，从而 $\ell(t)=\EE[f(Z_t)]$。
+
+余下只需直接应用引理 [\[lemma:gaussianinterpolation\]](#lemma:gaussianinterpolation){reference-type="ref" reference="lemma:gaussianinterpolation"}：
+$$\begin{eqnarray*}
+\ell'(t) & = &  \frac{d}{dt}\EE \left[ f(Z_t) \right] =  \frac12 \sum_{a,b=1}^{2n} \left( \Sigma^{Z_1}_{ab} - \Sigma^{Z_0}_{ab} \right) \EE \left[ \frac{\partial^2 f}{\partial x_a\partial x_b}(Z_t)\right] \\
+& = &\frac12 \left(2\sum_{i=1}^n \EE \frac{\partial}{\partial x_i}\phi(g) \frac{\partial}{\partial x_i}\psi(g_{(t)}) \right) \\
+& = & \EE \langle \nabla\phi(g),\nabla\psi(g_{(t)}) \rangle.
+\end{eqnarray*}$$ ◻
+:::
+
+这个恒等式有一个优美而著名的推论：高斯 Poincaré 不等式。它用函数的梯度控制高斯向量函数的方差，因而给出一种测度集中。直观地说：“若 $f$ 的梯度很小，那么 $f(X)$ 的方差也很小。”
+
+::: proposition
+[]{#prop:GaussianPoincare label="prop:GaussianPoincare"} 设 $f:\RR^n\to\RR$ 可微且至多按指数速度增长，并令 $g\sim\NNN(0,I_{n\times n})$，则
+$$\Var\left( f(g) \right) \leq \EE \| \nabla f(g)\|^2.$$
+:::
+
+通过标准的光滑逼近论证，这个不等式以及本章的其他类似结果都可以直接推广到 Lipschitz 函数。
+
+::: proof
+*证明.* 由高斯协方差恒等式，即引理 [\[lemma:gaussiancovarianceidentity\]](#lemma:gaussiancovarianceidentity){reference-type="ref" reference="lemma:gaussiancovarianceidentity"}，
+$$\begin{eqnarray*}
+\Var\left( f(g) \right) = \cov(f(g),f(g)) &=& \int_{0}^1 \EE \langle \nabla f(g),\nabla f(g_{(t)}) \rangle dt \\
+& \leq  & \int_{0}^1 \left(\EE\|\nabla f(g)\|^2\right)^{\frac12}\left(\EE\|\nabla f(g_{(t)})\|^2\right)^{\frac12}  dt \\
+& = & \int_{0}^1 \EE\|\nabla f(g)\|^2dt = \EE\|\nabla f(g)\|^2,
+\end{eqnarray*}$$
+其中不等式先后对内积和期望使用了 Cauchy--Schwarz 不等式；倒数第二个等号则利用了 $g\sim g_{(t)}$。 ◻
+:::
+
+下面证明测度集中理论中最重要的结果之一：高斯集中。虽然它只针对高斯随机变量，却会在全书中反复发挥作用。与上面的 Poincaré 不等式一样，它表达了如下直觉：若 $F:\RR^n\to\RR$ 对输入扰动不敏感，那么当 $X\sim\NNN(0,I)$ 时，$F(X)$ 会紧密集中在其均值附近。更强的是，高斯集中直接给出高斯型尾界。
+
+::: theorem
+[]{#theorem:4:gaussianconcentration label="theorem:4:gaussianconcentration"} 设 $g\sim\NNN(0,I_{n\times n})$，即 $g$ 的各分量独立且服从标准高斯分布；设 $f:\RR^n\to\RR$ 是 $\sigma$-Lipschitz 函数，也就是说，对任意 $x,y\in\RR^n$ 都有 $|f(x)-f(y)|\leq\sigma\|x-y\|$。则对每个 $t\geq0$，
+$$\Prob\left\{ \left| f(g) - \EE f(g)\right| \geq t   \right\} \leq 2 \exp\left( -\frac{t^2}{2\sigma^2} \right).$$
+:::
+
+::: proof
+*证明.* 先假设 $f$ 光滑；一般的 Lipschitz 函数可由极限逼近得到。Lipschitz 条件限制了 $f$ 的增长速度，因此下文出现的积分都是良定义的。为简化记号，再假设 $\EE f(g)=0$；这不损失一般性，因为总可以把 $f(g)$ 换成 $\phi(g)=f(g)-\EE f(g)$。
+
+考虑矩母函数（参见式 [\[eq:MomentGeneratingFunction\]](#eq:MomentGeneratingFunction){reference-type="eqref" reference="eq:MomentGeneratingFunction"}）
+$$M_f(\lambda)=\EE\left[\exp\left(\lambda f(g)\right)\right].$$
+由于 $\EE f(g)=0$，有
+$$M_f'(\lambda)=\EE\left[f(g)\exp\left(\lambda f(g)\right)\right]
+=\cov\left(f(g),\exp\left(\lambda f(g)\right)\right).$$
+
+由高斯协方差恒等式（引理 [\[lemma:gaussiancovarianceidentity\]](#lemma:gaussiancovarianceidentity){reference-type="ref" reference="lemma:gaussiancovarianceidentity"}），
+$$\begin{eqnarray*}
+M_f'(\lambda) &=& \int_{0}^{1}\EE \langle \nabla f(g),\nabla \exp\left( \lambda f(g_{(t)}) \right) \rangle dt \\ &=& \int_{0}^{1}\EE \left[ \langle \nabla f(g),\nabla f(g_{(t)}) \rangle \lambda   \exp\left( \lambda f(g_{(t)}) \right) \right] dt.
+\end{eqnarray*}$$
+Lipschitz 条件意味着
+$|\langle\nabla f(g),\nabla f(g_{(t)})\rangle|\leq\sigma^2$。再结合 $M_f(\lambda)\geq0$，得到
+$$\left|M_f'(\lambda)\right|
+\leq\int_0^1\sigma^2\EE\left|\lambda\exp\left(\lambda f(g_{(t)})\right)\right|dt
+=\sigma^2|\lambda|M_f(\lambda).$$
+由于 $M_f(0)=1$，即 $\log M_f(0)=0$，并且
+$$\left|\frac{d}{d\lambda}\log M_f(\lambda)\right|\leq|\lambda|\sigma^2,$$
+从 $0$ 积分到 $\lambda$ 可得
+$$M_f(\lambda)\leq\exp\left(\frac{\lambda^2\sigma^2}{2}\right).$$
+最后使用标准的 Chernoff 技巧与 Markov 不等式，正如命题 [\[prop:gaussian\]](#prop:gaussian){reference-type="ref" reference="prop:gaussian"} 中所做的那样。严格地说，上式已经证明 $f(g)$ 是定义 [\[def:subgaussian\]](#def:subgaussian){reference-type="ref" reference="def:subgaussian"} 意义下的次高斯随机变量，再应用命题 [\[prop:subgaussian\]](#prop:subgaussian){reference-type="ref" reference="prop:subgaussian"} 即完成证明。 ◻
+:::
+
+这一不等式的一个较弱版本也可用直接方法证明，无需协方差恒等式。感兴趣的读者可参阅 [@Tao_topicsRMT] 的定理 2.1.12；原始论证由 Maurey 与 Pisier 给出。
+
+### Talagrand 集中不等式
+
+Talagrand 的一个杰出结果 [@Talagrand_concentration_1995] 将高斯集中推广到了有界随机变量，这就是 Talagrand 集中不等式。
+
+::: theorem
+设 $K>0$，且 $X_1,\dots,X_n$ 是相互独立的有界随机变量，对每个 $1\leq i\leq n$ 都有 $|X_i|\leq K$。若 $F:\RR^n\to\RR$ 是凸的 $\sigma$-Lipschitz 函数，则对任意 $t\geq0$，
+$$\Prob\left\{ \left|F(X) - \EE\left[F(X)\right] \right| \geq t K\right\} \leq c_1 \exp\left( -c_2 \frac{t^2}{\sigma^2} \right),$$
+其中 $c_1,c_2$ 是正常数。
+:::
+
+更多带有显式常数的同类实用不等式可见 [@Massart_constants]。
+
+## 高斯比较原理 {#sec:gaussiancomparisonineqs}
+
+本节从著名的 Slepian 比较引理开始。它也称为 Sudakov--Fernique 不等式，[^3] 是比较高斯过程的核心工具。所谓高斯过程，是由某个集合 $T$ 索引的一族高斯随机变量 $\{X_t\}_{t\in T}$；若 $T$ 有限，它不过是一个高斯向量。对给定的高斯过程，我们尤其关心
+$\EE[\sup_{t\in T}X_t]$。
+
+我们只考虑其上确界可由有限子集上的最大值逼近的高斯过程，即满足
+$$\begin{equation}
+\label{eq:separablegaussianprocess}
+    \EE\left[\sup_{t\in T}X_t\right] = \sup_{\substack{T' \subseteq T \\ |T'| < \infty}} \EE\left[\max_{t\in T'}X_t\right].
+\end{equation}$$
+
+为不偏离主线，我们不深入讨论高斯过程的正则性与可测性。满足式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"} 的标准对象是所谓的*可分高斯过程*；严格定义可见 [@vanHandel_LectureNotesProb_14] 的定义 5.22。大意是：索引集存在一个可数子集 $T_0$，使任意 $t\in T$ 对应的 $X_t$ 都可由 $s\in T_0$ 且 $s\to t$ 时的 $X_s$ 逼近。本书涉及的过程要么索引集有限，因而显然可分；要么定义在可分集合 $T$ 上，并关于过程度量
+$d(t,u)=\sqrt{\EE(X_t-X_u)^2}$ 具有连续样本路径，这同样保证式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"} 成立。在多数应用里，可以把其中的有限逼近子集直接理解为 $T$ 的 $\epsilon$-网。
+
+我们主要比较两个不同的高斯过程，通常一个是目标过程，另一个则更容易分析。直觉上，若中心高斯过程 $X_t,Y_t$ 在每个索引处方差相同，那么相关性较弱的那个过程应有更大的最大值。可以对比两个极端：向量各分量独立时的最大分量，与所有分量始终等于同一个高斯变量时的最大分量。定理 [\[thm:Slepian_SF_ineq\]](#thm:Slepian_SF_ineq){reference-type="ref" reference="thm:Slepian_SF_ineq"} 将这一直觉精确化，并允许两个过程具有不同方差。[^4]
+
+::: theorem
+[]{#thm:Slepian_SF_ineq label="thm:Slepian_SF_ineq"}
+
+设 $\{X_u\}_{u\in U}$ 与 $\{Y_u\}_{u\in U}$ 是由同一个紧集 $U$ 索引、几乎处处有界的可分中心高斯过程，并满足式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"}。若对任意 $u,v\in U$ 都有
+$$\begin{equation}
+\EE\left[X_{u}-X_{v}\right]^2 \leq  \EE\left[Y_{u}-Y_{v}\right]^2,
+\end{equation}$$
+则
+$$\EE\left[\max_{u\in U}X_u\right] \leq \EE\left[\max_{u\in U}Y_u\right].$$
+:::
+
+::: proof
+*证明.* 因为 $X$、$Y$ 都是可分过程，只需在索引集的每个有限子集上证明该不等式，便可由式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"} 归约到 $U$ 有限的情形。
+
+证明的关键，是把高斯插值（引理 [\[lemma:gaussianinterpolation\]](#lemma:gaussianinterpolation){reference-type="ref" reference="lemma:gaussianinterpolation"}）用于最大值的光滑近似。令
+$$Z(t) = \sqrt{t}X + \sqrt{1-t^2}Y.$$
+对 $\beta>0$，定义 soft-max 函数
+$$F_\beta(Z(t)) = \frac{1}{\beta} \log\left(\sum_{u\in U} e^{\beta Z_u(t)} \right).$$
+高斯插值给出
+$$\begin{eqnarray*}
+\frac{d}{dt}\EE F_\beta(Z(t)) &=&  \frac12 \sum_{u,v\in U}^n \left( \Sigma^X_{uv} - \Sigma^Y_{uv} \right) \EE \left[ \frac{\partial^2 F}{\partial x_u\partial x_v}(Z(t))\right].
+\end{eqnarray*}$$
+记
+$p_u(Z)=e^{\beta Z_u(t)}/\sum_{v\in U}e^{\beta Z_v(t)}$；为简洁起见，记号中省略 $Z(t)$ 的 $t$。于是
+$$\begin{eqnarray*}
+\frac{\partial F}{\partial x_u}(Z(t)) & = & \frac{1}{\beta}  \frac{\beta e^{\beta Z_u(t)} }{\sum_{v\in U} e^{\beta Z_v(t)}} = p_u(Z), \\ \frac{\partial^2 F}{\partial x_u\partial x_v}(Z(t)) & = & \delta_{uv} \frac{\beta e^{\beta Z_u(t)} }{\sum_{w\in U} e^{\beta Z_w(t)}} - e^{\beta Z_u(t)}\frac{\beta e^{\beta Z_v(t)}  }{\left(\sum_{w\in U} e^{\beta Z_w(t)}\right)^2} \\ & = & \beta\left( \delta_{uv}p_u(Z) - p_u(Z)p_v(Z)  \right).
+\end{eqnarray*}$$
+
+下面只需证明 $\frac{d}{dt}\EE F_\beta(Z(t))\leq0$。这将推出 $\EE F_\beta(X)\leq\EE F_\beta(Y)$。再注意
+$$\max_{u\in U}Z_u(t) \leq F_\beta(Z(t)) \leq \frac{\log n}{\beta} + \max_{u\in U}Z_u(t),$$
+令 $\beta\to\infty$，soft-max 就收敛到真正的最大值，从而得到定理结论。
+
+导数非正可由直接计算验证；这里要用到 $\sum_{u\in U}p_u(Z)=1$ 以及
+$\EE[X_u-X_v]^2=\Sigma^X_{uu}-2\Sigma^X_{uv}+\Sigma^X_{vv}$。事实上，
+$$\begin{eqnarray}
+\frac{d}{dt}\EE F_\beta(Z(t)) &=& \frac{\beta}{2}\sum_{u\in U} \left( \Sigma^X_{uu} - \Sigma^Y_{uu} \right)\left( p_u(Z) - p_u(Z)p_u(Z)  \right)
+ \\ & &  - \frac{\beta}{2}\sum_{u\neq v\in U} \left( \Sigma^X_{uv} - \Sigma^Y_{uv} \right) p_u(Z)p_v(Z),
+\end{eqnarray}$$
+
+and $$\begin{eqnarray*}
+0 & \geq & \frac12 \sum_{u\neq v\in U} \left( \EE\left[X_{u}-X_{v}\right]^2 - \EE\left[Y_{u}-Y_{v}\right]^2 \right) p_u(Z)p_v(Z) \\
+ & = & \frac12 \sum_{u\neq v\in U} \left( \Sigma^X_{uu} - 2\Sigma^X_{uv} + \Sigma^X_{vv} - \Sigma^Y_{uu} + 2\Sigma^Y_{uv} -\Sigma^Y_{vv} \right) p_u(Z)p_v(Z)  \\
+ & = &  \sum_{u\neq v\in U} \left( \Sigma^X_{uu} -  \Sigma^Y_{uu}\right) p_u(Z)p_v(Z) -   \sum_{u\neq v\in U} \left( \Sigma^X_{uv} -  \Sigma^Y_{uv}\right) p_u(Z)p_v(Z) \\ 
+ & = &  \sum_{u\in U} \left( \Sigma^X_{uu} -  \Sigma^Y_{uu}\right) p_u(Z)\left(\sum_{v\in U\setminus \{u\}}p_v(Z)\right) -   \sum_{u\neq v\in U} \left( \Sigma^X_{uv} -  \Sigma^Y_{uv}\right) p_u(Z)p_v(Z) \\
+ & = & \frac2{\beta}\frac{d}{dt}\EE F_\beta(Z(t)),
+\end{eqnarray*}$$
+最后一个等号使用了
+$\sum_{v\in U\setminus\{u\}}p_v(Z)=1-p_u(Z)$。因此导数确实非正，证明完成。 ◻
+:::
+
+后文还会用到 Gordon 给出的推广 [@Gordon_comparison_85; @Gordon_EscapeMesh]。这里略去证明；只要把上面的 soft-max 换成光滑的 min-max 近似，就能沿用相似论证。细节可参见 [@Gordon_EscapeMesh]，或 [@vanHandel_LectureNotesProb_14] 的习题 6.2。
+
+::: theorem
+[]{#Thm:SlepiansIneq_extension_Gordon label="Thm:SlepiansIneq_extension_Gordon"}\[见 [@Gordon_EscapeMesh] 的定理 A\] 设 $\{X_{t,u}\}_{(t,u)\in T\times U}$ 与 $\{Y_{t,u}\}_{(t,u)\in T\times U}$ 是由同一对紧集 $T,U$ 索引、几乎处处有界的可分中心高斯过程。[^5]
+
+若对任意 $t_1,t_2\in T$ 及 $u_1,u_2\in U$ 都有
+$$\begin{equation}
+\EE\left[X_{t_1,u_1}-X_{t_1,u_2}\right]^2 \leq  \EE\left[Y_{t_1,u_1}-Y_{t_1,u_2}\right]^2,
+\end{equation}$$
+并且当 $t_1\neq t_2$ 时，
+$$\begin{equation}
+\EE\left[X_{t_1,u_1}-X_{t_2,u_2}\right]^2 \geq  \EE\left[Y_{t_1,u_1}-Y_{t_2,u_2}\right]^2,
+\end{equation}$$
+则
+$$\EE\left[\min_{t\in T}\max_{u\in U}X_{t,u}\right] \leq \EE\left[\min_{t\in T}\max_{u\in U}Y_{t,u}\right].$$
+:::
+
+令 $|T|=1$，便立即得到定理 [\[thm:Slepian_SF_ineq\]](#thm:Slepian_SF_ineq){reference-type="ref" reference="thm:Slepian_SF_ineq"}。
+
+### Wigner 矩阵的谱范数
+
+在进入 Gordon 逃逸网格定理之前，我们先稍作停留，用一个例子展示本章工具的威力。
+
+设 $W\in\RR^{n\times n}$ 是标准高斯 Wigner 矩阵：它是对称矩阵，除对称性约束外各元素相互独立，非对角元方差为 $1$，对角元方差为 $2$，参见式 [\[eq:WignerSC\]](#eq:WignerSC){reference-type="eqref" reference="eq:WignerSC"}。$\lambda_{\max}(W)$ 由 $n(n+1)/2$ 个独立标准高斯变量决定，而且它关于这些变量是 $\sqrt2$-Lipschitz 的，因为
+$$\left|\lambda_{\max}(W^{(1)}) - \lambda_{\max}(W^{(2)})  \right| \leq \lambda_{\max}\left( W^{(1)} - W^{(2)} \right) \leq \left\| W^{(1)} - W^{(2)} \right\|_F.$$
+额外的 $\sqrt2$ 因子来自矩阵对称性以及对角元的方差 $2$。
+
+应用高斯集中定理 [\[theorem:4:gaussianconcentration\]](#theorem:4:gaussianconcentration){reference-type="ref" reference="theorem:4:gaussianconcentration"}，立即得到
+$$\Prob\left\{ \lambda_{\max}(W) \geq \EE \lambda_{\max}(W) + t  \right\} \leq 2\exp\left( -\frac{t^2}{4} \right).$$
+
+另一方面，利用 Slepian 不等式（定理 [\[thm:Slepian_SF_ineq\]](#thm:Slepian_SF_ineq){reference-type="ref" reference="thm:Slepian_SF_ineq"}）比较高斯过程 $X_u=u^TWu$ 与 $Y_u=\sqrt2g^Tu$，其中 $g\sim\NNN(0,I_{n\times n})$，可以证明
+$\EE\lambda_{\max}(W)\leq2\sqrt n$。这是一个很好的练习，留给读者。合并期望界与集中界，得到下面的命题。
+
+::: proposition
+[]{#proposition:4:WignerSpectralNormTail label="proposition:4:WignerSpectralNormTail"} 设 $W\in\RR^{n\times n}$ 是标准高斯 Wigner 矩阵，即一个对称高斯矩阵；除对称性约束外，各元素相互独立，非对角元方差为 $1$，对角元方差为 $2$。则
+$$\Prob\left\{ \lambda_{\max}(W) \geq 2\sqrt{n} + t  \right\} \leq 2\exp\left( -\frac{t^2}{4} \right).$$
+:::
+
+这个结果对 $\lambda_{\max}(W)$ 的波动给出了相当精确的控制。[^6] 例如取 $t=2\sqrt{\log n}$，便有
+$$\Prob\left\{ \lambda_{\max}(W) \geq 2\sqrt{n} + 2\sqrt{\log n}  \right\} \leq 2\exp\left( -\frac{4\log n}{4} \right) = \frac2n.$$
+这说明随机矩阵的谱范数或最大特征值可以达到怎样的集中程度。正如第 [\[c:probability-matrixconcentration\]](#c:probability-matrixconcentration){reference-type="ref" reference="c:probability-matrixconcentration"} 章将看到的，在许多问题里，真正困难的部分不是控制偏离均值的波动，而是先控制谱范数或最大特征值的期望。
+
+## Gordon 定理 {#s:gordon}
+
+第 [\[s:jl\]](#s:jl){reference-type="ref" reference="s:jl"} 节已经证明：若想在 $1\pm\eps$ 的误差内保持 $n$ 个点之间的距离，只需把它们随机投影到 $\Theta(\epsilon^{-2}\log n)$ 维。关键在于，随机投影能近似保持集合 $S$ 中每个向量的范数；当时的 $S$ 是这 $n$ 个点两两作差所得的集合。一般而言，要同时保持有限集合 $S$ 中所有向量的范数，投影到 $\Theta(\epsilon^{-2}\log|S|)$ 维便已足够。本节追问：如果 $S$ 具有特殊结构，能否进一步降低维数？究竟哪一种复杂度刻画了保持 $S$ 中向量范数所需的投影维数？Gordon 定理告诉我们，答案是 $S$ 的*高斯宽度*。
+
+::: definition
+[]{#def:gaussianwidth label="def:gaussianwidth"} 给定闭集 $S\subset\RR^p$，其*高斯宽度*定义为
+$$\omega(S)=\EE\max_{x\in S}[g_p^Tx],$$
+其中 $g_p\sim\NNN(0,I_{p\times p})$。
+:::
+
+与定理 [\[JL_random_0\]](#JL_random_0){reference-type="ref" reference="JL_random_0"} 的证明类似，我们只考虑由单位向量组成的集合，即 $S\subseteq\SSS^{p-1}$；因此闭集 $S$ 也是紧的。
+
+我们研究的不是严格意义上的随机正交投影，而是相近的随机线性映射 $G:\RR^p\to\RR^d$，其矩阵元素独立同分布且服从高斯分布。为此先记录一个有用的估计。
+
+::: proposition
+设 $g_d\sim\NNN(0,I_{d\times d})$，并定义
+$$a_d\defeq\EE\|g_d\|.$$
+则
+$\sqrt{d-1}\leq\sqrt{\frac{d}{d+1}}\sqrt d\leq a_d\leq\sqrt d$。
+:::
+
+对本书而言，较弱的界 $\sqrt{d-1}\leq a_d\leq\sqrt d$ 已经足够，而且它有一个十分优美的证明。[^7]
+
+::: proof
+*证明.* 上界由 Jensen 不等式立即得到：
+$$a_d^2=(\EE\|g_d\|)^2\leq\EE\|g_d\|^2=d.$$
+下界来自高斯 Poincaré 不等式（命题 [\[prop:GaussianPoincare\]](#prop:GaussianPoincare){reference-type="ref" reference="prop:GaussianPoincare"}）。取 $f(g_d)=\|g_d\|$；它是 Lipschitz 函数，因而几乎处处可微，可应用该命题。于是
+$$d-(\EE\|g\|)^2=\EE\|g\|^2-(\EE\|g\|)^2=\Var(f(g))
+\leq\EE\|\nabla f(g)\|^2=\EE\|g/\|g\|\|^2=1.$$
+整理即得 $a_d\geq\sqrt{d-1}$。 ◻
+:::
+
+现在可以陈述 Gordon 定理了。
+
+::: theorem
+[]{#GordonsTheorem label="GordonsTheorem"} 设 $G\in\RR^{d\times p}$ 的元素相互独立且服从 $\NNN(0,1)$，并设 $S\subset\SSS^{p-1}$ 是 $p$ 维单位球面上的闭集。则
+$$\begin{equation}
+\label{eq:gordon1}   
+\EE \max_{x\in S} \left\|\frac1{a_d}Gx\right\| \leq 1 + \frac{\omega(S)}{a_d},
+\end{equation}$$
+
+and $$\begin{equation}
+   \label{eq:gordon2}  
+\EE \min_{x\in S} \left\|\frac1{a_d}Gx\right\| \geq 1 - \frac{\omega(S)}{a_d},
+\end{equation}$$
+
+其中 $a_d=\EE\|g_d\|$，$\omega(S)$ 是 $S$ 的高斯宽度。回顾
+$\sqrt{\frac{d}{d+1}}\sqrt d\leq a_d\leq\sqrt d$。
+:::
+
+证明 Gordon 定理之前，先看它的直接推论。定理表明，$a_d^{-1}G$ 会在 $1\pm\omega(S)/a_d$ 的尺度内保持 $S$ 中向量的范数。利用高斯集中定理 [\[theorem:4:gaussianconcentration\]](#theorem:4:gaussianconcentration){reference-type="ref" reference="theorem:4:gaussianconcentration"}，可以把这一直觉变成高概率结论。
+
+注意函数 $F(G)=\max_{x\in S}\|Gx\|$ 是 1-Lipschitz 的。事实上，
+$$\begin{eqnarray*}
+\left| \max_{x_1\in S}\left\| G_1x_1\right\|  - \max_{x_2\in S}\left\| G_2x_2\right\| \right| & \leq & \max_{x\in S} \left| \left\| G_1x\right\|  - \left\| G_2x\right\| \right| \leq \max_{x\in S} \left\| \left( G_1 - G_2 \right)x\right\| \\
+& \leq & \left\|  G_1 - G_2\right\| \leq \left\|  G_1 - G_2\right\|_F.
+\end{eqnarray*}$$
+
+同理，$F(G)=\min_{x\in S}\|Gx\|$ 也是 1-Lipschitz 的。因此高斯集中给出
+$$\begin{equation}
+\label{eq:5:usingGaussianconcentration_1}
+\Prob\left\{ \max_{x\in S} \|Gx\| \geq a_d + \omega(S) + t  \right\} \leq \exp\left( -\frac{t^2}2 \right),
+\end{equation}$$ and $$\begin{equation}
+\label{eq:5:usingGaussianconcentration_2}
+\Prob\left\{ \min_{x\in S} \|Gx\| \leq a_d - \omega(S) - t  \right\} \leq \exp\left( -\frac{t^2}2 \right).
+\end{equation}$$
+
+于是得到下面的高概率形式。
+
+::: theorem
+[]{#thm:Gordon:afterGconcentration label="thm:Gordon:afterGconcentration"} 设 $G\in\RR^{d\times p}$ 的元素相互独立且服从 $\NNN(0,1)$，$S\subset\SSS^{p-1}$ 是 $p$ 维单位球面上的闭集。若 $\eps>\omega(S)/a_d$，则以至少
+$1-2\exp\left[-\frac{a_d^2}{2}\left(\eps-\frac{\omega(S)}{a_d}\right)^2\right]$
+的概率，对所有 $x\in S$ 同时有
+$$(1-\eps)\|x\| \leq \left\| \frac1{a_d} Gx  \right\| \leq (1+\eps)\|x\|.$$
+
+并且 $d\frac{d}{d+1}\leq a_d^2\leq d$。
+:::
+
+::: proof
+*证明.* 在式 [\[eq:5:usingGaussianconcentration_1\]](#eq:5:usingGaussianconcentration_1){reference-type="eqref" reference="eq:5:usingGaussianconcentration_1"} 与 [\[eq:5:usingGaussianconcentration_2\]](#eq:5:usingGaussianconcentration_2){reference-type="eqref" reference="eq:5:usingGaussianconcentration_2"} 中取 $\eps=(\omega(S)+t)/a_d$ 即得。 ◻
+:::
+
+::: remark
+简单应用并合界[^8]可得 $\omega(S)\lesssim\sqrt{2\log|S|}$。因此只要 $d$ 与 $\log|S|$ 同阶，$a_d^{-1}G$ 就具有 Johnson--Lindenstrauss 性质。这说明定理 [\[thm:Gordon:afterGconcentration\]](#thm:Gordon:afterGconcentration){reference-type="ref" reference="thm:Gordon:afterGconcentration"} 几乎直接蕴含定理 [\[JL_random_0\]](#JL_random_0){reference-type="ref" reference="JL_random_0"}；唯一细微差别是 $a_d^{-1}G$ 并非正交投影。
+:::
+
+### Gordon 逃逸网格定理
+
+定理 [\[thm:Gordon:afterGconcentration\]](#thm:Gordon:afterGconcentration){reference-type="ref" reference="thm:Gordon:afterGconcentration"} 暗示：若 $\omega(S)\leq a_d$，从 $\RR^n$ 中均匀选取一个 $(n-d)$ 维随机子空间（可视为 $G$ 的零空间），它将以高概率避开 $S$。事实确实如此，这就是 Gordon 逃逸网格定理，见 Gordon 原论文 [@Gordon_EscapeMesh] 的推论 3.4；证明思路也可参考 [@Dustin_blog_gordon]。为完整起见，下面给出其陈述。
+
+::: theorem
+[]{#thm:GordonEscapeMesh label="thm:GordonEscapeMesh"} 设 $S\subset\SSS^{p-1}$ 是 $p$ 维单位球面上的闭集。若 $\omega(S)<a_d$，并从 Grassmann 流形上均匀抽取一个 $(p-d)$ 维子空间 $\Lambda$，则
+$$\Prob\left\{ \Lambda \cap S \neq \emptyset   \right\}  \leq \frac72 \exp \left( -\frac1{18} \left( a_d - \omega(S) \right)^2 \right).$$
+其中 $\omega(S)$ 是 $S$ 的高斯宽度，$a_d=\EE\|g_d\|$，且 $g_d\sim\NNN(0,I_{d\times d})$。
+:::
+
+### Gordon 定理的证明
+
+下面证明 Gordon 定理。
+
+::: proof
+*定理 [\[GordonsTheorem\]](#GordonsTheorem){reference-type="ref" reference="GordonsTheorem"} 的证明.* 设 $G\in\RR^{d\times p}$ 的元素独立同分布且服从 $\NNN(0,1)$。对 $v\in S\subset\SSS^{p-1}$ 与 $u\in\SSS^{d-1}$，取 $g\sim\NNN(0,I_{d\times d})$、$h\sim\NNN(0,I_{p\times p})$，并定义两个高斯过程
+$$A_{u,v}=g^Tu+h^Tv,qquad B_{u,v}=u^TGv.$$
+
+对任意 $v,v'\in S$ 及 $u,u'\in\SSS^{d-1}$，
+$$\begin{gather*}
+ \EE \left| A_{v,u} - A_{v',u'} \right|^2 - \EE \left| B_{v,u} - B_{v',u'} \right|^2  =  4 - 2\left(u^Tu' + v^Tv' \right) - \sum_{ij}\left( v_iu_j - v_i'u_j' \right)^2 \\
+  =  4 - 2\left(u^Tu' + v^Tv' \right) - \left[2-  2\left(v^Tv'\right) \left(u^Tu'\right)  \right] \\
+  =  2 - 2\left( u^Tu' + v^Tv' - u^Tu'v^Tv' \right) \\
+  =  2\left(1-u^Tu'\right)\left(1-v^Tv'\right).
+\end{gather*}$$
+因此该差非负；当 $v=v'$ 时差恰为零。于是可在定理 [\[Thm:SlepiansIneq_extension_Gordon\]](#Thm:SlepiansIneq_extension_Gordon){reference-type="ref" reference="Thm:SlepiansIneq_extension_Gordon"} 中取 $X=A,Y=B$。这些过程可由 $\epsilon$-网逼近，因而可分，参见式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"}。由此
+$$\EE \min_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \leq \EE \min_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}.$$
+又因为
+$$\EE \min_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}
+=\EE\min_{v\in S}\max_{u\in \SSS^{d-1}}u^TGv
+=\EE\min_{v\in S}\|Gv\|,$$
+并且
+$$\begin{align*}
+\EE \left[\min_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \right] & = \EE\max_{u\in \SSS^{d-1}}g^Tu +  \EE\min_{v\in S}h^Tv \\
+& =   \EE\max_{u\in \SSS^{d-1}}g^Tu -\EE\max_{v\in S}(-h^Tv) = a_d - \omega(S),
+\end{align*}$$
+便得到定理的第二个不等式。
+
+另一方面，由同一个增量方差比较，可在定理 [\[thm:Slepian_SF_ineq\]](#thm:Slepian_SF_ineq){reference-type="ref" reference="thm:Slepian_SF_ineq"} 中取 $X=B,Y=A$，得到
+$$\EE \max_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \geq \EE \max_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}.$$
+注意
+$$\EE \max_{v\in S}\max_{u\in \SSS^{d-1}} B_{v,u}
+=\EE\max_{v\in S}\max_{u\in \SSS^{d-1}}u^TGv
+=\EE\max_{v\in S}\|Gv\|,$$
+而
+$$\EE \left[\max_{v\in S}\max_{u\in \SSS^{d-1}} A_{v,u} \right]
+=\EE\max_{u\in \SSS^{d-1}}g^Tu+\EE\max_{v\in S}h^Tv
+=a_d+\omega(S).$$
+这就得到第一个不等式，定理得证。 ◻
+:::
+
+Gordon 定理一个引人注目的用途，是处理高度抽象的集合 $S$，例如所有“自然图像”组成的集合，或所有合理的“用户--商品”评分矩阵。它表明，仅仅进行随机投影式的测量，就可能足以保留数据集的几何结构，甚至允许仅凭投影重建原始数据。由此节省测量的现象，正是压缩感知、推荐系统算法以及许多其他数据处理技术的核心。受这些应用启发，后文将研究哪些投影能够保持稀疏向量与低秩矩阵的范数。压缩感知与低秩矩阵模型将分别在第 [\[c:cs\]](#c:cs){reference-type="ref" reference="c:cs"} 章和第 [\[c:lowrank\]](#c:lowrank){reference-type="ref" reference="c:lowrank"} 章详细讨论。
+
+::: remark
+[]{#remark:Ornstein-Uhlenbeck label="remark:Ornstein-Uhlenbeck"} 高斯分析还有一条本书未展开的重要支线：Markov 半群理论，尤其是 Ornstein--Uhlenbeck 过程。事实上，从这一角度证明 Poincaré 不等式或许最为自然；它与第 [\[sec:MarkovChains\]](#sec:MarkovChains){reference-type="ref" reference="sec:MarkovChains"} 节的内容密切相关，还能导出对数 Sobolev 不等式与超收缩不等式。关于这些思想的优秀入门讲解，可参阅 [@vanHandel_LectureNotesProb_14] 第 2 章。
+:::
+
+::: remark
+[]{#remark:HermitePolynomials label="remark:HermitePolynomials"} 本书还略去了高斯分析的另一组核心思想：Hermite 多项式理论。Hermite 多项式构成高斯测度下的一组正交多项式基，相当于高斯空间中的 Fourier 分析。把 $f\in L^2(\NNN(0,1))$ 或 $L^2(\NNN(0,I))$ 展开为 Hermite 多项式级数，是一个经典方法，通常称为 Wiener 混沌展开。由于高斯分部积分（引理 [\[lemma:GIbP\]](#lemma:GIbP){reference-type="ref" reference="lemma:GIbP"}），对函数求梯度只会对展开系数施加简单变换；这甚至给出了 Poincaré 不等式的一个极简证明，不妨一试。[^9] Hermite 多项式也是备注 [\[remark:Ornstein-Uhlenbeck\]](#remark:Ornstein-Uhlenbeck){reference-type="ref" reference="remark:Ornstein-Uhlenbeck"} 所述 Ornstein--Uhlenbeck 算子的特征函数。更多内容以及优美的正交多项式理论，可参阅经典文献 [@Szego1975OrthogonalPolynomials]。
+:::
+
+## 习题 {#exercises .unnumbered}
+
+::: myexercise
+[]{#prob:gaussian_moments label="prob:gaussian_moments"} 设 $Z$ 为标准高斯随机变量。回顾高斯分部积分：若可微函数 $f:\R\to\R$ 的导数关于标准正态测度绝对可积，则
+$$\begin{equation*}
+        \E\bras{Zf(Z)} = \E\bras{f'(Z)}.
+\end{equation*}$$
+设 $p\geq1$ 为整数，证明
+$$\begin{equation*}
+        \E\bras{Z^p} = \begin{cases}
+            (p-1)!! &\text{if } p \text{ is even};\\
+            0 &\text{if } p \text{ is odd}.
+        \end{cases}
+\end{equation*}$$
+其中 $!!$ 表示双阶乘：对奇自然数 $n$，$n!!=n(n-2)\cdots3\cdot1$。（当 $p$ 为偶数时，$p$ 个元素恰有 $(p-1)!!$ 种配对方式；这绝非巧合。）
+:::
+
+::: myexercise
+[]{#prob:maximum_gaussians label="prob:maximum_gaussians"} 设 $g_1,\ldots,g_d$ 是一组均值为零、方差为 $\sigma^2$ 的高斯随机变量，它们不必相互独立。
+
+(a) 证明
+$$\begin{equation*}
+                \mathbb{E}\max_{i=1,\ldots,d}g_i \le \sigma \sqrt{2\log d}.
+    \end{equation*}$$
+*（若无法得到根号内的最优常数 $2$，可将其换成某个绝对常数 $C>0$。）*
+
+(b) 若进一步假设这些高斯变量相互独立，证明 (a) 的界在绝对常数意义下是紧的，即存在普适常数 $c>0$ 使
+$$\begin{equation*}
+                \mathbb{E}\max_{i=1,\ldots,d}g_i \geq c\, \sigma \sqrt{\log d}.
+    \end{equation*}$$
+
+(c) 说明去掉 $g_1,\ldots,g_d$ 的独立性假设后，(b) 的结论不再成立。
+:::
+
+::: myexercise
+[]{#prob:slepian_lemma label="prob:slepian_lemma"} 设 $W$ 是 $d\times d$ 高斯 Wigner 矩阵。
+
+(a) 证明
+$$\begin{equation*}
+                \mathbb{E}\sup_{v\in S^{d-1}}\langle g,v\rangle = \mathbb{E}\|g\|_2 \le \sqrt{d},
+    \end{equation*}$$
+其中 $g\in\mathbb R^d$ 是标准高斯随机向量。
+
+(b) 应用 Slepian 引理证明
+$$\begin{equation*}
+                \mathbb{E}\lambda_{\max}(W) \le 2\sqrt{d}.
+    \end{equation*}$$
+
+(c) 证明上述上界在绝对常数意义下是紧的。
+:::
+
+::: hint
+对 (b)，考虑随机过程 $Y_v:=2\langle g,v\rangle$。对 (c)，先通过积分证明 $\E\norm g_2\leq c\sqrt d$。
+:::
+
+::: lemma
+若 $x\geq\frac12$，则
+$$\Gamma(x)=\int_0^\infty t^{x-1}e^{-t}\,dt\leq3x^x.$$
+:::
+
+:::: myexercise
+[]{#prob:subgaussian_moments label="prob:subgaussian_moments"} 设 $Y$ 是 $\sigma^2$-次高斯随机变量，即对所有 $t\geq0$，
+$$\Prob(\abs Y\geq\sigma t)\leq2e^{-t^2/2}.$$
+证明对任意 $p\geq1$，
+$$\E[\abs Y^p]^{1/p}\leq C\sigma\sqrt p,$$
+其中 $C>0$ 是普适常数。
+
+::: hint
+使用习题 [\[prob:integral_identity\]](#prob:integral_identity){reference-type="ref" reference="prob:integral_identity"}(a) 以及 Gamma 函数的界。
+:::
+::::
+
+::: theorem
+设 $g_1,\ldots,g_n$ 是独立同分布的标准高斯随机变量，$f:\mathbb R^n\to\mathbb R$ 关于 Euclidean 范数是 $L$-Lipschitz 的。则对所有 $t>0$，
+$$\begin{equation}
+\label{conc_gauss}
+    \mathbb{P}(|f(g_1,\ldots,g_n)-\mathbb{E}f(g_1,\ldots,g_n)|\ge L t)\le 2e^{-t^2/2}.
+\end{equation}$$
+:::
+
+::: myexercise
+[]{#prob:gaussprocessvariance label="prob:gaussprocessvariance"} 设 $g\in\R^d$ 是标准高斯随机向量，$v_1,\ldots,v_n\in\R^d$ 为固定向量，并定义 $f(g)=\sup_{1\leq i\leq n}\langle v_i,g\rangle$。本题要证明：在常数因子意义下，$f$ 的方差不超过被取上确界的那些随机变量中最大的方差。
+
+(a) 对任意 $x,y\in\R^d$，证明
+$\abs{f(x)-f(y)}\leq\sup_{1\leq i\leq n}\norm{v_i}_2\norm{x-y}_2$。
+
+(b) 利用尾积分与高斯集中证明
+$\Var(f(g))\leq4\sup_{1\leq i\leq n}\norm{v_i}_2^2$。
+:::
+
+::: myexercise
+[]{#prob:sudakovinequality label="prob:sudakovinequality"} 设 $g\in\R^d$ 是标准高斯随机向量，$I=\{v_1,\ldots,v_n\}\subseteq\R^d$ 是固定向量组成的有限集，并定义 $f(g)=\sup_{v\in I}\langle v,g\rangle$。本题说明装填数与高斯过程之间的联系。若集合 $S$ 中任意不同的 $v,w$ 都满足 $\norm{v-w}_2>\eps$，就称 $S$ 是 $\eps$-分离的。
+
+(a) 设 $\eps>0$，且 $I$ 含有一个 $\eps$-分离子集 $S$。结合习题 [\[prob:maximum_gaussians\]](#prob:maximum_gaussians){reference-type="ref" reference="prob:maximum_gaussians"}(b) 与 Slepian 引理，证明存在普适常数 $c>0$ 使
+$$\E[f(g)]\geq c\eps\sqrt{\log(\abs S)}.$$
+
+(b) 令 $\mathcal D(\eps)$ 为 $I$ 的 $\eps$-分离子集所能达到的最大基数。推出
+$$\E[f(g)]\geq c\sup_{\eps>0}\eps\sqrt{\log(\mathcal D(\eps))}.$$
+:::
+
+::: myexercise
+[]{#prob:absvaluessmalldifference label="prob:absvaluessmalldifference"} 设 $X$ 是实值随机变量。许多问题需要以最优首项常数估计 $\E|X|$，但技术上它往往比估计 $\E X$ 更困难。当 $X$ 的方差较小时，两者却能很好地相互控制；在适当条件下，随机变量最大值也有类似现象。
+
+(a) 证明
+$\abs{\E X}\leq\E\abs X\leq\abs{\E X}+\sqrt{\Var X}$。
+
+(b) 设 $Y_1,\ldots,Y_n$ 是一组不必独立同分布的实值随机变量，且每个 $Y_i$ 都与 $-Y_i$ 同分布。令 $Z=\max_{1\leq i\leq n}Y_i$。利用并合界与 Chebyshev 不等式证明
+$$\P\left(\max_{1\leq i\leq n}|Y_i|\geq\E Z+t\right)\leq\frac{2\Var Z}{t^2}.$$
+
+(c) 利用尾积分推出
+$$\E\left[\max_{1\leq i\leq n}|Y_i|\right]
+\leq\E Z+(1+\sqrt2)\sqrt{\Var Z}.$$
+:::
+
+::: theorem
+设 $f:\sqrt nS^{n-1}\to\mathbb R$ 是 $L$-Lipschitz 函数，$X$ 在球面 $\sqrt nS^{n-1}$ 上均匀分布。则对所有 $t>0$，
+$$\begin{equation}
+\label{conc_sphere}
+        \mathbb{P}(|f(X) - \mathbb{E}f(X)| \ge L t)\le 2e^{-ct^2}.
+\end{equation}$$
+其中 $c>0$ 是绝对常数。
+:::
+
+::: myexercise
+[]{#prob:lipschitz_concentration label="prob:lipschitz_concentration"}
+
+本题把球面上的 Lipschitz 集中推广为围绕 $L_p$ 范数的集中。具体而言，设 $p\geq1$，除满足式 [\[conc_sphere\]](#conc_sphere){reference-type="eqref" reference="conc_sphere"} 的假设外，再假定 $f$ 非负；我们要证明
+$$\begin{equation}
+\label{eq:lpsphereconc}
+    \mathbb{P}(|f(X) - \|f(X)\|_{L_p}| \ge L t)\le 2e^{-c_pt^2},
+\end{equation}$$
+其中 $c_p>0$ 只依赖于 $p$；对具有有限 $p$ 阶绝对矩的随机变量 $Z$，定义 $\|Z\|_{L_p}:=(\E|Z|^p)^{1/p}$。
+
+证明分为以下几步。
+
+(a) 设 $Y$ 是习题 [\[prob:subgaussian_moments\]](#prob:subgaussian_moments){reference-type="ref" reference="prob:subgaussian_moments"} 意义下的 $L^2$-次高斯随机变量。证明对任意 $A\geq0$，存在只依赖于 $A$ 的常数 $c_A>0$，使
+$$\Prob(\abs{Y-LA}\geq Lt)\leq2e^{-c_At^2}.$$
+
+(b) 证明对任意非负随机变量 $Z$，
+$$|\E Z-(\E Z^p)^{1/p}|\leq(\E\abs{Z-\E Z}^p)^{1/p}.$$
+可假设所有相关矩均存在。利用习题 [\[prob:subgaussian_moments\]](#prob:subgaussian_moments){reference-type="ref" reference="prob:subgaussian_moments"} 与式 [\[conc_sphere\]](#conc_sphere){reference-type="eqref" reference="conc_sphere"} 推出：存在普适常数 $C>0$，使
+$$|\E[f(X)]-\E[f(X)^p]^{1/p}|\leq CL\sqrt p.$$
+
+(c) 结合 (a)、(b) 与式 [\[conc_sphere\]](#conc_sphere){reference-type="eqref" reference="conc_sphere"}，完成不等式 [\[eq:lpsphereconc\]](#eq:lpsphereconc){reference-type="eqref" reference="eq:lpsphereconc"} 的证明。
+:::
+
+::: myexercise
+[]{#prob:poincaremgf label="prob:poincaremgf"} 设随机向量 $X\in\R^d$ 满足如下 Poincaré 不等式：对 $\R^d$ 上任意有界可微函数 $f$，
+$$\Var(f(X))\leq C_P\E[\norm{\nabla f(X)}_2^2].$$
+本题说明，在这种条件下，梯度较小的函数具有良好的矩母函数界。
+
+(a) 对任意有界可微函数 $g$，证明 $\nabla(e^{g(x)})=e^{g(x)}\nabla g(x)$。结合 Poincaré 不等式推出：若 $\norm{\nabla g(X)}_2^2\leq1$ 几乎处处成立，则对所有 $\lambda\geq0$，
+$$\E[e^{\lambda g(x)}]-\E[e^{\lambda g(x)/2}]^2
+\leq\frac{C_p\lambda^2}{4}\E[e^{\lambda g(x)}].$$
+
+(b) 进一步假设 $C_p\lambda^2/4<1/2$，且当 $n\to\infty$ 时 $\E[e^{\lambda g(x)/n}]^n$ 收敛到某个 $\alpha$。递归使用 (a)，证明存在普适常数 $K>0$ 使
+$$\E[e^{\lambda g(x)}]\leq e^K\alpha.$$
+可不加证明地使用：当 $0\leq x\leq1/2$ 时，$(1-x)^{-1}\leq e^{2x}$。
+
+(c) 证明对有界函数 $g$ 及任意 $\lambda$，
+$$\lim_{n\to\infty}\E[e^{\lambda g(x)/n}]^n
+=\alpha=e^{\lambda\E[g(x)]}.$$
+:::
+
+::: myexercise
+[]{#prob:duality_covering_numbers label="prob:duality_covering_numbers"} 下面在一个完全不同的语境中展示对偶原理。设 $T\subseteq\R^n$ 且 $\eps>0$。若对每个 $t\in T$ 都存在 $s\in S\subseteq T$ 使 $\norm{s-t}_2\leq\eps$，称 $S$ 为 $T$ 的 $\eps$-覆盖；若任意不同的 $s,s'\in S$ 都满足 $\norm{s-s'}_2>\eps$，称 $S$ 为 $\eps$-分离集。定义
+$$\mathcal{N}(T, \eps) \coloneqq \hspace{-3mm} \min_{\substack{S \subseteq T \\ S \text{ 是 } T \text{ 的 } \eps\text{-覆盖}}} \hspace{-8mm} \abs{S}  \qquad \qquad \mathcal{D}(T, \eps) \coloneqq \hspace{-3mm} \max_{\substack{S \subseteq T \\ S \text{ 是 } \eps\text{-分离集}}} \hspace{-5mm} \abs{S}.$$
+
+(a) 证明这两个优化问题具有如下对偶关系：
+$$\mathcal N(T,\eps)\leq\mathcal D(T,\eps)\leq\mathcal N(T,\eps/2).$$
+
+(b) 利用 (a) 证明：对 $d$ 维 Euclidean 单位球及任意 $0<\eps<1$，
+$$\left(\frac1\eps\right)^d\leq\mathcal N(\mathbb B_2^d,\eps)
+\leq\left(\frac3\eps\right)^d.$$
+:::
+
+::: myexercise
+[]{#prob:norm_gaussian_vector label="prob:norm_gaussian_vector"}
+
+给定标准高斯向量 $g\in\mathbb R^d$，Jensen 不等式立即给出 $\mathbb E\|g\|_2\leq\sqrt d$。本题利用高斯 Poincaré 不等式，简单证明这个界是渐近紧的。
+
+(a) 证明 $\|g\|_2$ 的方差不超过某个绝对常数。
+
+(b) 证明当 $d\to\infty$ 时，$\mathbb E\|g\|_2/\sqrt d\to1$。
+:::
+
+::: myexercise
+[]{#prob:gaussian_width_simplex label="prob:gaussian_width_simplex"} 集合 $S\subseteq\R^d$ 的高斯宽度定义为
+$$\omega(S):=\E\left[\sup_{s\in S}\langle s,g\rangle\right],$$
+其中 $g\in\R^d$ 是标准高斯向量，各坐标独立且服从 $\mathcal N(0,1)$。考虑 $(d-1)$ 维单纯形
+$$S_d:=\left\{x\in\R^d:0\leq x_i\leq1,\ \sum_{i=1}^d x_i=1\right\}.$$
+证明存在普适常数 $c,C>0$ 使
+$$c\sqrt{\log d}\leq\omega(S_d)\leq C\sqrt{\log d}.$$
+
+1.  对任意 $T\subseteq\R^d$，定义其凸包
+    $$\operatorname{conv}(T)=\left\{\sum_{i=1}^k x_it_i:k\in\mathbb N_{>0},\ x_i\in S_k,\ t_i\in T\right\}.$$
+    证明 $\omega(\operatorname{conv}(T))=\omega(T)$。
+
+2.  找到有限集 $T\subseteq\R^d$ 使 $S_d=\operatorname{conv}(T)$，再利用本节另一道习题的结果推出所需上下界。
+:::
+
+::: myexercise
+考虑如下量：\
+**定义（高斯复杂度）** *子集 $T\subseteq\R^n$ 的高斯复杂度定义为
+$$\gamma(T):=\E\left[\max_{x\in T}|\langle g,x\rangle|\right],$$
+其中 $g\sim\mathcal N(0,I_n)$。*
+
+高斯复杂度与集合 $T$ 的高斯宽度有何关系？$T$ 满足什么条件时二者相等？据此能对差集 $T-T$ 得出什么结论？再给出一个二者确实不同的例子。
+:::
+
+[^1]: 为避免偏离本书主线，我们不追求陈述最弱的正则性条件。这里所谓“可微且至多按指数速度增长”，还要求相应导数也至多按指数速度增长。熟悉函数空间的读者会看出，这与高斯测度上的 Sobolev 空间密切相关。
+
+[^2]: 在统计学与概率论中，Wick 公式也称为 Isserlis 定理 [@isserlis1918formula]，其历史可追溯至 1918 年。1950 年，Wick 在量子场论的语境下重新发现了这一公式 [@wick1950evaluation]。
+
+[^3]: 两者本质上是同一个结论，其中一个只是另一个的轻微推广。这里陈述较一般的形式，即定理 [\[thm:Slepian_SF_ineq\]](#thm:Slepian_SF_ineq){reference-type="ref" reference="thm:Slepian_SF_ineq"}。
+
+[^4]: 这个说法虽有直观依据，却是高斯随机变量特有而精细的性质；换成一般分布后，它通常不再成立。
+
+[^5]: 这里要求 min-max 能够按照式 [\[eq:separablegaussianprocess\]](#eq:separablegaussianprocess){reference-type="eqref" reference="eq:separablegaussianprocess"} 的意义，由 $T$、$U$ 的有限子集良好逼近。与前面一样，本书应用该结果时，相关过程都可由 $\epsilon$-网逼近。
+
+[^6]: 实际上，$\lambda_{\max}(W)$ 的波动还要更小，其极限行为对应所谓的 Tracy--Widom 分布 [@Anderson_Guionnet_Zeitouni_IntroRandomMatrices]。
+
+[^7]: 博文 [@Epperly_blog_gaussiannorm] 对这个下界有一段很精彩的讨论。
+
+[^8]: 这是因为 $n$ 个标准高斯随机变量的最大值至多为 $\lesssim\sqrt{2\log n}$。
+
+[^9]: Hermite 多项式在研究假设检验计算困难性的低阶方法中也起着关键作用，例如可参阅 [@KuniskyWeinBandeira2022LowDegreeSurvey] 的附录 B。

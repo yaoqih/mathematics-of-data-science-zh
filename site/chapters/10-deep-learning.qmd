@@ -1,20 +1,839 @@
 ---
 title: "深度学习的数学导论"
-description: "神经网络、通用逼近、训练与深层架构"
-status: 待翻译
+description: "神经网络、通用逼近、训练方法与深层架构"
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `deeplearning.tex`，尚待翻译。
-:::
+<!-- 原稿章节标签：c:deeplearning -->
+
+深度学习是现代数据科学最引人注目的进展之一，它提供了一套直接从数据中学习复杂模式的强大框架。传统机器学习往往高度依赖人工特征工程；深度神经网络则能自动提取分层表示，同时捕捉数据的低层细节与高层结构。这使它尤其适合分类任务：把图像、声音或文本等输入归入离散类别。通过复合多层非线性变换，深度模型能够逼近极为复杂的决策边界，并在众多领域取得出色表现。
+
+2024 年 Nobel 物理学奖与化学奖的颁发，是深度学习及其广泛科学影响获得正式认可的重要时刻。这两项奖共同表明，深度学习架构已经从小众的算法创新，发展为公认的强大科学工具。
+
+然而，与惊人的经验成功和科学认可相比，深度学习的数学理论仍处于早期阶段。优化、泛化界，以及过参数化模型为何有效等许多根本问题，仍是数学、统计学与计算机科学交界处的开放难题。
+
+深度学习的核心，是利用具有许多层的人工神经网络来刻画数据中的复杂关系，“深度”之名也由此而来。本章从数学视角介绍支撑该领域的基本概念与结构。深度学习形成了自己的术语体系，其中不少新名称其实对应信号与图像处理、优化或统计学中早已成熟的方法。在连接深度学习与应用数学时，我们部分沿用 Higham 与 Higham 的通俗综述 [@higham2019deep]。另推荐 [@petersen2024mathematical]，其中讨论了本章未覆盖的主题，例如深度神经网络的泛化性质。
 
 ## 神经网络
 
+神经网络是现代人工智能的基石，能够从数据中学习模式，已广泛用于图像识别、自然语言处理，乃至围棋和国际象棋等复杂博弈。本章重点讨论神经网络在分类中的应用。
+
+设训练集由 $\R^d$ 中的 $n$ 个样本组成，分属类别 $A$ 与 $B$，并来自某个具有相同标签的潜在分布。我们希望据此设计函数 $F:\R^d\to\{\textrm{A,B}\}$，为新数据生成标签，例如图 [1.1](#fig:classification){reference-type="ref" reference="fig:classification"} 中的黑色问号。
+
+<figure id="fig:classification">
+
+::: center
+`<img src="../assets/figures/plotclass.png" />`{=html}
+:::
+
+<figcaption>
+[$\R^2$]{.math .inline} 中的有标签与无标签数据点，以及一条可能的决策边界。
+</figcaption>
+</figure>
+
+若绿线表示 $F$ 的决策边界，问号就会被判为 $B$ 类。人工神经网络（简称神经网络）正是构造这类函数 $F$ 的一种方法。
+
+### 感知机
+
+神经网络由若干层*神经元*组成，每个神经元（或节点）都是处理输入并产生输出的计算单元。Frank Rosenblatt 于 1958 年提出的感知机 [@Rosenblatt]，是最简单的神经元模型之一。数学上，感知机写成
+$$y=\sigma\left(\sum_{i=1}^nw_ix_i+b\right),$$
+其中 $x_i$ 是输入特征，$w_i$ 是对应权重，$b$ 称为偏置项，$\sigma$ 是激活函数，典型选择是 Heaviside 阶跃函数，也可以是 sigmoid 等一般非线性函数。
+
+多层感知机（MLP）通过堆叠多层节点来扩展感知机。它由输入层、一个或多个隐藏层以及输出层组成。第 $\ell$ 层满足
+
+$$a^{(\ell)}=\sigma\left(W^{(\ell)}a^{(\ell-1)}+b^{(\ell)}\right),$$
+其中 $a^{(\ell-1)}$ 是前一层的输出（首层时就是输入数据），$W^{(\ell)}$ 与 $b^{(\ell)}$ 分别为第 $\ell$ 层的权重矩阵和偏置向量，$\sigma$ 逐元素作用。MLP 是神经网络的一种，更准确地说是前馈神经网络的子类；广义的“神经网络”则是统称，还包括前馈网络之外的多种架构。
+
+再介绍一些标准术语。网络的第一层称为输入层，通常直接对应数据；位于第一层和最后一层之间的节点层称为隐藏层。“隐藏”表示这些层既不直接暴露为输入，也不直接作为最终输出，只存在于网络内部。最后一层是输出层，通常配合损失函数衡量预测与真实目标的差距。输出层还会把内部表示变换成适合下游任务的形状，例如把 1024 维隐藏表示压缩为二元预测所需的 2 维输出。
+
+### 一般框架
+
+采用如下统一设定：网络共有 $L$ 层，第 1 层和第 $L$ 层分别为输入层与输出层；第 $\ell$ 层含 $n_\ell$ 个节点。因此输入维数为 $n_1$，输出维数为 $n_L$。第 $\ell$ 层的权重矩阵记为 $W^{(\ell)}\in\R^{n_\ell\times n_{\ell-1}}$，其中 $w^{(\ell)}_{jk}$ 表示第 $\ell$ 层节点 $j$ 施加于上一层节点 $k$ 输出上的权重。类似地，$b^{(\ell)}\in\R^{n_l}$ 是第 $\ell$ 层的偏置向量，$b_j^{(\ell)}$ 对应其中的节点 $j$。
+
+<figure id="fig:NN">
+
+::: center
+`<img src="../assets/figures/Network1.png" style="width:80.0%" />`{=html}
+:::
+
+<figcaption>
+一个含两个隐藏层的神经网络。
+</figcaption>
+</figure>
+
+图 [1.2](#fig:NN){reference-type="ref" reference="fig:NN"} 展示了一个四层神经网络，为简洁起见省略偏置项。$W_{kj}^{(\ell)}$ 表示第 $\ell$ 层单元 $j$ 到第 $\ell+1$ 层单元 $k$ 的连接，因此 $W^{(\ell)}$ 的每一行汇集流入相应节点的权重。记 $W_i^{(\ell)}$ 为 $W^{(\ell)}$ 的第 $i$ 行。图中 $W^{(1)}\in\R^{4\times3}$、$W^{(2)}\in\R^{2\times4}$、$W^{(3)}\in\R^{1\times2}$。此外，$a_k^{(\ell)}$ 表示第 $\ell$ 层单元 $k$ 的输出或激活值，而 $z_k^{(\ell)}=\sum_jW_{kj}^{(\ell)}x_J$ 是流入该节点的加权和。于是图中网络可写为 $$\begin{align*}
+  \ell = 1 ~&~ a_k^{(1)}  := x_k\\
+  \ell = 2 ~&~ a_k^{(2)} := \sigma_1 \big(W_k^{(1)}x \big) = \sigma_1 \big(W_
+  {k1}^{(1)}x_1 + W_{k2}^{(1)}x_2  + W_{k3}^{(1)} x_3\big)\\
+  \ell = 3 ~&~ a_k^{(3)} := \sigma_2 \big(W_k^{(2)} a^{(2)}\big) = \sigma_2 \big(W_
+  {k1}^{(2)}x_1 + W_{k2}^{(2)}x_2  + W_{k3}^{(1)} x_3 + W_
+  {k4}^{(1)} x_3\big)\\
+  \ell = 4 ~&~ a_k^{(4)} := \sigma_3 \big(W_k^{(3)} a^{(3)} \big) = \sigma_3 \big(
+  W_{k1}^{(3)} x_1 + W_{k2}^{(3)} x_2 \big)
+\end{align*}$$
+
+现在可以统一表示 $L$ 层深度神经网络的作用。给定输入 $x\in\R^{d_1}$，令 $a_j^{(\ell)}$ 为第 $\ell$ 层神经元 $j$ 的输出或激活值，则 $$\begin{equation}
+\label{neuralnet}
+\begin{split}
+    a^{(1)} & = x \in \R^{d_1}, \\
+    a^{(\ell)} & = \sigma_k \Big( W^{(\ell)} a^{(\ell-1)} + b^{(\ell)}\Big) \in \R^{d_\ell}, \qquad \text{for $\ell = 2,\dots, L$,}
+\end{split}
+\end{equation}$$ 其中激活函数 $\sigma_\ell$ 和节点数 $d_\ell$ 都可以逐层变化。
+
+设给定 $N$ 个数据点 $x_1,\dots,x_N\in\R^{d_1}$ 组成的*训练集*，以及对应目标 $y_1,\dots,y_N$。例如，$x_i$ 可以是汽车或自行车图像，$y_i$ 则是指明图中对象类别的二元标签。训练神经网络，就是最小化用户指定的代价函数或损失函数 $\mathcal C$；它以 $\{x_i\}_{i=1}^N,\{y_i\}_{i=1}^N$ 为数据，并依赖全部权重 $\{W^{(\ell)}\}_{\ell=1}^L$ 和偏置 $\{b^{(\ell)}\}_{\ell=1}^L$。例如可取
+$$\mathcal C\big(\{x_i\}_{i=1}^N,\{y_i\}_{i=1}^N\big)=\frac1N\sum_{i=1}^N\|y(x_i)-a^{(L)}(x_i)\|_2^2.$$
+第 [1.3](#nn:training){reference-type="ref" reference="nn:training"} 节将讨论其他损失函数，以及如何寻找使损失最小的权重与偏置。
+
+### 激活函数
+
+激活函数 $\sigma$ 为模型引入非线性，使具有足够节点和层数的网络能够学习复杂模式。下面简述常用选择。*Sigmoid 型*函数满足 $\lim_{x\to\infty}\sigma(x)=1$ 与 $\lim_{x\to-\infty}\sigma(x)=0$。其中 logistic 函数
+$$\sigma(x)=\frac{1}{1+e^{-x}}$$
+把输入映射到 0 与 1 之间，适合二元分类，见第 [\[c:classification\]](#c:classification){reference-type="ref" reference="c:classification"} 章。*双曲正切*
+$$\tanh(x)=\frac{e^x-e^{-x}}{e^x+e^{-x}}$$
+把输入映射到 $[-1,1]$，常用于隐藏层。*修正线性单元*（ReLU）
+$$\text{ReLU}(x)=\max(0,x)$$
+是深度学习中最流行的激活函数；它计算高效，并有助于缓解梯度消失 [@hochreiter1991untersuchungen; @bengio1994learning]，但在原点不可微。*Softmax* 函数为 $$\begin{equation}
+   \label{softmax}
+  \text{Softmax}(x_i) = \frac{e^{x_i}}{\sum_{j=1}^n e^{x_j}}
+\end{equation}$$ 常用于多类分类网络的输出层，把原始输出得分转换为概率。
+
+<figure id="fig:activ">
+
+::: center
+<p>
+`<img src="../assets/figures/activ_logistic.png" alt="image" />`{=html} `<img src="../assets/figures/activ_tanh.png" alt="image" />`{=html} `<img src="../assets/figures/activ_relu.png" alt="image" />`{=html}
+</p>
+:::
+
+<figcaption>
+深度学习常用的激活函数：logistic（sigmoid）函数、双曲正切（tanh）和修正线性单元（ReLU）。
+</figcaption>
+</figure>
+
+每层应选哪种激活函数？输出层在一定程度上由任务决定，例如分类适合 Softmax，而 ReLU 无法直接给出类别概率；除此之外，激活函数的选择主要依靠试验。
+
+试错在多数应用中已经够用，但能否像学习权重和偏置一样，由数据*学习*激活函数？Kolmogorov--Arnold 网络提供了一种系统做法，其激活函数可学习。事实上，这类网络完全没有线性权重：每个权重参数都被一个以样条参数化的单变量函数取代。详见 [@liu2024kan]。
+
 ## 通用逼近定理
 
-## 神经网络的训练
+尽管深度学习的许多现象仍缺乏充分的数学解释，浅层神经网络的逼近性质已经相当清楚。通用逼近定理 [@hornik1990universal; @hornik1991approximation; @cybenko1989approximation; @pinkus1999approximation; @barron2002universal] 是神经网络理论的基础结果：只要恰当选择权重与偏置，含有限个节点、仅一个隐藏层的前馈网络，就能在 $\R^n$ 的紧子集上一致逼近任意连续函数。
+
+### 一个关于“浅层”网络的定理
+
+浅层网络通用逼近定理（UAT）的奠基性版本之一由 George Cybenko 给出 [@cybenko1989approximation]，适用于使用 sigmoid 型激活函数的单隐藏层前馈网络。先引入必要记号。
+
+令 $I_n=[0,1]^n$ 为 $\mathbb R^n$ 中的单位超立方体，$C(I_n)$ 为其上连续实值函数构成的空间，并赋予上确界范数 $\|f\|=\sup_{x\in I_n}|f(x)|$。回顾：若 $\sigma:\mathbb R\to\mathbb R$ 满足 $\lim_{t\to+\infty}\sigma(t)=1$、$\lim_{t\to-\infty}\sigma(t)=0$，则称其为 *sigmoid 型*函数。
+
+::: theorem
+: []{#th:UAT label="th:UAT"} 设 $\sigma$ 是任意连续 sigmoid 型函数。所有如下有限和
+$$G(x)=\sum_{j=1}^N\alpha_j\sigma(\langle y_j,x\rangle+\theta_j),$$
+其中 $N\in\mathbb N$、$\alpha_j,\theta_j\in\mathbb R$、$y_j\in\mathbb R^n$，在 $C(I_n)$ 中稠密。换言之，对任意 $f\in C(I_n)$ 和 $\varepsilon>0$，存在这样的 $G$，使
+$$|G(x)-f(x)|<\varepsilon\qquad\forall x\in I_n.$$
+:::
+
+该定理说明，只要隐藏神经元足够多，采用连续 sigmoid 型激活函数（如 $\sigma(t)=1/(1+e^{-t})$）的单隐藏层网络，就能以任意精度逼近紧集上的任意连续函数。通过缩放和平移，结论自然推广到 $\mathbb R^n$ 的任意紧子集；逐分量应用还可处理多输出函数。
+
+证明依赖泛函分析中的 Hahn--Banach 定理与 Riesz 表示定理。我们先为下述“判别性”函数证明更一般的结论，再证明连续 sigmoid 型函数都具有判别性。
+
+::: definition
+记 $M(I_n)$ 为 $I_n$ 上有限带符号正则 Borel 测度的空间。若对任意 $\mu\in M(I_n)$，条件
+$$\int_{I_n}\sigma(\langle y,x\rangle+\theta)\,d\mu(x)=0\quad\forall y\in\mathbb R^n,\ \forall\theta\in\mathbb R$$
+都蕴含 $\mu=0$，则称 $\sigma:\mathbb R\to\mathbb R$ 是*判别性*函数。
+:::
+
+::: theorem
+[]{#th:UATgen label="th:UATgen"} 设 $\sigma$ 是任意连续判别性函数，则形如
+$$G(x)=\sum_{j=1}^N\alpha_j\sigma(\langle y_j,x\rangle+\theta_j)$$
+的有限和在 $C(I_n)$ 中稠密。
+:::
+
+::: proof
+*证明。* 令 $S$ 为 $C(I_n)$ 的子空间，由所有 $x\mapsto\sigma(\langle y,x\rangle+\theta)$（$y\in\mathbb R^n,\theta\in\mathbb R$）的有限线性组合组成。显然 $S$ 是线性子空间。
+
+反设 $S$ 在上确界范数下的闭包 $\overline S$ 是 $C(I_n)$ 的真闭子空间。由 Hahn--Banach 定理，存在非零有界线性泛函 $L:C(I_n)\to\mathbb R$，使所有 $g\in\overline S$ 都满足 $L(g)=0$，因而对所有 $g\in S$ 也成立。
+
+由 Riesz 表示定理，存在唯一 $\mu\in M(I_n)$，使
+$$L(h)=\int_{I_n}h(x)\,d\mu(x)\qquad\forall h\in C(I_n).$$
+对任意固定的 $y,\theta$，函数 $h(x)=\sigma(\langle y,x\rangle+\theta)$ 属于 $S\subset\overline S$，故
+$$L(\sigma(\langle y,\cdot\rangle+\theta))=\int_{I_n}\sigma(\langle y,x\rangle+\theta)\,d\mu(x)=0.$$
+这对所有 $y\in\mathbb R^n,\theta\in\mathbb R$ 成立。由于 $\sigma$ 具有判别性，必有 $\mu=0$；但这又意味着 $L=0$，与 $L\neq0$ 矛盾。
+
+因此 $\overline S=C(I_n)$，即 $S$ 在 $C(I_n)$ 中稠密。 ◻
+:::
+
+要把定理 [\[th:UATgen\]](#th:UATgen){reference-type="ref" reference="th:UATgen"} 应用于 sigmoid 型函数，还需要如下引理。
+
+::: lemma
+[]{#le:UAT label="le:UAT"} 任意连续 sigmoid 型函数 $\sigma$ 都具有判别性。
+:::
+
+::: proof
+*证明。* 假设
+$$\int_{I_n}\sigma(\langle y,x\rangle+\theta)\,d\mu(x)=0\quad\forall y\in\mathbb R^n,\ \forall\theta\in\mathbb R.$$
+我们要证明 $\mu=0$。
+
+固定 $y\in\mathbb R^n$ 与 $\theta\in\mathbb R$，并缩放自变量。对任意 $\lambda>0$，用 $\lambda y,\lambda\theta$ 替换 $y,\theta$，得到
+$$\int_{I_n}\sigma(\lambda(y^Tx+\theta))\,d\mu(x)=0.$$
+当 $\lambda\to+\infty$ 时，被积函数逐点收敛到阶跃函数
+$$\psi(x)=
+\begin{cases}
+1 & \text{if } \langle y, x\rangle + \theta > 0, \\
+0 & \text{if } \langle y, x\rangle + \theta < 0, \\
+\sigma(\theta) & \text{if } \langle y, x \rangle + \theta = 0
+\end{cases}$$
+因为 $\sigma$ 在正负无穷处的极限分别为 1 和 0。连续 sigmoid 型函数在 $\mathbb R$ 上有界，所以这一收敛也是一致有界的。
+
+由 Lebesgue 控制收敛定理（$I_n$ 测度有限且函数有界），
+$$\lim_{\lambda\to+\infty}\int_{I_n}\sigma(\lambda(\langle y,x\rangle+\theta))\,d\mu(x)=\int_{I_n}\psi(x)\,d\mu(x)=\mu(H_{y,\theta})+\sigma(0)\mu(\Pi_{y,\theta})=0,$$
+其中 $H_{y,\theta}=\{x\in I_n:\langle y,x\rangle+\theta>0\}$ 是开半空间，$\Pi_{y,\theta}=\{x\in I_n:\langle y,x\rangle+\theta=0\}$ 是超平面。
+
+为分离两项，可轻微改变 $\theta$ 或采用不同缩放，从而证明几乎所有超平面都有 $\mu(\Pi_{y,\theta})=0$。更严格的论证使用沿 $y$ 方向的推前测度。
+
+定义线性泛函
+$$F(g)=\int_{I_n}g(\langle y,x\rangle)\,d\mu(x),\qquad F:C(\mathbb R)\to\mathbb R.$$
+由于 $\mu$ 有限，$F$ 定义良好且有界。假设说明对所有 $\theta$ 都有 $F(\sigma(\cdot+\theta))=0$；结合上述缩放论证并适当选择 $\theta$，可知 $F$ 在任意半直线 $(a,+\infty)$ 的指示函数上都为零。
+
+区间的指示函数生成 Borel 代数，而简单函数（指示函数的有限线性组合）在 $L^1(\mathbb R,\nu)$ 中稠密；这里 $\nu$ 是 $\mu$ 经映射 $x\mapsto\langle y,x\rangle$ 得到的推前测度。因此，$F$ 在连续函数中的一个稠密集合上为零。
+
+事实上，可用 sigmoid 函数的叠加逼近指数函数，或直接利用 $F$ 在阶跃函数上为零，得到 Fourier 基上 $F(\exp(2\pi it\,\cdot))=0$。于是推前测度的特征函数处处为零，推前测度本身也为零。因此
+$$\int_{I_n}e^{2\pi im\langle y,x\rangle}\,d\mu(x)=0\quad\forall m\in\mathbb Z,$$
+即 $\mu$ 的 Fourier 变换为零。由测度 Fourier 变换的唯一性，$\mu=0$。 ◻
+:::
+
+::: proof
+*定理 [\[th:UAT\]](#th:UAT){reference-type="ref" reference="th:UAT"} 的证明。* 合并定理 [\[th:UATgen\]](#th:UATgen){reference-type="ref" reference="th:UATgen"} 与引理 [\[le:UAT\]](#le:UAT){reference-type="ref" reference="le:UAT"}，结论立即成立。 ◻
+:::
+
+这个证明没有显式构造逼近，而是借助泛函分析中的分离定理证明了定理 [\[th:UAT\]](#th:UAT){reference-type="ref" reference="th:UAT"}。后续推广（如 [@hornik1990universal; @hornik1991approximation]）为更广泛的激活函数类给出了其他证明，另见 [@petersen2024mathematical]。
+
+但这是非构造性证明，它“只”保证逼近网络存在，却没有告诉我们如何寻找权重 $\alpha_j,y_j,\theta_j$，也没有给出所需神经元数 $N$。
+
+关于神经网络逼近函数 $f$ 的收敛速率已有大量理论，见 [@mhaskar1993approximation; @pinkus1999approximation; @devore1998nonlinear]。对经典光滑函数空间，为达到精度 $\eps$，网络规模必须随维数 $d$ 指数增长，而且这种指数依赖不可避免 [@novak2009approximation; @devore1998nonlinear]。
+
+要避开这种维数灾难，就必须对 $f$ 施加额外假设。*Barron 类*刻画了一种这样的正则性。Barron 在 [@barron2002universal] 中引入了一个正则函数的 Banach 空间，如今称为 Barron 类，其半范数为 $\|f\|_B:=\int|\hat f(\omega)||\omega|\,d\omega$。他证明，对任意 $n$，存在含 $n$ 个神经元的网络，使 $L^2$ 范数下的逼近误差为 $1/\sqrt n$ 阶。
+
+### 深层网络何时优于浅层网络？
+
+原则上，增加层数并不会扩大可逼近函数的范围，因为一个隐藏层已经具有稠密性；但深度会显著改变逼近的*效率*与*表示复杂度*。
+
+已有研究表明 [@poggio2017and; @yarotsky2017error; @telgarsky2016benefits]，某些函数用深层网络逼近时，可比浅层网络获得指数级效率提升。例如高阶单项式 $f(x)=x_1x_2\cdots x_d$：浅层网络需要数量随 $d$ 指数增长的神经元，而深层网络利用复合结构，只需 $\mathcal O(d)$ 个神经元即可逼近 [@poggio2017and]。
+
+不过，构造具有通用逼近能力的深层或浅层网络并不太难，这却几乎无法解释深度学习为何成功。经过精细调节、拥有海量参数的网络，为什么仍能惊人地泛化？传统理论尚不能解释大型神经网络在实践中的良好泛化 [@zhang2016understanding; @zhang2021understanding]。
+
+Rademacher 复杂度能否提供帮助？它度量整个假设类的最坏情形容量；对大型神经网络，这种界往往*极大*，所得泛化界因而毫无信息。可是，网络的有效复杂度似乎远小于最坏情形复杂度。准确理解过参数化网络何时以及为何能够泛化，仍是现代学习理论的核心开放问题之一。
+
+“双下降现象”是这一方向的重要理论进展，它部分解释了深度网络为何在严重过参数化时仍能良好泛化 [@belkin2019reconciling]。这一观点认为，在高度过参数化区域，网络会以数学上最简约的方式插值训练数据。双下降曲线因而修正了我们对过参数化区域中偏差--方差权衡的理解：泛化不仅取决于模型大小，还取决于训练方式以及算法偏好的解。
+
+### 无限深度：神经微分方程
+
+令神经网络深度趋于无穷，就得到所谓神经微分方程 [@chen2018neural]。考虑 $L$ 层标准前馈网络，每层作变换
+$$a^{(\ell+1)}=a^{(\ell)}+f(a^{(\ell)},\theta_\ell),\qquad\ell=0,1,\dots,L-1,$$
+其中 $a^{(0)}=x$ 为输入，$a^{(L)}$ 为最终隐藏表示或输出。这正是残差网络（ResNet）架构：更新规则在恒等映射上显式加入残差项。
+
+把递推解释为离散化格式：引入连续“深度”变量 $t\in[0,T]$，令每层对应离散时刻 $t_\ell=\ell\Delta t$，步长 $\Delta t=T/L$。逐层更新可改写为
+$$a^{(\ell+1)}(t_{\ell+1})=a^{(\ell)}(t_\ell)+\Delta t\,f(a^{(\ell)}(t_\ell),t_\ell,\theta(t_\ell)).$$
+这正是初值问题
+$$\frac{da(t)}{dt}=f(a(t),t,\theta(t)),\qquad a(0)=x$$
+的显式 Euler 格式。当 $L\to\infty$、$\Delta t\to0$ 时，离散深度网络形式上收敛到*神经微分方程*，更具体地说是*神经常微分方程*。隐藏表示的动力学由
+$$\frac{da(t)}{dt}=f(a(t),t,\theta(t))$$
+控制，其中神经网络 $f$ 参数化 $a(t)$ 的瞬时变化率。
+
+连续深度视角把神经网络架构视为参数化动力系统。终态由微分方程从 $0$ 到 $T$ 的积分得到：
+$$a(T)=a(0)+\int_0^Tf(a(t),t,\theta(t))\,dt,$$
+再优化参数 $\theta(t)$，使定义在终态上的损失泛函最小。
+
+从分析角度看，这一解释说明深层网络的表达能力可以用连续时间动力系统理论理解，而残差连接对应一阶数值积分格式。
+
+## 训练神经网络 {#nn:training}
+
+训练神经网络，就是寻找使代价函数或损失函数 $\cost$ 最小的权重 $W^{(\ell)}$ 与偏置 $b^{(\ell)}$。由于数据量通常很大，高阶优化方法的代价往往难以承受；无论具体架构如何，基于梯度的算法都是训练过程的主力。
+
+### 损失函数 {#s:loss}
+
+损失函数在优化中也称代价函数，在数值分析中也称误差函数。它量化预测与真实目标的吻合程度，从而引导学习。具体选择取决于任务类型和数据特征。例如，回归常用均方误差
+$$\cost(y,\hat y)=\frac1n\sum_{i=1}^n(y_i-\hat y_i)^2,$$
+或平均绝对误差
+$$\cost(y,\hat y)=\frac1n\sum_{i=1}^n|y_i-\hat y_i|.$$
+后者对离群点不如均方误差敏感，因此在强调稳健性的回归中尤其有用。
+
+交叉熵是分类任务的标准选择：
+$$\cost(y,\hat y)=-\sum_{i=1}^ny_i\log(\hat y_i).$$
+多类交叉熵把二元情形推广到多个类别。若真实目标为独热向量 $\mathbf y_i$，各类预测概率为 $\hat{\mathbf y}_i$，则
+$$\cost(y,\hat y)=-\frac1n\sum_{i=1}^n\sum_{c=1}^Cy_{ic}\log(\hat y_{ic}),$$
+其中 $C$ 是类别数，$y_{ic}\in\{0,1\}$ 是真实标签，$\hat y_{ic}$ 是第 $c$ 类的预测概率。
+
+合页损失主要用于支持向量机，也可用于神经网络。二元分类中，若 $y_i\in\{-1,1\}$ 且 $\hat y_i$ 是预测得分而非概率，则
+$$\cost(y,\hat y)=\frac1n\sum_{i=1}^n\max(0,1-y_i\hat y_i).$$
+它不仅要求类别预测正确，还要求间隔至少为 1。当 $y_i\hat y_i\geq1$ 时损失为零；否则损失线性增长，对错误或信心不足的预测施加惩罚。
+
+Kullback--Leibler（KL）散度衡量一个概率分布偏离另一目标分布的程度，常见于变分自编码器和强化学习。对真实分布 $P$ 与预测分布 $Q$，定义
+$$\text{KL}(P\parallel Q)=\sum_{i=1}^nP(i)\log\frac{P(i)}{Q(i)}.$$
+它不对称，即 $\text{KL}(P\parallel Q)\neq\text{KL}(Q\parallel P)$。深度学习中，它常用于迫使模型输出分布 $Q$ 匹配目标分布 $P$。
+
+Huber 损失试图兼具均方误差与平均绝对误差的优点。对预测 $\hat y_i$ 与目标 $y_i$，定义
+$$\cost(y,\hat y)=\frac1n\sum_{i=1}^nC_\delta(y_i-\hat y_i),$$
+其中 $$C_{\delta}(r) = \begin{cases}
+\frac{1}{2} r^2 & \text{for } |r| \leq \delta, \\
+\delta (|r| - \frac{1}{2} \delta) & \text{for } |r| > \delta.
+\end{cases}$$ Huber 损失常用于含离群点的回归任务，对离群点的敏感程度低于均方误差。
+
+### 随机梯度下降 {#ss:SGDsubsection}
+
+训练神经网络就是选择使代价函数最小的权重与偏置。神经网络维数高、非线性强，寻找最优参数并不容易。该怎样做？
+
+答案是*梯度下降*。经典数值优化往往不鼓励使用它，而且理由充分：收敛可能很慢，对步长与初始化敏感，也容易停在鞍点或局部极值附近 [@nocedal2006numerical]。但数据科学和机器学习常只需较低精度的解，找到局部极小点通常也可接受。梯度下降只用一阶信息，在有限算力与超大数据下比二阶方法更易实施，因此成为神经网络训练的主力。
+
+把第 [\[s:grad\]](#s:grad){reference-type="ref" reference="s:grad"} 章的结果用于神经网络，可将 $f(x)$ 解释为网络代价 $\cost(\theta)$，并把全部权重与偏置参数 $\theta$ 汇集成向量 $x$。
+
+深度学习通常采用第 [\[s:grad\]](#s:grad){reference-type="ref" reference="s:grad"} 章讨论的随机梯度下降（SGD），而非标准的全批量梯度下降；在现代网络的规模与结构下，计算、统计和优化地形方面的因素都会使这一选择至关重要。
+
+标准梯度下降计算完整梯度
+$$\nabla_\theta\loss(\theta)=\frac1n\sum_{i=1}^n\nabla_\theta\loss_i(\theta),$$
+其中 $\loss_i(\theta)$ 是第 $i$ 个样本的损失。
+
+SGD 则随机选择单个数据点 $(x_i,y_i)$，用其梯度更新参数：
+$$\theta^{(k+1)}=\theta^{(k)}-\eta\nabla_\theta\loss_i(\theta^{(k)}).$$
+
+常见变体是*小批量梯度下降*，它用一小批而非单个样本计算梯度：
+$$\theta^{(k+1)}=\theta^{(k)}-\eta\frac1{|B_k|}\sum_{i\in B_k}\nabla_\theta\loss_i(\theta^{(k)}),$$
+其中 $B_k$ 是第 $k$ 个小批量的指标集，$|B_k|$ 是批量大小。它在 SGD 的计算效率与全批量方法的稳定性之间折中，既能利用并行计算，又适合噪声环境，因此实践中应用广泛。SGD 的收敛性可通过损失期望分析；应用于线性方程组的特例见第 [\[ss:kaczmarz\]](#ss:kaczmarz){reference-type="ref" reference="ss:kaczmarz"} 节。
+
+梯度下降的步长在这里称为*学习率*，是重要的设计参数。学习率过大时，噪声可能使算法发散；过小时，收敛又会很慢。若 $\eta$ 足够小，SGD 会收敛到局部极小点附近，其邻域大小取决于噪声特征与损失函数曲率。
+
+提高稳定性的一种办法是使用衰减学习率
+$$\eta_k=\frac{\eta_0}{1+\alpha k},$$
+其中 $\eta_0$ 是初始学习率，$\alpha$ 是衰减因子。
+
+Adam [@kingma2014adam]、AdaGrad [@duchi2011adaptive] 等自适应方法动态调整步长，往往改善经验表现，却使理论保证更复杂 [@ward2020adagrad]。Adam 常因训练速度而成为首选；但模拟表明，对某些架构，在训练末期切换到带动量的 SGD（见第 [\[s:grad\]](#s:grad){reference-type="ref" reference="s:grad"} 章）可能在测试数据上获得更好的泛化 [@wilson2017marginal]。
+
+### 反向传播
+
+反向传播是训练神经网络的基础算法，它利用微积分链式法则，高效计算损失函数关于网络中每个权重的梯度。
+
+把神经网络记为 $f(x,W)$，其中 $x$ 是输入，$W$ 统称全部权重与偏置。训练目标是寻找使损失最小的参数 $W^*$。为突出损失对网络参数的依赖，写成 $\loss(f(x_i,W),y_i)$，于是要解
+$$W^*=\arg\min_W\left\{\frac1N\sum_{i=1}^N\loss(f(x_i,W),y_i)\right\},$$
+其中 $y_i$ 是 $x_i$ 的真实输出。反向传播计算 $\nabla_WL$，再用（随机）梯度下降更新
+$$W\leftarrow W-\eta\nabla_WL,$$
+其中 $\eta$ 是学习率。
+
+目标是计算所有权重与偏置的偏导。第 $\ell$ 层神经元 $j$ 的输入为上一层输出的加权和
+$$z_j^{(\ell)}=\sum_kw_{jk}^{(\ell)}a_k^{(\ell-1)}+b_j^{(\ell)}.$$
+由链式法则，
+$$\frac{\partial\loss}{\partial w_{jk}^{(\ell)}}=\frac{\partial\loss}{\partial z_j^{(\ell)}}\frac{\partial z_j^{(\ell)}}{\partial w_{jk}^{(\ell)}},\qquad
+\frac{\partial z_j^{(\ell)}}{\partial w_{jk}^{(\ell)}}=a_k^{(\ell-1)}.$$
+定义误差项 $\delta_j^{(\ell)}\equiv\frac{\partial\loss}{\partial z_j^{(\ell)}}$，则权重梯度为 $$\begin{equation}
+    \label{BP-1}
+    \frac{\partial \loss}{\partial w_{jk}^{(\ell)}} = \delta_j^{(\ell)} a_k^{(\ell-1)}.
+\end{equation}$$ 类似地，偏置梯度为 $$\begin{equation}
+    \label{BP-2}
+\frac{\partial \loss}{\partial b_j^{(\ell)}} = \frac{\partial \loss}{\partial z_j^{(\ell)}} \frac{\partial z_j^{(\ell)}}{\partial b_j^{(\ell)}} = \delta_j^{(\ell)} \cdot 1 = \delta_j^{(\ell)}.
+\end{equation}$$
+
+关键在于求每一层的误差项 $\delta_j^{(\ell)}$。损失直接依赖输出激活 $a_j^{(L)}$，而后者又依赖净输入 $z_j^{(L)}$，故
+$$\delta_j^{(L)}=\frac{\partial\loss}{\partial z_j^{(L)}}=\frac{\partial\loss}{\partial a_j^{(L)}}\frac{\partial a_j^{(L)}}{\partial z_j^{(L)}}.$$
+
+由于 $a_j^{(L)}=\sigma(z_j^{(L)})$，第二项就是激活函数导数，故输出层误差为 $$\begin{equation}
+    \label{BP-3}
+\delta_j^{(L)} = \frac{\partial \loss}{\partial a_j^{(L)}} \sigma'(z_j^{(L)}).
+\end{equation}$$
+
+隐藏层误差 $\delta_j^{(\ell)}$ 通过下一层误差 $\delta_k^{(\ell+1)}$ 递推得到，“反向传播”之名正源于此。
+
+再次应用链式法则，得到 $$\begin{equation}
+\label{delta0}
+\delta_j^{(\ell)} = \frac{\partial \loss}{\partial z_j^{(\ell)}} = \sum_{k} \frac{\partial \loss}{\partial z_k^{(\ell+1)}} \frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}},
+\end{equation}$$ 其中对第 $\ell+1$ 层的所有神经元 $k$ 求和。
+
+把 $\delta_k^{(\ell+1)}=\frac{\partial\loss}{\partial z_k^{(\ell+1)}}$ 代入式 [\[delta0\]](#delta0){reference-type="eqref" reference="delta0"}，得到 $$\begin{equation}
+    \label{deltaeq}
+\delta_j^{(\ell)} = \sum_{k} \delta_k^{(\ell+1)} \frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}}.
+\end{equation}$$
+
+再计算第二项。由 $z_k^{(\ell+1)}=\sum_{j'}w_{kj'}^{(\ell+1)}a_{j'}^{(\ell)}+b_k^{(\ell+1)}$ 与 $a_j^{(\ell)}=\sigma(z_j^{(\ell)})$，有
+$$\frac{\partial z_k^{(\ell+1)}}{\partial z_j^{(\ell)}}=w_{kj}^{(\ell+1)}\sigma'(z_j^{(\ell)}).$$
+
+代回式 [\[deltaeq\]](#deltaeq){reference-type="eqref" reference="deltaeq"}，得到
+$$\delta_j^{(\ell)}=\sum_k\delta_k^{(\ell+1)}w_{kj}^{(\ell+1)}\sigma'(z_j^{(\ell)}).$$
+
+提出与求和无关的 $\sigma'(z_j^{(\ell)})$，得到 $$\begin{equation}
+    \label{BP-4}
+\delta_j^{(\ell)} = \Big( \sum_{k} w_{kj}^{(\ell+1)} \delta_k^{(\ell+1)} \Big) \sigma'(z_j^{(\ell)}).
+\end{equation}$$
+
+这就是“反向传播误差方程”：第 $\ell$ 层误差等于下一层误差的加权和，再乘以本层激活函数的导数。
+
+反向传播分为*前向传播*与*反向传播*两个阶段。前向传播包括：
+
+（i）初始化全部权重 $W$ 与偏置 $b$。\
+
+（ii）把输入 $x$ 逐层传过网络，计算各层净输入 $z^{(\ell)}$ 与激活 $a^{(\ell)}$：$${a}^{(\ell)}=\sigma(W^{(\ell)}a^{(l-1)}+b^{(\ell)}).$$
+
+（iii）在输出层 $a^{(L)}$ 计算损失 $\loss$。
+
+反向阶段分四步计算梯度并更新参数：
+
+（i）输出误差 $\delta^{(L)}$：由式 [\[BP-3\]](#BP-3){reference-type="eqref" reference="BP-3"} 计算输出层误差。
+$$\delta_j^{(L)}=\frac{\partial\loss}{\partial a_j^{(L)}}\sigma'(z_j^{(L)}).$$
+
+（ii）反传误差 $\delta^{(\ell)}$：对 $\ell=L-1,L-2,\dots,1$，由后一层误差和式 [\[BP-4\]](#BP-4){reference-type="eqref" reference="BP-4"} 计算本层误差。
+$$\delta_j^{(\ell)}=\left(\sum_kw_{kj}^{(\ell+1)}\delta_k^{(\ell+1)}\right)\sigma'(z_j^{(\ell)}).$$
+
+（iii）计算梯度 $\nabla_W\loss$ 与 $\nabla_b\loss$：由误差项 $\delta^{(\ell)}$ 及式 [\[BP-1\]](#BP-1){reference-type="eqref" reference="BP-1"}、[\[BP-2\]](#BP-2){reference-type="eqref" reference="BP-2"} 得到全部权重和偏置的梯度： $$\begin{align*}
+          \frac{\partial \loss}{\partial w_{jk}^{(\ell)}} & = \delta_j^{(\ell)} a_k^{(\ell-1)}, \\
+          \frac{\partial \loss}{\partial b_j^{(\ell)}} & = \delta_j^{(\ell)}.
+      \end{align*}$$
+
+（iv）更新参数：执行一步梯度下降，更新权重与偏置。 $$\begin{align*}
+         W^{(\ell)} & \leftarrow W^{(\ell)} - \eta \frac{\partial \loss}{\partial W^{(\ell)}}, \\
+         {b}^{(\ell)} & \leftarrow {b}^{(\ell)} - \eta \frac{\partial \loss}{\partial {b}^{(\ell)}}.
+     \end{align*}$$
+
+反向传播之所以高效，是因为它复用前向传播的中间结果，并利用早期层梯度可由后续层梯度递推表示这一事实，逆序逐层计算。深度网络参数量巨大，梯度计算必须高度优化，这种效率至关重要。
+
+### 正则化
+
+深层网络训练面临若干挑战，因此必须采用某种正则化手段：
+
+*梯度消失与爆炸：* 反向传播时梯度可能变得极小或极大，导致学习困难。精心初始化、批归一化、梯度裁剪以及采用 ReLU 都可缓解这些问题。
+
+*过拟合：* 参数众多的深层网络容易过度拟合训练数据。常见方法包括在损失中加入 $\lambda\|W\|_2^2$ 等惩罚项，以及使用 *dropout*：训练时随机丢弃部分单元，防止神经元共同适应。
+
+*提前停止*是一种特别有效的策略：验证集表现不再改善时即停止训练。它隐式正则化模型，降低拟合训练噪声的风险。
+
+*数据增强*无需真正采集新数据，而是对现有数据施加变换，生成略有变化的新版本，从而增加训练多样性并抑制过拟合。例如图像分类应不受对象位置、方向和光照影响；对训练图像作平移、旋转、翻转、缩放及亮度或对比度调整，可帮助模型更好地泛化到未见数据。
+
+### 神经网络训练的实践配置
+
+训练神经网络不只是选择架构与优化算法，还需要精心设计实验流程，确保模型能超越训练数据而泛化。下面简述可靠训练流水线的最佳实践；这些原则其实适用于所有监督学习任务。
+
+*监督学习*的基本原则之一，是把数据分成职责不同且互不重叠的子集。通常划分为训练集、*验证集*与*测试集*；常见经验比例是 70% 训练、10% 验证、20% 测试[^1]。
+
+训练集通过 SGD 等算法拟合模型参数；验证集用于调节超参数和作建模决策；测试集则始终留出，只在最后使用一次，以无偏估计最终模型的泛化性能。参数调节通常使用交叉验证（见岭回归部分的定义 [\[def:cv_ridge\]](#def:cv_ridge){reference-type="ref" reference="def:cv_ridge"}）。关键是，测试集绝不能影响模型设计或训练的任何环节。
+
+神经网络包含大量超参数，如学习率、批量大小、网络深度与宽度、正则系数和优化器设置。通常在训练集上训练多个模型，再以验证集表现调参；方法从手工调节、网格搜索到随机搜索和 Bayesian 优化不等。所有超参数都必须在测试集评估之前确定。
+
+若训练或模型选择无意中使用了训练集之外的信息，就会发生数据泄漏，导致性能估计过于乐观。常见来源包括用完整数据集执行归一化、特征选择等预处理，或开发过程中反复在测试集上评估。
+
+为避免泄漏，所有依赖数据的预处理都只能在训练集上拟合，再原样应用于验证集与测试集；测试集应一直完全隔离到训练流程的最后。
+
+训练与调参结束后，才用测试集评估最终模型的泛化性能，而且只应评估一次。
+
+### 计算复杂度
+
+训练大型神经网络需要大量计算资源。GPU、TPU 等专用硬件和分布式训练技术的发展缓解了这一问题。
+
+但计算复杂度依然关键，尤其对大语言模型而言。训练成本与时间会随模型规模、数据量和序列长度迅速增长；Transformer 等架构的某些运算随输入长度平方增长，效率因而成为核心瓶颈。
 
 ## 深度学习架构
 
-## 习题 {.unnumbered}
+针对不同数据与任务，人们发展出多种网络架构。前文已经讨论了全连接前馈网络，也就是多层感知机；本节简要综述其他常用架构。
 
+### 卷积神经网络
+
+卷积神经网络（CNN） [@fukushima1980neocognitron; @lecun2002gradient] 从根本上推动了现代计算机视觉的突破。它尤其适合图像等网格数据，用卷积层中学习到的滤波器提取局部模式。
+
+数学上，CNN 每层的权重向量由有限个卷积核作离散卷积形成。对一维数据，这等价于权重矩阵 $W^{(\ell)}$ 为 Toeplitz 矩阵： $$\begin{equation}
+\label{layertoeplitz}
+  W^{(\ell)} =
+  \begin{pmatrix}
+    t_1       & t_2       & \ldots & t_{n}\\
+    t_2^{\ast}  & t_1       & \ddots & \vdots\\
+    \vdots & \ddots & \ddots  & t_2\\
+    t_{n}^{\ast}      & \ldots & t_2^{\ast}   &  t_1
+  \end{pmatrix},
+\end{equation}$$ 为简洁起见，式 [\[layertoeplitz\]](#layertoeplitz){reference-type="eqref" reference="layertoeplitz"} 的元素省略了层指标。该矩阵也可由*滤波器*或*卷积核* $g(j)=t_j$ 表示。二维图像对应由 Toeplitz 块组成的块 Toeplitz 矩阵。两种情形都可利用这种结构，通过一维或二维快速 Fourier 变换加速矩阵--向量乘法。
+
+卷积层通常使用多个卷积核，希望不同滤波器检测不同类型的输入特征，从而形成一组互补的特征图，从多个角度描述输入。
+
+与一般神经网络相比，CNN 有两个主要优点：
+
+1.  卷积结构减少未知权重：输入大小为 $n$、该层含 $k$ 个单元时，一般全连接层需要 $nk$ 个权重，而卷积共享权重可大幅缩减参数量。
+
+2.  卷积算子与平移算子可交换，因而具有平移不变性。若分类对象也应与平移无关，如图像中的物体或音频中的声音，所得分类器便能继承这一性质。
+
+卷积通常与下采样结合，以降低对尺度变化的敏感性；CNN 文献称之为池化，常见的有最大池化与平均池化。对锚定在 $(i,j)$ 的 $k\times k$ 窗口，最大池化取窗口内最大值，像非线性特征检测器一样判断边缘或纹理是否出现，而不在意其精确位置；平均池化取窗口均值，相当于对特征图作低通滤波，使激活更平滑。
+
+图 [1.4](#fig:cnn){reference-type="ref" reference="fig:cnn"} 展示了图像分类 CNN 的常见架构。
+
+<figure id="fig:cnn">
+
+::: center
+`<img src="../assets/figures/cnn_flow1.png" />`{=html}
+:::
+
+<figcaption>
+用于手写数字识别的典型 CNN。特征提取阶段交替使用卷积层（本例为 [5×5]{.math .inline} 核）与池化层（本例为 [2×2]{.math .inline} 平均池化），自动提取图像特征；分类阶段把特征展平并送入全连接网络，最终归入数字 0 至 9 的某一类别。
+</figcaption>
+</figure>
+
+大量经验证据表明，CNN 的浅层滤波器倾向于检测边缘、角点、颜色梯度等简单局部模式，深层滤波器则响应纹理、形状或物体部件等更复杂的全局模式。图 [1.5](#fig:CAM){reference-type="ref" reference="fig:CAM"} 用一个四卷积层 CNN 处理金鱼图像，并展示各层的类别激活图（CAM）。CAM 把某层所有特征图加权求和，以可解释的*热图*突出对特定类别决策贡献最大的区域 [@zhou2016learning]。左列从上到下为第 1 至 4 层 CAM，右列叠加原图[^2]；可清楚看到信息由局部逐渐走向全局。
+
+<figure id="fig:CAM">
+
+::: center
+<p>
+`<img src="../assets/figures/layer1_raw.png" style="height:21.0%" alt="image" />`{=html} `<img src="../assets/figures/layer1_overlay.png" style="height:21.0%" alt="image" />`{=html}
+</p>
+<p>
+`<img src="../assets/figures/layer2_raw.png" style="height:21.0%" alt="image" />`{=html} `<img src="../assets/figures/layer2_overlay.png" style="height:21.0%" alt="image" />`{=html}
+</p>
+<p>
+`<img src="../assets/figures/layer3_raw.png" style="height:21.0%" alt="image" />`{=html} `<img src="../assets/figures/layer3_overlay.png" style="height:21.0%" alt="image" />`{=html}
+</p>
+<p>
+`<img src="../assets/figures/layer4_raw.png" style="height:21.0%" alt="image" />`{=html} `<img src="../assets/figures/layer4_overlay.png" style="height:21.0%" alt="image" />`{=html}
+</p>
+:::
+
+<figcaption>
+左列从上到下显示第 1、2、3、4 层的类别激活图，右列将其叠加在原图上。CNN 在浅层捕捉局部信息，在深层逐渐形成全局特征。
+</figcaption>
+</figure>
+
+CNN 广泛用于图像分类 [@lecun2002gradient; @krizhevsky2012imagenet]、目标检测 [@redmon2016you] 和图像分割 [@long2015fully; @ronneberger2015u]；后者为每个像素分类，在医学影像分析中尤其有用。
+
+### 图神经网络
+
+图神经网络（GNN）专为图结构数据上的推断而设计 [@scarselli2008graph; @Kipf2017]。它沿图边迭代传播并变换信息，以消息传递结合局部连接结构与可学习的非线性变换。
+
+给定图 $G=(V,E)$，令 $h_v^{(k)}$ 为节点 $v$ 在第 $k$ 层的表示。一般消息传递更新为 $$\begin{equation}
+    \label{GNN}
+h_{v}^{(k+1)} = \sigma \Big( W  h_v^{(k)} + \underbrace{\sum_{u \in \mathcal{N}(v)} \phi(h_v^{(k)}, h_u^{(k)}, e_{uv})}_{m_v^{(k)}} \Big),
+\end{equation}$$ 其中 $\mathcal N(v)$ 是 $v$ 的邻居集，$m_v^{(k)}$ 是聚合消息，$\phi$ 是可依赖边特征 $e_{uv}$ 的可学习消息函数。这一形式保持节点排列不变性。
+
+概念上，每层 GNN 重复两种操作：
+
+1.  *消息传递（邻域聚合）：* 节点 $v$ 根据邻居及边的当前特征接收消息，再以求和、平均或加权组合聚合，对应式 [\[GNN\]](#GNN){reference-type="eqref" reference="GNN"} 中的 $m_v^{(k)}$。
+
+2.  *特征更新：* 把聚合消息与节点自身特征结合，经过可学习变换和非线性，得到新节点嵌入，对应 $\sigma(Wh_v^{(k)}+m_v^{(k)})$。
+
+堆叠 $L$ 层后，$h_v^{(L)}$ 可吸收 $L$ 跳邻域的信息，并用于节点分类、链接预测或图分类。
+
+常见变体图卷积网络（GCN） [@Kipf2017] 的逐层传播规则为
+$$H^{(k)}=\sigma\left(\tilde D^{-1/2}\tilde A\tilde D^{-1/2}H^{(k-1)}W^{(k)}\right),$$
+其中 $H^{(k-1)}\in\mathbb R^{|V|\times d_{k-1}}$ 是节点表示矩阵，$W^{(k)}$ 为可学习权重，$\sigma$ 为非线性激活；$\tilde A=A+I$ 给邻接矩阵加入自环，使节点聚合自身旧状态，$\tilde D$ 是 $\tilde A$ 的度矩阵，相关定义见式 [\[adjacencymatrix\]](#adjacencymatrix){reference-type="eqref" reference="adjacencymatrix"} 与 [\[degreematrix\]](#degreematrix){reference-type="eqref" reference="degreematrix"}。
+
+“卷积”一词由谱图理论解释。图拉普拉斯算子 $L=D-A$（见式 [\[graphlalpacian\]](#graphlalpacian){reference-type="eqref" reference="graphlalpacian"}）具有分解 $L=U\Lambda U^T$，其中 $U$ 的特征向量是图 Fourier 模式，$\Lambda$ 的特征值是图频率。仿照卷积定理，以 $U$ 作为图上的 Fourier 变换即可定义图卷积；GCN 可证明是图卷积的一阶近似 [@defferrard2016convolutional]。
+
+GNN 已用于粒子物理 [@kipf2018neural]、分子性质预测 [@kearnes2016molecular]、药物发现 [@bongini2021molecular]、蛋白质结构分析 [@fout2017protein]、交通网络与推荐系统 [@zhou2020graph]。
+
+### 循环神经网络
+
+对序列数据，循环神经网络（RNN） [@cho2014learning] 通过输入 $x_t$ 更新隐藏状态，形成*递归*：
+$$h_t=\sigma(W_hh_{t-1}+W_xx_t+b),\qquad y_t=W_oh_t.$$
+$h_t$ 依赖 $h_{t-1}$，因此隐藏状态携带跨时间记忆。长短期记忆网络（LSTM） [@Hochreiter1997] 引入*门控机制*修改更新，以缓解梯度消失与爆炸，建模更长依赖。
+
+RNN 曾广泛用于自然语言建模、金融与天气等时间序列预测、医疗生理监测，以及机器人和强化学习中的序列控制。
+
+在 RNN 中，过去输入对后来状态的影响通过循环 Jacobian 的连乘传播：
+$$\frac{\partial h_{t+k}}{\partial h_t}=\prod_{i=1}^k\frac{\partial h_{t+i}}{\partial h_{t+i-1}}.$$
+
+这会造成梯度消失或爆炸，使长距离依赖难以学习。普通前馈网络加深时也有此问题，但 RNN 反复乘同一循环矩阵，使梯度随序列长度指数衰减或增长，问题更系统也更严重。
+
+LSTM 虽专为缓解简单 RNN 的梯度消失而设计，实践中仍难以在极长序列上有效保持信息并捕捉依赖。
+
+RNN 与 LSTM 必须逐步处理序列：当前词的隐藏状态依赖前一词，无法同时计算整条序列表示。这阻碍 GPU/TPU 上的充分并行。序列很长时，网络必须沿全序列“展开”并作随时间反向传播，计算与内存随长度线性增长；LSTM 的门控还增加每步开销。
+
+### Transformer 网络
+
+Transformer 的诞生主要针对 RNN/LSTM 的两大局限：难以有效捕捉长距离依赖，以及无法并行。Transformer [@vaswani2017attention] 用注意力机制取代递归，让序列中任意两个词无视距离直接建立联系，并行建模全局上下文。它已成为自然语言处理的前沿架构，也是现代大语言模型（LLM）的核心。
+
+下面部分沿用 [@turner2023introduction] 的思路作简要数学推导。*词元*（token）是输入被模型处理前划分出的基本单位；文本词元可以是词、子词甚至字符，图像也可切成图块作为词元。进入 Transformer 前，每个词元映射为*向量嵌入*；嵌入可以固定，也可与其他参数共同学习，这一技术由 *word2vec* 等方法开创 [@mikolov2013efficient]。
+
+设有 $n$ 个 $d$ 维词元组成的序列
+$$x_j^{(0)},\quad j=1,\dots,n,\quad x_j^{(0)}\in\mathbb R^d,$$
+其中 $x_j^{(0)}$ 是第 $j$ 个词元的向量嵌入。
+
+核心注意力机制对输入顺序不变，但 NLP 等应用高度依赖顺序，因此必须显式提供每个词元的位置。做法是在输入嵌入上加位置编码 $p_j\in\R^d$： $$\begin{equation}
+\label{positionencoding}
+    z_j^{(0)} = x_j^{(0)} + p_j, \qquad j=1,\dots,n.
+\end{equation}$$ 原始 Transformer 使用固定正弦位置编码；现代 LLM 也常把位置编码设为可学习参数。
+
+把各 $z_j$ 汇成矩阵
+$$Z^{(0)}=[z_1^{(0)},\dots,z_n^{(0)}]\in\mathbb R^{d\times n}.$$
+Transformer 以位置编码后的序列矩阵 $Z^{(0)}$ 为输入，输出另一 $d\times n$ 表示 $Z^{(L)}$，其中 $L$ 是层数。
+
+输出由 Transformer 块迭代计算：
+$$Z^{(\ell)}=\text{transformer-block}(Z^{(\ell-1)}),\qquad\ell=1,\dots,L.$$
+
+Transformer 块分两阶段：先沿序列维处理，再沿特征维处理。第一阶段的核心创新是自注意力，它根据序列中词元之间的依赖来细化特征，例如位置 $j$ 的词如何依赖位置 $j'$ 的词，或两个图块如何对应；这一阶段跨 $Z^{(\ell-1)}$ 的列作用。第二阶段则细化每个词元内部的特征，沿矩阵行作用。反复应用后，词元 $j$、特征 $i$ 的表示会受到词元 $j'$、特征 $i'$ 的影响。正如 [@turner2023introduction] 所指出，交替跨对象与跨特征处理是许多架构的共同思想，GNN 就交替处理节点与特征。
+
+#### 阶段 1：跨序列的自注意力
+
+下面详细说明 Transformer 块的第一阶段，即多头自注意力。
+
+**注意力。** 第 $\ell$ 次 Transformer 块第一阶段输出 $d\times n$ 矩阵 $Y^{(\ell)}$。它对每个特征独立地跨序列聚合信息。位置 $j$ 的输出向量是各位置输入的加权平均： $$\begin{equation}
+\label{eq:trans1}
+y_j^{(\ell)} = \sum_{j'=1}^n  z_{j'}^{(\ell-1)} A_{j',j}^{(\ell)}
+\end{equation}$$ 权重来自 $n\times n$ 注意力矩阵 $A^{(\ell)}$，并归一化为对每个 $j$ 都有 $\sum_{j'}A_{j',j}^{(\ell)}=1$。
+
+若位置 $j'$ 与 $j$ 高度相关，$A_{j',j}^{(\ell)}$ 取较大值；相关性弱时取较小值。
+
+矩阵形式为 $$Y^{(\ell)}=Z^{(\ell-1)}A^{(\ell)}.$$
+
+**自注意力。** 注意力矩阵的数值由输入本身决定。最直接的设想是以内积 $\langle z_{j'}^{(\ell)},z_j^{(\ell)}\rangle$ 衡量两个位置的相似度，再用式 [\[softmax\]](#softmax){reference-type="eqref" reference="softmax"} 转成非负且归一化的概率：
+$$A_{j',j}^{(\ell)}=\frac{\exp(\langle z_j^{(\ell)},z_{j'}^{(\ell)}\rangle)}{\sum_{j''}\exp(\langle z_{j'}^{(\ell)},z_{j''}^{(\ell)}\rangle)}.$$
+但这种做法把位置相似性与序列内容纠缠在一起，并不理想。
+
+可先用线性变换 $W$ 缓解纠缠，但相似度 $\langle Wz_j,Wz_{j'}\rangle$ 仍然对称，而词语关系通常不对称。例如“有袋类”强烈指向“哺乳类”，反向关联却弱得多，因为哺乳类还包括狮子、象、鲸等众多类别。
+
+引入两个不同的线性变换 $W_k,W_q\in\mathbb R^{d_k\times d}$ 即可打破对称性。通常取 $d_k<d$，把表示投影到低维子空间，只保留对相似度最重要的特征；再除以 $\sqrt{d_k}$ 改善数值稳定性，得到 $$\begin{equation}
+\label{attentionmatrix}
+A_{j',j}^{(\ell)} = \frac{\exp\big(\langle W_k z_{j}^{(\ell)}, W_q z_{j'}^{(\ell)} \rangle /\sqrt{d_k}\big)}{\sum_{j''=1}^n \exp\big(\langle W_k z_{j'}^{(\ell)}, W_q z_{j''}^{(\ell)} \rangle /\sqrt{d_k}\big)}.
+\end{equation}$$ 式 [\[eq:trans1\]](#eq:trans1){reference-type="eqref" reference="eq:trans1"} 与 [\[attentionmatrix\]](#attentionmatrix){reference-type="eqref" reference="attentionmatrix"} 共同构成*自注意力机制*。由于 $A$ 元素非负且每列和为 1，每个输出 $y_j^{(\ell)}$ 都是输入特征的凸组合。
+
+式中 $q_j=W_qz_j^{(\ell)}$ 与 $k_j=W_kz_j^{(\ell)}$ 分别称为*查询*（query）和*键*（key）。
+
+常见的注意力写法是 $$\begin{equation}
+    \label{attention2}
+\operatorname{Att}(Q, K, V) = \operatorname{softmax} \left( \frac{QK^\top}{\sqrt{d_k}} \right)V
+\end{equation}$$ 把查询与键分别汇成 $Q=[W_qZ^{(\ell)}]^T$、$K=[W_kZ^{(\ell)}]^T\in\mathbb R^{n\times d_k}$，便有 $\operatorname{softmax}(QK^\top/\sqrt{d_k})=A^{(\ell)}$，因此该式可由前两式直接恢复。
+
+前面的式子没有出现值矩阵 $V$，是因为原始 Transformer 会在多头自注意力中另加投影；按照 [@turner2023introduction] 的处理，这里先避免引入不必要的冗余。
+
+自注意力也可视为核平滑器：经可学习投影 $Q,K,V$ 后，查询 $q$ 的输出是值向量按相似度加权并归一化的平均。这类似核回归（见第 [\[s:kernellearning\]](#s:kernellearning){reference-type="ref" reference="s:kernellearning"} 章及 [@nadaraya1964estimating; @watson1964smooth]），其中 $\exp\langle q,k\rangle$ 充当核。经典核回归的核通常固定，而注意力核 $\exp\langle W_qz_i,W_kz_j\rangle$ 非对称、可学习且自适应，会随训练形成任务与上下文特定的相似度。
+
+**多头自注意力。** 单个注意力头只能用一组权重编码所有特征与关系，不得不混合不同信息，限制表达能力；多头机制可缓解这一问题。
+
+*多头注意力*用多组可学习矩阵分别投影查询、键和值，使模型能同时关注不同位置、不同表示子空间的信息。
+
+Transformer 块并行使用 $H$ 个*头*，再把输出线性投影为 $d\times n$ 数组，从而同时捕捉多个表示子空间的依赖；这类似 CNN 的多通道。具体地， $$\begin{equation}
+\label{multihead}
+Y^{(\ell)} = \sum_{h=1}^H V_h^{(\ell)} Z^{(\ell)}A_h^{(\ell)} ,
+\end{equation}$$ 其中 $V_h^{(\ell)}\in\mathbb R^{d\times d}$。令低秩分解 $V_h=W_hW_{v,h}$，$W_h\in\R^{d\times d_v}$、$W_{v,h}\in\R^{d_v\times d}$，即可恢复标准表示；此时 $V_h$ 类似投影到 $d_v$ 维子空间。$W_k,W_q,W_{v,h},W_v$ 都需训练学习。
+
+#### 阶段 2：跨特征的多层感知机
+
+第二阶段逐行应用*逐点前馈网络*，这一简单两层全连接网络为
+$$f_{\text{FFN}}(z)=\sigma(zW_1+b_1)W_2+b_2,$$
+其中 $W_1\in\mathbb R^{d\times d_{\text{ff}}}$、$W_2\in\mathbb R^{d_{\text{ff}}\times d}$。
+
+#### Transformer 块
+
+Transformer 层结合多头注意力与前馈变换，并加入残差连接和层归一化以稳定训练。堆叠 $L$ 层便得到编码器或解码器。
+
+编码器把输入嵌入处理成上下文表示；解码器用自注意力与交叉注意力生成输出。交叉注意力中，查询来自目标序列，键和值来自编码器的源序列。自注意力询问“句中各词如何相互关联”，交叉注意力则询问“输入的哪一部分与当前生成词最相关”。
+
+最终输出头把高维连续隐藏状态映射回词表上的离散概率分布。
+
+最后一个解码块后，每个位置由 $h\in\mathbb R^d$ 表示。通过
+$$u=hW_U+b$$
+映射到词表，其中 $W_U\in\mathbb R^{d\times V}$ 称为反嵌入矩阵，$V$ 是词表大小，$u\in\mathbb R^V$ 是未约束的 *logit* 得分。用 Softmax 转为概率：
+$$P(y=i\mid\text{上下文})=\frac{\exp(u_i/\tau)}{\sum_{j=1}^V\exp(u_j/\tau)},$$
+其中温度[^3] $\tau$ 控制分布尖锐程度；$\tau<1$ 更确定，$\tau>1$ 更随机。
+
+Transformer 是 BERT [@devlin2019bert]（仅编码器）、GPT [@radford2018improving]、Gemini [@team2023gemini]、Claude [@anthropic2024claude3]（通常视为仅解码器）及原始编码器--解码器 Transformer [@vaswani2017attention] 的基础。温和假设下，Transformer 是序列到序列函数的通用逼近器 [@yun2019transformers]。
+
+注意力架构虽已无处不在，其有效性的数学解释仍有限。尚无统一理论说明深度、宽度、注意力头和位置编码如何共同决定表达能力或产生涌现算法结构；自注意力的二次复杂度也成为长序列瓶颈。进一步进展可能需要泛函分析、动力系统、信息论和统计学习理论的新工具，并更紧密连接理论与经验。
+
+### 用自编码器学习低维结构
+
+前文介绍了多种降维方法：PCA 通过最小化 $\ell_2$ 重构误差寻找最优线性子空间；Johnson--Lindenstrauss 引理保证在对数级低维中的近等距嵌入；扩散映射借助 Markov 算子特征函数揭示数据流形的内在几何。它们分别对嵌入施加线性、等距或扩散光滑性结构，并由此获得保证。
+
+自编码器提供了基于神经网络的互补视角。它不解析地预设嵌入形式，而通过最小化重构目标，从数据*学习*编码器--解码器对。所得潜在表示与主成分或扩散坐标概念相同，都是高维数据的低维摘要 [@hinton2006reducing; @bengio2013representation]；区别在于假设类。非线性多层映射能捕捉 PCA 无法触及的结构。
+
+::: definition
+*自编码器*由*编码器* $f_\phi:\mathbb R^d\to\mathbb R^k$（$k\ll d$）和*解码器* $g_\psi:\mathbb R^k\to\mathbb R^d$ 组成，参数分别为 $\phi,\psi$。给定数据 $\{x_1,\ldots,x_n\}\subset\mathbb R^d$，通过最小化*重构损失*求参数： $$\begin{equation}
+    \mathcal{L}(\phi, \psi)
+    = \frac{1}{n} \sum_{i=1}^{n} \| x_i - g_\psi(f_\phi(x_i)) \|^2.
+    \label{eq:ae_loss}
+\end{equation}$$ 复合映射 $\Pi=g_\psi\circ f_\phi$ 称为*重构映射*，$f_\phi(x_i)$ 称为 $x_i$ 的*潜在编码*或*潜在表示*。
+:::
+
+编码器与解码器架构很灵活，通常都是含多隐藏层和逐点非线性的深层网络。维数为 $k$ 的瓶颈层迫使网络压缩信息，在学习重构的同时产生低维表示，见图 [1.6](#fig:autoencoder){reference-type="ref" reference="fig:autoencoder"}。
+
+<figure id="fig:autoencoder" data-latex-placement="h">
+
+::: center
+`<img src="../assets/figures/VAE.png" style="width:60.0%" />`{=html}
+:::
+
+<figcaption>
+自编码器架构示意图。
+</figcaption>
+</figure>
+
+考察*线性自编码器*很有启发性。约束 $f_\phi,g_\psi$ 都为线性映射：$f_\phi(x)=Wx$、$g_\psi(z)=Vz$，其中 $W\in\mathbb R^{k\times d}$、$V\in\mathbb R^{d\times k}$。重构损失为 $$\begin{equation}
+    \mathcal{L}(W, V) = \frac{1}{n}\sum_{i=1}^n \|x_i - VWx_i\|^2
+    = \|X - XW^\top V^\top\|_F^2 / n,
+    \label{eq:linear_ae_loss}
+\end{equation}$$ 其中数据矩阵 $X\in\mathbb R^{n\times d}$ 的行为 $x_i^\top$。直接计算可知，该目标的全局极小解恰是 PCA 子空间 [@baldi1989neural]。
+
+自编码器真正的能力来自非线性推广。若 $f_\phi,g_\psi$ 由多层网络实现，原则上便能利用数据流形的非线性结构。
+
+通用逼近定理保证足够宽或深的编码器、解码器可逼近紧集上的任意连续函数。代价是其损失非凸，不同于 PCA，梯度训练通常只能找到局部极小点。
+
+基本自编码器是纯判别式的，只学习确定性编码器--解码器，而不约束潜在空间。若无正则化，原空间邻近点未必映到潜在空间的邻近编码，潜在空间可能没有有用几何。多种结构化变体试图解决此问题，其中最成功的当属下面的变分自编码器。
+
+#### 变分自编码器
+
+标准自编码器把每个数据点映为单一编码，无法阻止潜在编码坍缩成彼此孤立、间隔大片空白的簇；从空白区域解码只会得到无意义输出。*变分自编码器*（VAE）在潜在空间上施加概率模型，从而同时支持有原则的推断与新样本生成 [@kingma2013auto; @diederik2019introduction]。
+
+*潜变量模型*假设：先从先验 $p(z)$ 抽取不可观测潜变量 $z\in\mathbb R^k$，再从条件分布 $p_\psi(x\mid z)$ 生成观测 $x\in\mathbb R^d$。联合分布为 $p_\psi(x,z)=p_\psi(x\mid z)p(z)$，边缘似然为 $$\begin{equation}
+    p_\psi(x) = \int_{\mathbb{R}^k} p_\psi(x | z) \, p(z) \, dz.
+    \label{eq:marginal_likelihood}
+\end{equation}$$ 典型选择是标准 Gaussian 先验 $p(z)=\mathcal N(0,I_k)$，以及由神经网络参数化的 Gaussian 或 Bernoulli 似然。学习目标是最大化 $\sum_i\log p_\psi(x_i)$。
+
+根本困难在于：非线性 $p_\psi(x\mid z)$ 使式 [\[eq:marginal_likelihood\]](#eq:marginal_likelihood){reference-type="eqref" reference="eq:marginal_likelihood"} 的积分不可解，既无闭式，高维朴素 Monte Carlo 方差又过大。VAE 为此引入可处理的*近似后验*。
+
+对任意分布 $q(z\mid x)$，对凹函数对数应用 Jensen 不等式，得到 $$\begin{align}
+    \log p_\psi(x)
+    &= \log \int p_\psi(x | z) \, p(z) \, dz \notag \\
+    &= \log \int \frac{p_\psi(x | z) \, p(z)}{q(z | x)} \, q(z | x) \, dz \notag \\
+    &= \log \, \mathbb{E}_{q(z | x)}\!\left[\frac{p_\psi(x | z) \, p(z)}{q(z | x)}\right] \notag \\
+    &\geq \mathbb{E}_{q(z | x)}\!\left[\log \frac{p_\psi(x | z) \, p(z)}{q(z | x)}\right] \notag \\
+    &= \mathbb{E}_{q(z | x)}\bigl[\log p_\psi(x | z)\bigr]
+       - \text{KL}\bigl(q(z | x) \,\|\, p(z)\bigr).
+    \label{eq:elbo_derivation}
+\end{align}$$ 式 [\[eq:elbo_derivation\]](#eq:elbo_derivation){reference-type="eqref" reference="eq:elbo_derivation"} 右侧称为*证据下界*（ELBO），记作 $\mathcal L_{\mathrm{ELBO}}(x;\phi,\psi)$。对数似然与 ELBO 的差恰是近似后验和真实后验之间的 KL 散度： $$\begin{equation}
+    \log p_\psi(x) - \mathrm{ELBO}(\phi, \psi; x)
+    = \text{KL}\bigl(q_\phi(z | x) \,\|\, p_\psi(z | x)\bigr) \geq 0.
+    \label{eq:elbo_gap}
+\end{equation}$$ 因而 ELBO 对任意 $q$ 都是对数似然的下界；且仅当 $q_\phi(z\mid x)=p_\psi(z\mid x)$ 几乎处处成立时取等号。最大化 ELBO 同时提高似然并改善后验近似。
+
+VAE 的关键是把近似后验参数化为对角协方差 Gaussian： $$\begin{equation}
+    q_\phi(z | x) = \mathcal{N}\bigl(\mu_\phi(x),\,
+    \mathrm{diag}(\sigma_\phi^2(x))\bigr),
+    \label{eq:vae_encoder}
+\end{equation}$$ 其中 $\mu_\phi$ 与 $\sigma_\phi^2$ 是直到末层都共享权重的神经网络，即*编码器*。似然参数化为 $$\begin{equation}
+    p_\psi(x | z) = \mathcal{N}\bigl(g_\psi(z),\, \tau^2 I_d\bigr),
+    \label{eq:vae_decoder}
+\end{equation}$$ 其中 $g_\psi$ 是*解码器*，$\tau^2>0$ 是固定或学习的方差。参数 $(\phi,\psi)$ 通过最大化全数据 ELBO 训练： $$\begin{equation}
+    \max_{\phi,\psi} \,\, \sum_{i=1}^n \underbrace{\Bigl[
+        \mathbb{E}_{q_\phi(z | x_i)}\bigl[\log p_\psi(x_i | z)\bigr]
+        - \text{KL}\bigl(q_\phi(z | x_i) \,\|\, p(z)\bigr)
+    \Bigr]}_{\mathrm{ELBO}(\phi, \psi; x_i)}.
+    \label{eq:vae_objective}
+\end{equation}$$
+
+式 [\[eq:vae_objective\]](#eq:vae_objective){reference-type="eqref" reference="eq:vae_objective"} 的 ELBO 分成两个相互竞争的部分：
+
+1.  重构项：鼓励解码器从编码器分布抽取的 $z$ 准确重构 $x_i$；在 Gaussian 似然下等于 $-\frac1{2\tau^2}\mathbb E\|x_i-g_\psi(z)\|^2+\mathrm{const}$，是确定性自编码器损失的概率版本。
+
+2.  KL 正则项：惩罚后验 $q_\phi(z\mid x_i)$ 过度偏离先验 $\mathcal N(0,I_k)$，防止编码器坍缩为确定性映射，并使先验良好覆盖潜在空间。
+
+没有 KL 正则时，模型可把每个输入分配到潜在空间中彼此遥远的狭窄点来降低重构误差，形成“碎裂”的潜在空间。KL 项迫使簇重叠并保持居中，使潜在空间中的邻近点解码为视觉或结构相似的输出。
+
+自编码器无需标签即可学习紧凑且与任务相关的表示，因而广泛用于科学与工程 [@balle2016end; @vincent2010stacked; @an2015variational; @gomez2018automatic]。潜在编码可作为下游监督任务特征，在标签稀缺时尤其有用 [@way2018extracting; @broecker2025multimodal]。如今它更多作为大型系统的组件，用于隐私保护、联邦学习、异常检测和生成模型。
+
+在生成质量上，扩散模型已超过自编码器 [@song2020score; @ho2020denoising]；但潜在扩散模型往往依赖高质量的自编码器式压缩作为预处理。这说明即使最终目标是生成而非描述，学习到的低维表示仍然重要 [@preechakul2022diffusion; @rombach2022high]。
+
+## 习题 {#exercises .unnumbered}
+
+::: myexercise
+（感知机线性分类）感知机是简单的二元线性分类器。给定数据 $${(x_i,y_i)}_{i=1}^n\subset\mathbb R^d\times\{-1,+1\},$$ 算法迭代更新 $w\in\mathbb R^d$ 与 $b\in\mathbb R$：
+
+1.  初始化 $w=0,b=0$。
+
+2.  对每个误分类点 $x_i$（即 $y_i(w^Tx_i+b)\leq0$），更新 $$w\gets w+y_ix_i,\qquad b\gets b+y_i.$$
+
+\(a\) 证明数据*线性可分*时，感知机经有限次更新便能找到分隔超平面。\
+(b) 令 $R=\max_i|x_i|$，$\gamma$ 为分隔间隔，证明更新次数至多为 $(R/\gamma)^2$。
+:::
+
+::: myexercise
+设 $d\in\mathbb N$，且 $$f(x) = \sum_{i=1}^\infty c_i ,\sigma_{\mathrm{ReLU}}(\langle a_i, x\rangle + b_i),
+\quad x \in \mathbb{R}^d,$$ 其中 $$\|a_i\|=1,\quad|b_i|\leq1,\quad\|c\|_1<\infty.$$ 证明对每个 $N\in\mathbb N$，存在含 $N$ 个神经元的单隐藏层 ReLU 网络 $f_N$，使
+$$\|f-f_N\|_{L^2(B_1^d)}\leq\frac{C\|c\|_1}{\sqrt N},$$
+其中 $C>0$ 为绝对常数。由此说明，系数 $\ell^1$ 可和的无限 ReLU 网络具有与维数无关的 $O(N^{-1/2})$ 逼近率。
+:::
+
+::: myexercise
+（UAT 中 sigmoid 型假设的重要性）设 $\sigma:\mathbb R\to\mathbb R$ 是多项式。
+
+1.  证明下列函数类中的每个函数都是 $x$ 的多项式： $$\mathcal{N}_\sigma =
+       \left\{
+       x\mapsto \sum_{j=1}^m a_j \sigma(w_j\cdot x + b_j)
+       \right\}.$$
+
+2.  推出 $\mathcal N_\sigma$ 在 $C([0,1]^n)$ 中不稠密。
+
+3.  解释为何这说明经典 UAT 的非多项式假设并非纯技术条件。
+:::
+
+::: myexercise
+设 $\sigma$ 为 sigmoid 型激活函数。
+
+1.  若限制所有 $\|w_j\|=1$，$\mathcal N_\sigma$ 是否仍在 $C([0,1]^n)$ 中稠密？
+
+2.  若所有偏置 $b_j=0$，通用性是否保留？
+
+3.  讨论哪些约束会破坏通用性，哪些只影响效率。
+:::
+
+::: myexercise
+（其他范数下的通用逼近）设 $1\leq p<\infty$。
+
+1.  证明若 $\mathcal N_\sigma$ 在 $C([0,1]^n)$ 中稠密，则在 $L^p([0,1]^n)$ 中也稠密。
+
+2.  给出一个不连续的 $L^p$ 函数例子，它仍可由神经网络在 $L^p$ 中逼近。
+:::
+
+::: myexercise
+反向传播与“梯度消失”：考虑每层只有一个神经元的 $L$ 层网络，输出 $y=a_L$，其中 $a_l=\sigma(z_l)$、$z_l=w_la_{l-1}+b_l$，$\sigma(z)=1/(1+e^{-z})$。\
+(a) 用链式法则推导 $\partial\mathcal L/\partial w_1$。\
+(b) $\sigma'(z)$ 在 $z=0$ 取最大值，该值是多少？\
+(c) 若权重初始化在 1 附近，解释为何 $L$ 增大时 $\partial\mathcal L/\partial w_1$ 趋于零。
+:::
+
+::: myexercise
+批归一化把小批量激活 $X=\{x_1,\dots,x_m\}$ 变换为
+$$\hat x_i=\frac{x_i-\mu_B}{\sqrt{\sigma_B^2+\epsilon}}.$$
+(a) 证明变换后的批量均值为 0、方差为 1。\
+(b) 加入可学习缩放与平移 $y_i=\gamma\hat x_i+\beta$ 后，若网络学得 $\gamma=\sqrt{\sigma_B^2+\epsilon}$、$\beta=\mu_B$，表示会发生什么？
+:::
+
+::: myexercise
+（深度的效率）通过实验比较浅层与深层网络逼近高频重复模式所需的参数量。
+
+在 $[0,1]$ 上逼近嵌套锯齿函数。定义
+$$S(x)=\begin{cases}2x&0\leq x<0.5,\\2(1-x)&0.5\leq x\leq1.\end{cases}$$
+
+考虑 $k$ 重复合成 $f=S\circ\cdots\circ S$，它产生 $2^{k-1}$ 个“齿”或振荡。本题取 $k=4$，即 8 次振荡。
+
+- 浅层逼近：构造单隐藏层 ReLU 网络，寻找使均方误差低于 $0.01$ 的最小神经元数 $N$，并计算参数总数。单隐藏层含 $N$ 个神经元时，参数数为 $3N+1$。
+
+- 深层逼近：构造每个隐藏层仅 2 个神经元、层数 $L$ 对应合成次数 $k$ 的深层网络，在相同数据上训练并计算参数总数。宽度 2、$L$ 层时参数数约为 $6L$。
+
+比较不同架构与参数量下的均方误差。
+:::
+
+::: myexercise
+（再探“深度与宽度”）考虑函数 $$f(x)=\sin(8\pi x),\qquad x\in[0,1].$$
+
+用两种 ReLU 网络逼近 $f$：
+
+1.  浅层网络：一个含 $m$ 个神经元的隐藏层；
+
+2.  深层网络：$L$ 个固定小宽度的隐藏层。
+
+（a）浅层网络逼近：
+
+1.  构造含一个输入神经元、宽度 $m$ 的单隐藏层、ReLU 激活和一个线性输出神经元的全连接网络。
+
+2.  在 $[0,1]$ 的均匀训练网格上，以均方误差训练网络逼近 $f$。
+
+3.  对 $m\in\{5,10,20,40,80\}$ 分别训练至收敛，记录最终误差并绘制 $x\mapsto\hat f_m(x)$。
+
+（b）深层网络逼近：
+
+1.  构造含一个输入神经元、$L$ 个宽度为 4 的隐藏层、ReLU 激活和一个线性输出神经元的全连接网络。
+
+2.  按上述方法训练。
+
+3.  对 $L\in\{2,4,8,16\}$ 分别训练，记录最终误差并绘制 $x\mapsto\hat f_L(x)$。
+
+计算每个模型的可训练参数总数，在同一坐标系绘制浅层与深层网络的“逼近误差--参数数目”曲线，并判断哪种架构能以更少参数达到给定目标误差（如 $10^{-3}$）。
+:::
+
+::: myexercise
+在 MNIST 数字分类上实现三隐藏层网络，分别采用 sigmoid、tanh、ReLU 与 Leaky ReLU，并比较性能。\
+(a) 绘制各激活函数训练期间每层的梯度范数，哪一种梯度消失最严重？\
+(b) 比较最终测试准确率与训练时间。
+:::
+
+[^1]: 对中等规模数据集，70--10--20 是常见起点；在“大数据”时代，98--1--1 的划分也并不少见，因为仅 1% 的数据就可能足以作出具有统计意义的评估。不过，更保守的划分通常能提供更可靠的保护。
+
+[^2]: 这些图由 [@torcham2020] 中的软件包生成。
+
+[^3]: “温度”一词借自热力学，用法与第 [\[sec:MarkovChains\]](#sec:MarkovChains){reference-type="ref" reference="sec:MarkovChains"} 节相同。

@@ -1,6 +1,8 @@
 ---
-title: "参考文献"
+pagetitle: "参考文献"
 ---
+
+# 参考文献 {.unnumbered}
 
 ::: {#refs}
 :::

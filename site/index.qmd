@@ -1,11 +1,19 @@
 ---
-title: "数据科学的数学基础"
-subtitle: "从高维几何到低秩恢复的数学路线"
+pagetitle: "数据科学的数学基础"
 description: "Mathematics of Data Science 中文翻译工程"
 page-layout: full
 toc: false
-title-block-banner: assets/figures/bookcover.png
+number-sections: false
+title-block-style: none
 ---
+
+# 数据科学的数学基础 {.unnumbered}
+
+::: {.index-subtitle}
+从高维几何到低秩恢复的数学路线
+:::
+
+![](assets/figures/bookcover.png){.book-cover fig-alt="《Mathematics of Data Science》英文原书封面"}
 
 ::: {.home-intro}
 这是一部面向数据科学的现代数学教材，系统串联高维概率、线性代数、图方法、优化、统计学习与结构化恢复。本项目按原书章节组织中文翻译，并保留公式、定理和文献引用的可追溯性。

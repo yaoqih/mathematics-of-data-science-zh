@@ -1,20 +1,897 @@
 ---
-title: "图拉普拉斯的大样本极限"
-description: "密度估计、图拉普拉斯收敛与向量扩散映射"
-status: 待翻译
+title: "图拉普拉斯算子的大样本极限"
+description: "密度估计、连续极限、谱几何与向量扩散映射"
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `convergence.tex`，尚待翻译。
-:::
+<!-- 原稿章节标签：c:convergence -->
+
+本章分析扩散映射及其他非线性降维方法在大样本下的行为。设数据点
+$$x_1,x_2,\ldots,x_n\in\mathbb R^p$$
+独立同分布地取自 $d$ 维 Riemann 流形 $\mathcal M$ 上的某个概率分布；$\mathcal M$ 嵌入 $\mathbb R^p$，且 $d=\dim\mathcal M\ll p$。称 $\mathcal M$ 为*内在流形*，$\mathbb R^p$ 为*环境空间*。用核函数 $K$ 和局部尺度 $\sqrt\varepsilon$ 定义权重
+$$w_{ij}=K_\varepsilon(\|x_i-x_j\|)=K\left(\frac{\|x_i-x_j\|}{\sqrt\varepsilon}\right).$$
+例如 Gaussian 核给出
+$$w_{ij}=\exp\left(-\frac{\|x_i-x_j\|^2}{2\varepsilon}\right).$$
+前文已经讨论随机游走矩阵 $A=D^{-1}W$、随机游走拉普拉斯算子 $L_{rw}=I-A$、图拉普拉斯算子 $L=D-W$ 以及归一化图拉普拉斯算子 $\LL=I-D^{-1}W$。现在希望理解如下极限： $$\begin{eqnarray*}
+D - W &\to& ? \\
+I - D^{-1}W &\to & ?
+\end{eqnarray*}$$
+这里 $n\to\infty$ 且 $\varepsilon\to0$。为使极限存在，还必须规定 $\varepsilon=\varepsilon_n$ 如何依赖 $n$，并说明收敛意义。我们期待离散随机游走收敛到流形上的连续扩散过程，但取极限时必须谨慎：怎样选择 $\varepsilon_n$ 才能保证收敛？速率如何？是哪一种收敛？直觉上，离散图拉普拉斯算子似乎应趋于流形上的 Laplace--Beltrami 算子；实际极限还依赖点云在流形上的采样分布，不同归一化也会产生不同极限算子。理解图拉普拉斯算子的大样本极限，是洞察扩散映射与相关非线性降维算法的有力工具，也是本章主题。
 
 ## 非参数密度估计
 
-## 图拉普拉斯的逐点收敛
+由点云估计密度与图拉普拉斯算子的大样本极限密切相关，因此先讨论密度估计。
 
-## 能否听出数据的形状
+### 一维非参数密度估计
 
-## 向量扩散映射与图联络拉普拉斯
+先考虑实直线上的密度估计。设 $p(x)$ 为随机变量 $X$ 的概率密度，$x_1,\dots,x_n$ 是独立同分布观测。假设 $p$ 一致连续，并用 *Parzen 窗* [@parzen1962estimation] 从样本估计它。把以各样本为中心的凸起函数相加，定义
+$$p_{n,\varepsilon}(x)=\frac1n\sum_{i=1}^n\frac1{\sqrt\varepsilon}K\left(\frac{x-x_i}{\sqrt\varepsilon}\right).$$
+合理的核 $K$ 应满足：
 
-## 习题 {.unnumbered}
+- $K \geq 0$
 
+- $\int_\mathbb{R} K(x)\,dx = 1$
+
+- $K(x) = K(-x)$
+
+- $\lim_{|x|\to \infty} K(x)=0$
+
+- $K$ 在 $x>0$ 上单调递减（可选但合理）；
+
+- 有界变差：$\int|K'(x)|\,dx<\infty$；若 $K$ 单调，则该积分等于 $2K(0)$；
+
+- $K$ 连续（因为 $p$ 连续）。
+
+估计量 $p_{n,\eps}$ 本质上就是平滑直方图。
+
+当 $n\to\infty$ 时，由大数定律， $$\begin{equation}
+p_{n,\varepsilon}(x)
+\rightarrow \mathbb{E}\left[\frac{1}{\sqrt{\eps}}K\left(\frac{x-X}{\sqrt{\eps}}\right)  \right]
+= \frac{1}{\sqrt{\eps}} \int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy
+= (K_\eps \ast p)(x),
+\label{parzen}
+\end{equation}$$ 其中
+$$K_\eps(x)=\frac1{\sqrt\eps}K\left(\frac{x}{\sqrt\eps}\right)$$
+是宽度 $\sqrt\eps$、高度 $1/\sqrt\eps$ 的缩放核。$p_{n,\eps}$ 是 $K_\eps$ 与真实密度 $p$ 的卷积，$\eps$ 因而造成模糊。令 $\eps\to0$ 会使样本周围的凸起变窄、趋近 delta 函数，并有
+$$\lim_{\eps\to0}\lim_{n\to\infty}p_{n,\eps}(x)=p(x).$$
+但实际样本有限，$\eps$ 过小会造成显著误差，下面分析有限样本情形。
+
+对小的 $\eps>0$，在式 [\[parzen\]](#parzen){reference-type="ref" reference="parzen"} 中令 $z=(y-x)/\sqrt\eps$，再作 Taylor 展开：
+
+$$\begin{align}
+& \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)dy = \int_\mathbb{R} K(z)p(x+z\sqrt{\eps})\,dz\nonumber\\
+& \qquad \qquad = \int_\mathbb{R} K(z)\left(p(x)+\sqrt{\eps}p^\prime(x) z + \frac{\eps}{2}p^{\prime \prime}(x) z^2 + O(\eps^{3/2})\right)\,dz\nonumber\\
+& \qquad \qquad = p(x) + \eps \frac{m_2}{2} p^{\prime\prime} (x) + O(\eps^2), \label{eq:2}
+\end{align}$$ 其中 $m_2=\int K(z)z^2\,dz$。式 [\[eq:2\]](#eq:2){reference-type="ref" reference="eq:2"} 中 $K$ 为偶函数而 $z$ 为奇函数，故一阶项消失；所有奇次幂积分也同样为零。因此固定 $\eps>0$ 时，即使 $n\to\infty$，估计量也不趋于 $p(x)$，其偏差为
+$$\text{Bias}=p(x)-\mathbb E[p_{n,\eps}(x)]=O(\eps).$$
+
+回顾第 [\[ss:predictionrisk\]](#ss:predictionrisk){reference-type="ref" reference="ss:predictionrisk"} 章的均方误差偏差--方差分解。有限 $n$ 时，$p_{n,\eps}$ 的方差为 $$\begin{eqnarray}
+\text{Var }[p_{n,\eps}(x)] &=& \frac{1}{n} \text{Var}\left[\frac{1}{\sqrt{\eps}} K\left( \frac{x-y}{\sqrt{\eps}}\right) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps} \int_\mathbb{R} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - \left(\frac{1}{\sqrt{\eps}} \int_\mathbb{R} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy\right)^2\right] \nonumber \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps} \int_\mathbb{R} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - O(1) \right] \label{var2}\\
+&=& \frac{1}{n} \left[ \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K^2(z)p(x+\sqrt{\eps}z)\,dz + O(1) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\sqrt{\eps}}\int_\mathbb{R} K^2(z)\,dz \;p(x) + O(1) \right] \nonumber\\
+&=:& \frac{1}{n\sqrt{\eps}} \left[M_2 p(x) + O(\sqrt{\eps})\right]\label{var5}
+\end{eqnarray}$$ 式 [\[var2\]](#var2){reference-type="ref" reference="var2"} 中的相应项在 $\eps\to0$ 时趋于 $p(x)$，故为 $O(1)$；式 [\[var5\]](#var5){reference-type="ref" reference="var5"} 定义 $M_2=\int_\mathbb R K^2(z)\,dz$。综合得到 $$\begin{equation}
+\label{eq:density_estimation_MSE}
+p_{n,\eps}(x) = p(x) + \eps \frac{m_2}{2} p^{\prime\prime} (x) + \xi_{n,\eps} + O(\eps^2),
+\end{equation}$$ where $$\mathbb{E}[\xi_{n,\eps}] = 0 \,\,\text{ and }\,\, \text{Var}[\xi_{n,\eps}] = \frac{M_2 p(x)}{n\sqrt{\eps}}\left[1 + O(\sqrt{\eps})\right].$$
+
+若直接令 $\eps\to0$，标准差 $\sigma(\xi_{n,\eps})$ 会发散，因此必须选取最优 $\eps_n$ 平衡偏差与方差。MMSE 准则
+$$\min_\eps O(\eps^2)+O\left(\frac1{n\eps^{1/2}}\right)$$
+给出 $\eps_n=n^{-2/5}$，带宽 $\sqrt{\eps_n}=n^{-1/5}$，衰减很慢。此时 MSE 以 $n^{-4/5}$ 衰减，而非参数估计中常见的 $n^{-1}$。MSE 趋零意味着逐点收敛：对每个 $x$，当 $n\to\infty$ 时，$p_{n,\eps}(x)\to p(x)$ 几乎必然成立。
+
+### 高维非参数密度估计
+
+设 $x_1,\ldots,x_n$ 是 $\mathbb R^d$ 中随机变量 $X$ 的独立同分布样本，定义
+$$p_{n,\eps}(x)=\frac1n\sum_{i=1}^n\frac1{\eps^{d/2}}K\left(\frac{x-x_i}{\sqrt\eps}\right).$$
+若 $\int_{\mathbb R^d}K(x)\,dx=1$，则 $K_\eps(x)=\eps^{-d/2}K(x/\sqrt\eps)$ 也积分为 1。另假设核径向对称，即 $K(x)=k(\|x\|)$。
+
+### 偏差项与拉普拉斯算子
+
+与一维情形相同，令 $z=(x-y)/\sqrt\eps$ 计算期望： $$\begin{eqnarray*}
+\mathbb{E}[p_{n,\eps}(x)] &=& \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy \\
+&=& \int_{\mathbb{R}^d} K(z)p(x+\sqrt{\eps}z)\,dz \\
+&=& \int_{\mathbb{R}^d} K(z)\left[p(x) + \sqrt{\eps}\sum_{i=1}^n \frac{\partial p(x)}{\partial x_i} z_i + \frac{\eps}{2}\sum_{i,j=1}^n \frac{\partial^2 p(x)}{\partial x_i \partial x_j} z_i z_j + \cdots \right]\,dz \\
+&=& p(x) + \eps  \frac{m_2}{2} \sum_{i=1}^n \frac{\partial^2 p}{\partial x_i^2}(x) + O(\eps^2) \\
+&=& p(x) + \eps  \frac{m_2}{2} \Delta p(x) + O(\eps^2)
+\end{eqnarray*}$$ 其中
+$$m_2=\int_{\mathbb R^d}K(z)z_i^2\,dz=\frac1d\int_{\mathbb R^d}K(z)\|z\|^2\,dz.$$
+径向对称性使 $i\neq j$ 时含 $z_iz_j$ 的混合项消失，Laplacian 因而自然出现。另一种理解是取 Gaussian 核 $K(x)=(2\pi)^{-d/2}e^{-\|x\|^2/2}$。当 $\eps=2t$ 时，$K_{2t}$ 正是 $\mathbb R^d$ 的热核，$K_{2t}*p$ 是初值 $u(0,x)=p(x)$ 的热方程 $u_t=\Delta u$ 的解。形式上
+$$K_{2t}*p=e^{t\Delta}p=p+t\Delta p+O(t^2),$$
+故 $K_\eps*p=p+\frac\eps2\Delta p+O(\eps^2)$，即 $m_2=1$。所有核的偏差中都会出现 Laplacian，区别只在系数 $m_2$。
+
+### 方差项与 $\eps_n$ 的最优选择
+
+下面计算方差，过程与一维情形相同： $$\begin{eqnarray*}
+\text{Var }[p_{n,\eps}(x)] &=& \frac{1}{n} \text{Var}\left[\frac{1}{\eps^{d/2}} K\left( \frac{x-y}{\sqrt{\eps}}\right) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^d} \int_{\mathbb{R}^d} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - \left(\frac{1}{\eps^{d/2}} \int_{\mathbb{R}^d} K\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy\right)^2\right] \nonumber \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^d} \int_{\mathbb{R}^d} K^2\left(\frac{x-y}{\sqrt{\eps}}\right)p(y)\,dy - O(1) \right] \\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K^2(z)p(x+\sqrt{\eps}z)\,dz + O(1) \right] \nonumber\\
+&=& \frac{1}{n} \left[ \frac{1}{\eps^{d/2}}\int_{\mathbb{R}^d} K^2(z)\,dz \;p(x) + O(1) \right] \nonumber\\
+&=& \frac{1}{n\eps^{d/2}} \left[M_2 p(x) + O(\eps)\right]
+\end{eqnarray*}$$ 其中 $M_2=\int_{\mathbb R^d}K^2(z)\,dz$。最小化
+$$\text{MMSE}=\min_\eps\left(\eps^2+\frac1{n\eps^{d/2}}\right)$$
+得到
+$$\eps_n=O\left(n^{-1/(d/2+2)}\right),\qquad\text{MSE}=O\left(n^{-1/(d/4+1)}\right).$$
+这又体现了维数灾难：达到给定 MSE 所需样本数随 $d$ 指数增长，
+$$n=O\left(\text{MSE}^{-(d/4+1)}\right).$$
+
+## 图拉普拉斯算子的逐点收敛
+
+现在从密度估计回到图拉普拉斯算子的大样本收敛。收敛有多种含义；这里聚焦逐点收敛。它虽弱于特征值和特征向量的谱收敛，却无需过深的分析工具，又能揭示核心思想。图拉普拉斯算子的收敛已有大量研究，至今仍很活跃 [@belkin2005towards; @hein2005graphs; @singer2006graph; @belkin2006convergence; @gine2006empirical; @singer2017spectral; @trillos2018variational; @garcia2020error; @calder2022improved]。
+
+### $\mathbb{R}^d$ 中的拉普拉斯算子
+
+设 $x_1,\dots,x_n$ 独立同分布地取自 $\mathbb R^d$ 上密度为 $p(x)$ 的分布，并定义 $w_{ij}=n^{-1}K_\eps(x_i-x_j)$。图拉普拉斯算子与随机游走拉普拉斯算子分别为
+$$L=D-W,\qquad L_{rw}=I-D^{-1}W.$$
+把这些矩阵视为 $\mathbb R^{|V|}$ 上的算子，作用于数据上的函数向量。也就是说，将
+$$f=(f_1,\dots,f_n)=(f(x_1),\dots,f(x_n))$$
+看成确定性函数 $f:\mathbb R^d\to\mathbb R$ 在样本点上的取值；上下文会表明 $f$ 指函数还是向量。另假设 $f\in C^4(\mathbb R^d)$。
+
+### $L=D-W$ 的极限算子
+
+对角矩阵 $D$ 满足
+$$D_{ii}=\sum_jw_{ij}=\frac1n\sum_jK_\eps(x_i-x_j).$$
+由核密度估计的结果，固定 $\eps$ 时
+$$\mathbb E[D_{ii}]=p(x_i)+\eps\frac{m_2}{2}\Delta p(x_i)+O(\eps^2),$$
+进而
+$$\mathbb E[(Df)(i)]=f(x_i)p(x_i)+\eps\frac{m_2}{2}f(x_i)\Delta p(x_i)+O(\eps^2).$$
+严格说应排除确定性的 $w_{ii}$，但它只贡献 $K(0)/n$，随 $n\to\infty$ 消失。另一方面
+$$(Wf)(i)=\frac1n\sum_jK_\eps(x_i-x_j)f(x_j),$$
+其期望为 $$\begin{eqnarray*}
+\mathbb{E}[(Wf)(i)] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y)f(y)p(y)\,dy \\
+&=& f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2).
+\end{eqnarray*}$$ 因而 $$\begin{eqnarray*}
+\mathbb{E}[(Lf)(i)] &=& \mathbb{E}[(D-W)f(i)] \\
+&=& [p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i)]f(x_i) - [f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i)] + O(\eps^2) \\
+&=& \eps\frac{m_2}{2} [f\Delta p - \Delta(fp)](x_i) + O(\eps^2) \\
+&=& \eps\frac{m_2}{2} [f\Delta p - f\Delta p - 2\nabla f \cdot \nabla p - p\Delta f](x_i) + O(\eps^2)\\
+&=& -\eps\frac{m_2}{2} [p\Delta f + 2\nabla p \cdot \nabla f](x_i) + O(\eps^2)
+\end{eqnarray*}$$ Therefore, $$\begin{eqnarray*}
+-\frac{1}{\eps}(Lf)(i) &\to& \frac{m_2}{2} [p\Delta f + 2\nabla p \cdot \nabla f](x_i) + O(\eps) \\
+&=& \frac{m_2 p(x_i)}{2} [\Delta f + 2\frac{\nabla p}{p} \cdot \nabla f](x_i) + O(\eps)
+\end{eqnarray*}$$ 当 $n\to\infty$ 时几乎必然成立。若 $p$ 均匀，则 $\nabla p=0$，极限就是 Laplacian；若采样不均匀，则扩散系数与漂移都依赖 $p$。最终
+$$\lim_{\eps\to0}\lim_{n\to\infty}-\frac1\eps(Lf)(i)=\frac{m_2p(x_i)}2\left[\Delta f+2\frac{\nabla p}{p}\cdot\nabla f\right](x_i).$$
+
+### $L_{rw}=I-D^{-1}W$ 的极限算子
+
+对随机游走拉普拉斯算子
+$$L_{rw}=I-A=I-D^{-1}W$$
+有
+$$(L_{rw}f)(i)=f(x_i)-\frac{\sum_jw_{ij}f(x_j)}{\sum_jw_{ij}}.$$
+分子分母并不独立，不能把比值的期望写成期望之比；应使用大数定律。当 $n\to\infty$ 时， $$\begin{align*}
+& (L_{rw}f)(i) \to f(x_i) - \frac{f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2)}{p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i) + O(\eps^2)} \\
+& \quad = f(x_i) - \frac{f(x_i)p(x_i) + \eps\frac{m_2}{2}f(x_i)\Delta p(x_i) + \eps\frac{m_2}{2}\left(p \Delta f + 2\nabla p \cdot \nabla f \right) + O(\eps^2)}{p(x_i) + \eps\frac{m_2}{2}\Delta p(x_i) + O(\eps^2)} \\
+%&=& f(x_i) - \frac{1}{p(x_i)}\left(f(x_i)p(x_i) + \eps\frac{m_2}{2}\Delta(fp)(x_i) + O(\eps^2) \right)\left(1 - \eps\frac{m_2}{2}\frac{\Delta p(x_i)}{p(x_i)} + O(\eps^2) \right) \\
+%&=& -\eps\frac{m_2}{2}\frac{\Delta (fp) - f\Delta p}{p}(x_i) + O(\eps^2) \\
+%&=& -\eps\frac{m_2}{2}\frac{p\Delta f + 2\nabla f \nabla p + f\Delta p - f\Delta p}{p}(x_i) + O(\eps^2) \\
+& \quad = -\eps\frac{m_2}{2}\left(\Delta f + 2\frac{\nabla p}{p}\cdot \nabla f \right)(x_i) + O(\eps^2).
+\end{align*}$$ 均匀采样时，随机游走拉普拉斯算子趋于 Laplacian；非均匀时则趋于后向 Fokker--Planck 算子 [@nadler2006diffusion]。定义势函数 $U(x)=-2\log p(x)$，则 $\nabla U=-2\nabla p/p$，并有
+$$-\frac1\eps(L_{rw}f)(i)\to\frac{m_2}{2}(\Delta f-\nabla U\cdot\nabla f)(x_i)+O(\eps).$$
+若样本来自协方差 $\Sigma$ 的 Gaussian 分布，则 $U(x)=x^T\Sigma^{-1}x+\mathrm{const}$ 是抛物势，扩散粒子受到指向原点、斜率随位置变化的线性漂移。
+
+### 曲率的影响
+
+设数据取自嵌入 $\mathbb R^p$ 的正则 $C^3$ 曲线 $\gamma(s)$，$s$ 为弧长参数，故 $\|\gamma'(s)\|=1$。微分得 $\gamma'\cdot\gamma''=0$，即加速度垂直切向。以 $\gamma(0)$ 为原点、$\gamma'(0)$ 为 $x$ 轴、$\gamma''(0)$ 为 $y$ 轴建立局部坐标，并记曲率 $a=\|\gamma''(0)\|$，则每条正则曲线局部都像平面抛物线。再由 $\|\gamma''\|^2+\gamma'\cdot\gamma'''=0$，得到更精细的展开
+$$\gamma(s)=\left(s-\frac16a^2s^3,\frac12as^2,0,\ldots,0\right)+(o(s^3),O(s^3),\ldots,O(s^3)).$$
+
+实践中只能测量环境空间的 Euclidean 距离，无法知道曲线或直接测量测地距离。幸而在短距离上，弦长是测地距离的高精度近似。具体地， $$\|\gamma(s)\|^2=s^2\left(1-\frac1{12}a^2s^2+o(s^2)\right),$$ 因而 $$\begin{eqnarray}
+\|\gamma(s)\| &=& s\sqrt{1 - \frac{1}{12}a^2 s^2 + o(s^2)} = s(1 - \frac{1}{24}a^2 s^2 + o(s^2)) \nonumber \\
+&=& s-\frac{1}{24}a^2 s^3+o(s^3) \label{eq:u}
+\end{eqnarray}$$ 可见弦长与测地距离在一阶、二阶上都相同。令 $u=\|\gamma(s)\|$，则
+$$u=s-\frac1{24}a^2s^3+o(s^3),\quad s=u+\frac1{24}a^2u^3+o(u^3),\quad\frac{ds}{du}=1+\frac18a^2u^2+o(u^2).$$
+
+设曲线上的采样密度为 $p(s)$ 且 $x_i=0$。忽略 $j=i$ 的 $O(n^{-1})$ 贡献，$D_{ii}$ 的期望为 $$\begin{eqnarray*}
+\mathbb{E}\left[D_{ii}\right] &=& \mathbb{E}\left[\sum_{j=1}^n w_{ij}\right] \\
+&=& \mathbb{E}\left[K_\eps(\|x_i-X\|)\right] \\
+&=& \int \frac{1}{\sqrt{\eps}} K\left(\frac{\|\gamma(s)\|}{\sqrt{\eps}} \right)p(s)\,ds\\
+ &=& \int \frac{1}{\sqrt{\eps}} K\left(\frac{u}{\sqrt{\eps}}\right)p(u+O(u^3))(1+\frac{a^2u^2}{8} + o(u^2))\,du  \\
+&=& \int K(z) p(\sqrt{\eps}z + O(\eps^{3/2}))(1+\frac{\eps}{8}a^2z^2+o(\eps))\, dz\\
+&=& \int K(z) ( p(0)+\sqrt{\eps}zp^\prime (0) + \frac{\eps}{2}p^{\prime \prime}(0)z^2 + O(\eps^{3/2})   )(1+\frac{\eps}{8}a^2z^2+o(\eps))\, dz \nonumber \\
+&=& p(0) + \eps \frac{m_2}{2}\left[p^{\prime \prime}(0) + \frac{a^2}{4}p(0) \right] + o(\eps)
+\end{eqnarray*}$$ 这里依次使用 $u=\|\gamma(s)\|$、上述 Jacobian、$z=u/\sqrt\eps$、$m_2=\int K(z)z^2dz$，以及核的归一化和对称性。若曲线为 $C^4$，则 $o(\eps)$ 可改为 $O(\eps^2)$。
+
+于是
+$$\mathbb E[Df]=fp+\eps\frac{m_2}{2}\left[fp''+\frac{a^2}{4}fp\right]+o(\eps),$$
+$$\mathbb E[Wf]=fp+\eps\frac{m_2}{2}\left[(fp)''+\frac{a^2}{4}fp\right]+o(\eps).$$
+因此 $$\begin{eqnarray*}
+\mathbb{E}[Lf] &=& \mathbb{E}[(D-W)f] \\
+&=&  \eps \frac{m_2}{2}\left[fp^{\prime \prime} - (fp)''  \right] + o(\eps) \\
+&=& -\eps \frac{m_2}{2}\left[f''p + 2f'p'   \right] + o(\eps)
+\end{eqnarray*}$$ 曲率虽同时影响 $D$ 和 $W$，在 $L=D-W$ 中却恰好抵消。因此无论曲线在 $\mathbb R^p$ 中怎样弯曲扭转，$L$ 的主阶项不变；它只依赖数据的内在几何。
+
+随机游走拉普拉斯算子中也有同样的曲率抵消： $$\begin{eqnarray*}
+L_{rw}f &\to& f - \frac{fp + \eps \frac{m_2}{2}\left[(fp)'' + \frac{a^2}{4}fp \right] + o(\eps)}{p + \eps \frac{m_2}{2}\left[p'' + \frac{a^2}{4}p \right] + o(\eps)} \\
+&=& f - \frac{fp + \eps \frac{m_2}{2}\left[fp'' + \frac{a^2}{4}fp + pf'' + 2p'f'  \right] + o(\eps)}{p + \eps \frac{m_2}{2}\left[p'' + \frac{a^2}{4}p \right] + o(\eps)} \\
+&=& -\eps\frac{m_2}{2}\left[f'' + 2\frac{p'}{p}f' \right].
+\end{eqnarray*}$$ 因而即使存在曲率，归一化后仍回到 Fokker--Planck 算子。
+
+### 一般流形
+
+一般流形上会怎样？一维中，曲率效应可概括为 $p''\mapsto p''+a^2p/4$。在 $d$ 维流形任一点，都可选择一组相互正交的测地方向，以 $s_1,\dots,s_d$ 为相应坐标。
+
+Laplace--Beltrami 算子为
+$$\Delta_Mf=\sum_{i=1}^d\frac{\partial^2f}{\partial s_i^2}.$$
+各方向曲率 $a_i(x)$ 可以不同，因而产生修正项 $\Delta_Mp+E(x)p/4$，其中
+$$E(x)=\sum_i a_i^2(x)-\sum_i\sum_{j\ne i}a_i(x)a_j(x).$$
+
+但 $E(x)$ 在 $L$ 与 $L_{rw}$ 中仍会抵消，故
+$$\lim_{\eps\to0}\lim_{n\to\infty}-\frac1\eps Lf=\frac{m_2}{2}[p\Delta_Mf+2\nabla p\cdot\nabla f],$$
+$$\lim_{\eps\to0}\lim_{n\to\infty}-\frac1\eps L_{rw}f=\frac{m_2}{2}\left[\Delta_Mf+2\frac{\nabla p}{p}\cdot\nabla f\right].$$
+
+### 前向与后向 Fokker--Planck 算子及 Neumann 边界条件
+
+仍令 $U(x)=-2\log p(x)$，则随机游走拉普拉斯算子趋于后向 Fokker--Planck 算子
+$$\mathcal Lf=\Delta_Mf-\nabla U\cdot\nabla f.$$
+它在随机微分方程和 Itô 扩散分析中十分重要。正如 Laplacian 出现在描述 Brownian 运动密度演化的热方程中，势阱 $U$ 中带漂移 Brownian 运动的密度演化由前向 Fokker--Planck 方程控制。
+
+Laplace--Beltrami 算子自伴；在无边界流形上，$\int_\mathcal M f\Delta_Mg=\int_\mathcal M g\Delta_Mf$。证明留作习题。后向算子的伴随 $\mathcal L^*$ 称为前向 Fokker--Planck 算子：
+$$\mathcal L^*g=\Delta_Mg+\nabla(g\nabla U).$$
+
+前向算子可写成通量的散度：
+$$\mathcal L^*g=\nabla\cdot[\nabla g+g\nabla U]=-\nabla\cdot J,\qquad-J=\nabla g+g\nabla U.$$
+第一项来自浓度梯度，第二项来自漂移 $F=-\nabla U$。
+
+直观上，数据图上的随机游走不会被吸收，总概率守恒；到达边界后只能反射回流形，因此满足无通量边界条件 $J=0$。下面推导 $f$ 的相应边界条件，并验证 $\mathcal L^*$ 确为 $\mathcal L$ 的伴随： $$\begin{eqnarray*}
+\int_{\mathcal{M}} f \mathcal{L}^* g \,dv &=& -\int_{\mathcal{M}} f \nabla \cdot J \,dv\\
+&=& -\int_{\mathcal{M}} \nabla \cdot [fJ] \,dv + \int_{\mathcal{M}} J \cdot \nabla f \,dv \\
+&=& -\int_{\partial \mathcal{M}} fJ\,dS + \int_{\mathcal{M}} J\cdot \nabla f \,dv ~~~~~~~~~\text{no flux b.c.:}\, J=0\\
+&=& -\int_{\mathcal{M}} \left[\nabla g + g \nabla U \right] \cdot \nabla f \,dv \\
+&=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla g \cdot \nabla f \, dv \\
+&=& -\int_{\mathcal{M}} g\nabla U \cdot \nabla f \,dv - \int_{\mathcal{M}}\nabla\cdot(g\nabla f) + \int_{\mathcal{M}} g\Delta f\,dv \\
+&=& \int_{\mathcal{M}} g\left[\Delta f - \nabla U \cdot \nabla f  \right]\,dv - \int_{\partial \mathcal{M}} g \frac{\partial f}{\partial \nu}\,dS ~~~~~~~\text{adjoint b.c.: } \frac{\partial f}{\partial \nu}=0 \\
+&=& \int_{\mathcal{M}} g \mathcal{L} f \,dv
+\end{eqnarray*}$$ 因而当 $f$ 满足齐次 Neumann 条件 $\partial f/\partial\nu=0$ 时，$\mathcal L^*$ 是 $\mathcal L$ 的形式伴随。
+
+若 $\partial\mathcal M\ne\emptyset$，$L_{rw}$ 的特征向量离散逼近满足齐次 Neumann 边界条件的后向 Fokker--Planck 特征函数：
+
+$$\begin{eqnarray*}
+\mathcal{L}\phi &=& \lambda \phi,\quad x\in \mathcal{M}\\
+\frac{\partial \phi}{\partial \nu} &=& 0,\quad x\in \partial \mathcal{M}
+\end{eqnarray*}$$
+
+### 密度不变的图拉普拉斯算子
+
+下面采用另一种相似度归一化，以获得不同极限。原始相似度为 $w_{ij}=n^{-1}K_\eps(x_i-x_j)$；现在令
+$$\tilde w_{ij}=\frac{w_{ij}}{d_id_j},\qquad d_i=\sum_jw_{ij},$$
+即 $\tilde W=D^{-1}WD^{-1}$。再定义 $\tilde D_{ii}=\sum_j\tilde w_{ij}$、$\tilde L=\tilde D-\tilde W$ 与 $\tilde L_{rw}=I-\tilde D^{-1}\tilde W$。此时
+$$\lim_{\eps\to0}\lim_{n\to\infty}-\frac1\eps\tilde Lf=\frac{m_2}{2p(x_i)}\Delta_Mf,$$
+$$\lim_{\eps\to0}\lim_{n\to\infty}-\frac1\eps\tilde L_{rw}f=\frac{m_2}{2}\Delta_Mf.$$
+因此，即使采样不均匀，重新归一化后的随机游走算子仍趋于与密度无关的 Laplace--Beltrami 算子，无需预先估计密度。不过 $d_i$ 本身确实携带密度信息，因为 $d_i\propto p(x_i)$： $$\begin{eqnarray}
+d_i &\to& p(x_i) + \eps \frac{m_2}{2}\left(\Delta_M p(x_i) + \frac{1}{4}E(x_i)p(x_i)\right) + O(\eps^2)
+\end{eqnarray}$$ 当 $n\to\infty$。相应地展开 $1/d$ 与 $\tilde w_{ij}$，可得 $$\begin{eqnarray*}
+&& \tilde{D}_{ii} = \sum_{j=1}^n \tilde{w}_{ij}  \\
+&=& \frac{1}{n} \sum_{j=1}^n K_{\eps}(x_i-x_j)\left[\frac{1}{p(x_i)p(x_j)} - \eps\frac{m_2}{2p(x_i)p(x_j)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_j)}{p(x_j)} + \frac{1}{4}E(x_j)\right) + O(\eps^2) \right] \\
+&\to& \frac{1}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta 1 + \frac{1}{4}E(x_i) \right] - \eps\frac{m_2}{2p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i)\right) + O(\eps^2) \\
+&=& \frac{1}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\frac{1}{4}E(x_i) \right] - \eps\frac{m_2}{p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) \right) + O(\eps^2) \\
+&=& \frac{1}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]
+\end{eqnarray*}$$ 类似地， $$\begin{eqnarray*}
+&& (\tilde{W}f)(x_i) = \sum_{j=1}^n \tilde{w}_{ij}f(x_j) \\
+&=& \frac{1}{n} \sum_{j=1}^n K_{\eps}(x_i-x_j)\left[\frac{f(x_j)}{p(x_i)p(x_j)} - \eps\frac{m_2 f(x_j)}{2p(x_i)p(x_j)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_j)}{p(x_j)} + \frac{1}{4}E(x_j)\right) + O(\eps^2) \right] \\
+%&\to& \frac{f(x_i)}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta f(x_i) + \frac{1}{4}E(x_i)f(x_i) \right] - \eps\frac{m_2f(x_i)}{2p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) + \frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i)\right) + O(\eps^2) \\
+&\to& \frac{f(x_i)}{p(x_i)} + \eps \frac{m_2}{2} \frac{1}{p(x_i)}\left[\Delta f(x_i)+\frac{1}{4}E(x_i)f(x_i) \right] - \eps\frac{m_2f(x_i)}{p(x_i)}\left(\frac{\Delta p(x_i)}{p(x_i)} + \frac{1}{4}E(x_i) \right) + O(\eps^2) \\
+&=& \frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]
+\end{eqnarray*}$$ 综合得到 $$\begin{eqnarray*}
+(\tilde{L}f)(x_i) &=& (\tilde{D}-\tilde{W})f(x_i) \\
+&\to& \frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right] \\
+&& -\frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right] \\
+&=& -\eps \frac{m_2}{2}\frac{1}{p(x_i)}\Delta_M f(x_i) + O(\eps^2)
+\end{eqnarray*}$$ 对随机游走拉普拉斯算子， $$\begin{eqnarray*}
+(\tilde{L}_{rw}f)(x_i) &=& (I-\tilde{D}^{-1}\tilde{W})f(x_i) \\
+%&\to& f(x_i) - \frac{\frac{f(x_i)}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(-\frac{\Delta f(x_i)}{f(x_i)} + 2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]}{\frac{1}{p(x_i)}\left[1 - \eps\frac{m_2}{2}\left(2\frac{\Delta p(x_i)}{p(x_i)} +\frac{1}{4}E(x_i)\right) + O(\eps^2) \right]} \\
+&=& -\eps \frac{m_2}{2}\Delta_M f(x_i) + O(\eps^2)
+\end{eqnarray*}$$ 因此，密度不变的归一化随机游走拉普拉斯算子无论采样密度如何，都趋于 Laplace--Beltrami 算子；这种归一化把密度与几何分离开来。
+
+图拉普拉斯算子还有许多归一化与变体。例如，可由 Sinkhorn--Knopp 迭代高效计算的双随机归一化对异方差噪声稳健 [@landa2021doubly; @cheng2024bi]；受自调节谱聚类 [@zelnik2004self] 启发，文献 [@singer2008non; @berry2016variable] 研究了可变带宽扩散核与各向异性扩散；基于最优传输 Wasserstein 距离等非 Euclidean 距离的扩散映射见 [@kileel2021manifold; @Xu2026]。
+
+### 方差误差
+
+为简化叙述，假设样本取自 $\mathbb R^d$；推广到 $d$ 维流形并不困难。前面在样本数趋于无穷时导出了极限算子，但实践中样本有限，必须适当选择 $\eps_n$，防止方差误差过大，这与非参数密度估计中的权衡相似。
+
+先考虑图拉普拉斯算子
+$$Lf(i)=\frac1n\sum_jK_\eps(x_i-x_j)(f(x_i)-f(x_j)).$$
+其方差为 $$\begin{eqnarray*}
+\text{Var}(Lf(i)) &=& \frac{1}{n}\left[\int_{\mathbb{R}^d} K_{\eps}^2(x_i-y)(f(x_i)-f(y))^2p(y)\,dy + O(\eps^2)  \right] ~~~~~ (\mathbb{E}[Lf]=O(\eps))\\
+&=& \frac{1}{n\eps^{d/2}}\left[M_2 (f(x_i)-f(x))^2p(x)|_{x=x_i} + \eps \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(x))^2p(x))|_{x=x_i} + O(\eps^2) \right] \\
+&=& \frac{1}{n\eps^{d/2-1}} \left[\frac{m_{2,2}}{2}\Delta ((f(x_i)-f(x))^2p(x))|_{x=x_i} + O(\eps) \right]
+\end{eqnarray*}$$ 其中 $m_{2,2}=d^{-1}\int K(x)^2\|x\|^2dx$。通常主阶为 $1/(n\eps^{d/2})$；但 $f(x_i)-f(x)$ 在 $x=x_i$ 为零，主阶随之消失，方差更小。由 $\Delta(g^2)=2g\Delta g+2\|\nabla g\|^2$，均匀采样时主项由 $2\|\nabla f(x_i)\|^2$ 决定。若 $\nabla f(x_i)=0$，方差进一步降低。例如球面上 $f(x,y,z)=z$ 在南北极取极值，这些点的方差误差渐近更小。
+
+### 随机游走拉普拉斯算子的随机涨落
+
+随机游走拉普拉斯算子是两个相关随机变量之比，方差不能直接计算。写成
+$$L_{rw}f(i)=\frac{\sum_jF_j}{\sum_jG_j},$$
+其中 $$\begin{eqnarray*}
+F_j &=& K_{\eps}(x_i-x_j) (f(x_i)-f(x_j))\\
+G_j &=& K_{\eps}(x_i-x_j)
+\end{eqnarray*}$$ 目标是证明该比值接近期望之比，并控制涨落关于 $n,\eps$ 的大小。各矩为 $$\begin{eqnarray*}
+\mathbb{E}[F_j] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y) (f(x_i)-f(y))p(y)\,dy \\ &=& \eps \frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps^2) \\
+\mathbb{E}[G_j] &=& \int_{\mathbb{R}^d} K_{\eps}(x_i-y) p(y)\,dy \\ &=& p(x_i) + O(\eps)
+\end{eqnarray*}$$ and $$\begin{eqnarray*}
+\mathbb{E}[F_j^2] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) (f(x_i)-f(y))^2 p(y)\,dy \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))^2p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}}) \\
+\mathbb{E}[G_j^2] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) p(y)\,dy \\
+&=& \frac{M_2}{\eps^{d/2}}p(x_i) + O(\frac{1}{\eps^{d/2-1}}) \\
+\mathbb{E}[F_j G_j] &=& \int_{\mathbb{R}^d} K_{\eps}^2(x_i-y) (f(x_i)-f(y))p(y)\,dy \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}})
+\end{eqnarray*}$$ 因此 $$\begin{eqnarray*}
+\text{Var}(F_j) &=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))^2p(y))|_{y=x_i} + O(\frac{1}{\eps^{d/2-2}}) \\
+\text{Var}(G_j) &=& \frac{M_2}{\eps^{d/2}}p(x_i) + O(1,\frac{1}{\eps^{d/2-1}}) \\
+\text{Cov}(F_j, G_j) &=& \mathbb{E}[F_j G_j] - \mathbb{E}[F_j]\mathbb{E}[G_j] \\
+&=& \frac{1}{\eps^{d/2-1}} \frac{m_{2,2}}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps,\frac{1}{\eps^{d/2-2}})
+\end{eqnarray*}$$ $F_j,G_j$ 的相关系数为 $$\begin{eqnarray*}
+\rho (F_j,G_j) &=& \frac{\text{Cov}(F_j,G_j)}{\sqrt{\text{Var}(F_j)}\sqrt{\text{Var}(G_j)}} \\
+&=& O\left(\frac{1}{\eps^{d/2-1}} \sqrt{\eps^{d/2 + d/2 - 1}}\right) \\
+&=& O(\sqrt{\eps})
+\end{eqnarray*}$$ 综合起来， $$\begin{eqnarray*}
+L_{rw}f(i) &=& \frac{\frac{1}{n}\sum_{j=1}^n F_j}{\frac{1}{n}\sum_{j=1}^n G_j} \\
+&=& \frac{\mathbb{E}[F_j] + \xi_{n,\eps}^f}{\mathbb{E}[G_j] + \xi_{n,\eps}^g} \\
+&=& \frac{\eps \frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps^2) + \xi_{n,\eps}^f}{p(x_i) + O(\eps) + \xi_{n,\eps}^g} \\
+&=& \eps\frac{\frac{m_2}{2}\Delta ((f(x_i)-f(y))p(y))|_{y=x_i} + O(\eps) + O_P(\frac{1}{n^{1/2}\eps^{d/4+1/2}})}{p(x_i) + O(\eps) + O_P(\frac{1}{n^{1/2}\eps^{d/4}})}
+\end{eqnarray*}$$ 因此
+$$\frac1\eps L_{rw}f(i)=\frac{m_2}{2p(x_i)}\Delta((f(x_i)-f(y))p(y))|_{y=x_i}+O(\eps)+O_P\left(\frac1{n^{1/2}\eps^{d/4+1/2}}\right).$$
+平衡方差与偏差平方，得到 $\eps^{d/2+3}=1/n$，故最优核带宽为
+$$\eps_n=O\left(n^{-1/(d/2+3)}\right).$$
+
+### 大偏差界
+
+还可给出高概率大偏差界。$F_j$ 一致有界于 $c=O(\eps^{-d/2})$，方差 $\sigma^2=O(\eps^{-(d/2-1)})$，且 $\sigma^2\ll c$，因此 Bernstein 不等式原则上比 Hoeffding 界更紧：
+$$\Pr\left\{\frac1n\sum_j(F_j-\mathbb E F_j)>\alpha\right\}\leq\exp\left(-\frac{n\alpha^2}{2\sigma^2+\frac23c\alpha}\right).$$
+被估计量为 $O(\eps)$，故取 $\alpha=o(\eps)$，指数为 $O(n\alpha^2\eps^{d/2-1})$。令其等于 $\log n$，偏差概率随 $n\to\infty$ 消失；联合界还可同时控制所有点。偏差尺度为
+$$\alpha=\frac{\sqrt{\log n}}{n^{1/2}\eps^{d/4-1/2}}.$$
+因此高概率控制只多付出 $\sqrt{\log n}$ 因子。若 $\eps_n\to0$ 且上述量趋零，就能保证逐点乃至一致收敛。
+
+对流形样本，我们更希望证明离散拉普拉斯算子的特征向量收敛到微分算子的特征函数。遗憾的是，逐点甚至一致收敛都不足以推出这种谱收敛；严格处理超出本书范围。
+
+### Sturm-Liouville
+
+考虑特征值问题
+$$\Delta f-\nabla U\cdot\nabla f=-\lambda f.$$
+一维时为 $f''-U'f'=-\lambda f$；乘积分因子 $e^{-U}$ 得
+$$(e^{-U}f')'+\lambda e^{-U}f=0,$$
+这是 Sturm--Liouville 方程。因此其特征值可数，特征函数在适当加权 $L^2$ 空间构成正交归一基。特别地，第一个非平凡特征函数会按弧长排列开曲线上的点；闭曲线的平面嵌入则恰绕原点一周，见章末习题。
+
+## 能否听出数据的形状？
+
+Cheeger 不等式把 Laplacian 的第二特征值解释为等周不等式，对离散图和连续流形都成立。Laplacian 特征值还编码哪些几何信息？连续情形已有广泛研究，答案是它们确实记录了部分形状信息。Mark Kac 在 1966 年发表于 *American Mathematical Monthly* 的名文中对此作了著名阐述 [@kac1966]。
+
+### 波动方程
+
+Laplacian 出现在许多描述物理现象的重要偏微分方程中，包括波传播、扩散与热方程、量子力学中的 Schrödinger 方程等。这或许是因为它与旋转和平移可交换，因而自然出现在具有这些对称性的物理规律中。
+
+考虑“鼓面”或振动膜 $D\subset\mathbb R^2$，其时刻 $t$ 的形态 $u(t,x)$ 满足*波动方程* $$\begin{eqnarray*}
+u_{tt}(t,x) &=&c^2\Delta u (t,x), \quad x\in D, \; t>0,
+\end{eqnarray*}$$ 其中 $\Delta u=u_{x_1x_1}+u_{x_2x_2}$，$c$ 为波速。固定边界对应 Dirichlet 条件 $u(t,x)=0$，$x\in\partial D$。
+
+用分离变量法，设 $u(t,x)=T(t)X(x)$，则 $$\begin{eqnarray*}
+T''X&=&c^2T\Delta X\\
+&\Updownarrow&\\
+\frac{T''}{T} &=& c^2\frac{\Delta X}{X} = -\lambda\\
+\end{eqnarray*}$$ 从而 $T''=-\lambda T$、$T(t)=e^{\pm\imath\sqrt\lambda t}$，且
+
+$$\left\{
+     \begin{array}{lr}
+       c^2\Delta X = -\lambda X  &\;\;\text{（$X$ 是 Laplacian 特征函数）}\\
+       X(x)=0 , x\in\partial D &\;\;\text{（Dirichlet 边界条件）}\\
+     \end{array}
+   \right.$$
+
+因此需要求带 Dirichlet 边界条件的 Laplacian 特征函数 $\{\varphi_n\}_{n=1}^\infty$： $$\begin{eqnarray*}
+       \Delta \varphi_n &=& -\lambda_n \varphi_n,\quad x\in D,\\
+       \varphi_n(x)&=&0, \quad \quad x\in\partial D,
+\end{eqnarray*}$$ 特征值满足 $0<\lambda_1\leq\lambda_2\leq\cdots$，且分离常数 $\lambda=c^2\lambda_n$。由于 $\varphi_n$ 构成 $L^2(D)$ 的正交归一基，
+$$\begin{equation*}
+u(t,x)=\sum_{n=1}^\infty \left( a_n e^{\imath c\sqrt{\lambda_n} t} + b_n e^{-\imath c \sqrt{\lambda_n} t}\right) \varphi_n(x)\\
+\end{equation*}$$ 系数 $a_n,b_n$ 由初值 $u(0,x)=f(x)$ 与 $u_t(0,x)=g(x)$ 决定。
+
+### 扩散方程
+
+一维区间 $[0,L]$ 上考虑 $u_t=\Delta u$，并施加 Neumann 条件 $u_x(t,0)=u_x(t,L)=0$。特征函数为 $\phi_n(x)=\cos(\sqrt{\lambda_n}x)$，其中
+$$\lambda_n=\frac{n^2\pi^2}{L^2},\qquad n=0,1,2,\ldots.$$
+因此 $$\begin{eqnarray*}
+u(t,x)&=&\sum_{n=0}^\infty a_n e^{-\lambda_n t} \cos{(\sqrt{\lambda_n} x)}\\
+&=&\sum_{n=0}^\infty a_n e^{-\frac{n^2 \pi^2}{L^2} t} \cos\left(\frac{n\pi x}{L}\right).\\
+\end{eqnarray*}$$
+
+二维时 $\Delta u=u_{xx}+u_{yy}$。对 $L_x\times L_y$ 矩形，可取一维特征函数的张量积 $\phi_{nm}(x,y)=X_n(x)Y_m(y)$，于是 $$\begin{equation*}
+-\Delta\phi_{nm} = \lambda_nX_nY_m + \lambda_mX_nY_m = (\lambda_n+\lambda_m) \phi_{nm}\\
+\end{equation*}$$ 且
+$$\lambda_{nm}=\left(\frac{n\pi}{L_x}\right)^2+\left(\frac{m\pi}{L_y}\right)^2.$$
+二维特征值的增长规律不同于一维。
+
+记特征值计数函数 $N(\lambda)=\#\{\lambda_n\leq\lambda\}$。一维时 $N(\lambda)=\frac L\pi\lambda^{1/2}$；二维时，$N(\lambda)$ 等于第一象限椭圆
+$$\frac{n^2}{(\sqrt\lambda L_x/\pi)^2}+\frac{m^2}{(\sqrt\lambda L_y/\pi)^2}\leq1$$
+内的整数格点数。
+
+因而二维的 $N(\lambda)$ 约等于该椭圆面积的四分之一： $$\begin{eqnarray*}
+N(\lambda) & \approx & \frac{1}{4} \pi a b = \frac{1}{4}\pi \left(\frac{\sqrt{\lambda} L_x}{\pi}\right) \left(\frac{\sqrt{\lambda} L_y}{\pi}\right)\\
+&=& \frac{\lambda L_x L_y}{4\pi}.
+\end{eqnarray*}$$
+
+所以一维 $N(\lambda)=\frac L\pi\lambda^{1/2}$，二维 $N(\lambda)\sim\frac{\lambda L_xL_y}{4\pi}$；高维长方体可类似分析。
+
+由此猜测 $N(\lambda)\sim c\lambda^{d/2}$，其中 $c=c(d)|D|$，$|D|$ 为区域体积。
+
+### Green 函数与热核
+
+Green 函数 $G_t(x,y)$ 使初值 $u(0,y)=f(y)$ 的扩散方程解可写为 $$\begin{equation*}
+u(t,x)=\int\limits_D G_t(x,y)f(y)dy
+\end{equation*}$$ 由 $u_t=\Delta u$，$G$ 本身必须满足扩散方程 $$\begin{equation*}
+\int\limits_D \frac{\partial G}{\partial t} f(y) dy = \int\limits_D \Delta_x G_t(x,y)f(y)dy.
+\end{equation*}$$ 即 $$\begin{equation*}
+\frac{\partial}{\partial t}G_t(x,y)=\Delta_x G_t(x,y).
+\end{equation*}$$ 它还须满足初值 $G_t(x,y)\to\delta(x,y)$，以及 Dirichlet 边界 $G_t=0$ 或 Neumann 边界 $\partial G_t/\partial n_x=0$。
+
+热核有直接概率解释：它是从 $X(0)=y$ 出发的 Brownian 运动在时刻 $t$ 到达 $x$ 的概率密度，因而是概率密度的传播子。
+
+由于 $G_t(\cdot,y)$ 满足扩散方程和边界条件，可展开为
+$$G_t(x,y)=\sum_{n=1}^\infty a_n(y)e^{-\lambda_nt}\phi_n(x).$$
+$t=0$ 时形式上有 $$\begin{equation*}
+\delta(x,y) = G_0(x,y) = \sum_{n=1}^\infty a_n(y)\phi_n(x),
+\end{equation*}$$ 与 $\phi_m$ 取内积得 $$\begin{equation*}
+a_m(y) = \phi_m(y),
+\end{equation*}$$ 因而
+$$G_t(x,y)=\sum_{n=1}^\infty e^{-\lambda_nt}\phi_n(x)\phi_n(y),$$
+这正是热核的谱分解。它也可由 $u_t=\Delta u$ 的解 $u=e^{t\Delta}f$ 理解，完全类似常系数 ODE $u'=Au$ 的解 $u=e^{tA}u_0$。
+
+热核的*迹*定义为 $$\begin{eqnarray*}
+\text{Tr}(G_t) &=& \int_D G_t(x,x)\,dx\\
+&=&\sum_{n=1}^\infty e^{-\lambda_n t} \int_D  \phi_n^2(x)\, dx\\
+&=&\sum_{n=1}^\infty e^{-\lambda_n t}.
+\end{eqnarray*}$$
+
+已知谱即可构造迹；反之也可由迹逐个恢复特征值，例如
+$$\lambda_1=-\lim_{t\to\infty}\frac{\log\operatorname{Tr}(G_t)}t.$$
+
+### Weyl 定律
+
+由长方体区域的特征值启发，猜测 $$\begin{equation*}
+N(\lambda) \sim \lambda^{d/2},
+\end{equation*}$$ 等价地， $$\begin{equation*}
+\lambda_n \sim n^{2/d},
+\end{equation*}$$ 这就是 Weyl 定律，下面推导它。
+
+当 $t\to0$ 时，$\operatorname{Tr}(G_t)=\sum_ne^{-\lambda_nt}$ 成为无穷多个 1 的和而发散。对 $\Omega\subset\mathbb R^d$，其发散速率为 $$\begin{equation*}
+\text{Tr}(G_t)=\int_\Omega G_t(x,x)\, dx = \sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{(4\pi t)^{d/2}},\quad \text{as } t\to 0.
+\end{equation*}$$
+
+##### 实直线上的扩散
+
+先考察无边界的整条实直线。Green 函数满足热方程与 delta 初值，答案是 Gaussian 核
+$$G_t(x,y)=\frac1{\sqrt{4\pi t}}e^{-(x-y)^2/(4t)}.$$
+因此热方程解是初值与 $G_t$ 的卷积： $$\begin{equation*}
+u(x,t)=\int_{-\infty}^\infty G_t(x,y)f(y)\,dy = \frac{1}{\sqrt{4\pi t}}\int_{-\infty}^\infty e^{-\frac{(x-y)^2}{4t}}f(y)\,dy.
+\end{equation*}$$ 对扩散方程作 Fourier 变换可证明这一结果： $$\begin{equation*}
+\frac{\partial}{\partial t}\hat{G}_t(\xi,y)= -4\pi^2\xi^2\hat{G}_t(\xi,y),
+\end{equation*}$$ 对每个 $\xi,y$，这是线性一阶 ODE，解为 $$\begin{equation*}
+\hat{G}_t(\xi, y) = A(\xi,y) e^{-4\pi^2 \xi^2 t}.
+\end{equation*}$$ 对初值作 Fourier 变换， $$\begin{equation*}
+G_0(x,y) = \delta(x,y),
+\end{equation*}$$ 得到 $$\begin{equation*}
+\hat{G}_0(\xi,y) = \int_{-\infty}^\infty e^{-2\pi \imath \xi x} \delta(x,y)\,dx = e^{-2\pi \imath \xi y}.
+\end{equation*}$$ 因此 $$\begin{equation*}
+\hat{G}_0(\xi,y) = A(\xi,y) = e^{-2\pi \imath \xi y},
+\end{equation*}$$ 并有 $$\begin{equation*}
+\hat{G}_t(\xi, y) = e^{-2\pi \imath \xi y} e^{-4\pi^2 \xi^2 t}.
+\end{equation*}$$ 这是 $\xi$ 中的平移 Gaussian，其逆 Fourier 变换仍为 Gaussian，容易验证 $$\begin{equation*}
+G_t(x,y) = \int_{-\infty}^\infty e^{2\pi \imath \xi x}e^{-2\pi \imath \xi y} e^{-4\pi^2 \xi^2 t}\,d\xi = \frac{1}{\sqrt{4\pi t}} e^{-(x-y)^2/{4t}}.
+\end{equation*}$$
+
+##### 半无限直线上的扩散
+
+在 $\mathbb R_+$ 上考虑满足 Neumann 条件 $u_x(0)=0$ 的扩散方程，可用*镜像法*推导热核：在 $-y$ 放置虚拟粒子，使原粒子离开正半轴时镜像轨迹进入，从而保持无通量条件。因此 $$\begin{equation*}
+G_t(x,y)=\frac{1}{\sqrt{4\pi t}}e^{\frac{-(x-y)^2}{4t}}+\frac{1}{\sqrt{4\pi t}}e^{\frac{-(x+y)^2}{4t}}\\
+\end{equation*}$$ 若原点采用 Dirichlet 条件，则两项应相减。
+
+##### 有限区间上的扩散
+
+有限区间 $[0,L]$ 的热核推导留作习题。仍可使用镜像法，但需无穷多个镜像。短时间内粒子尚“看不见”边界，所以渐近行为与整条实线相同。
+
+**热核的短时间渐近：** 当 $t\to0$，
+$$G_t(x,y)\sim\frac1{\sqrt{4\pi t}}e^{-(x-y)^2/(4t)}.$$
+
+### 任意区域 $\Omega\subset\mathbb{R}^d$
+
+再次利用 Fourier 变换，可得 $\mathbb R^d$ 上的热核 $$\begin{equation*}
+G_t(x,y) = \frac{1}{(4\pi t)^{d/2}} e^{-\frac{\|x-y\|^2}{4t}}.
+\end{equation*}$$ 它也可视为 $d$ 个一维热核之积，对应各维独立 Brownian 运动。任意区域 $\Omega$ 的短时间渐近也相同，因为粒子尚未感知边界。更严格地，可考虑展开 $$\begin{equation*}
+G_t(x,y)\sim\sum\limits_k \frac{1}{(4\pi t)^{d/2}}e^{-\frac{S_k^2(x,y)}{4t}}\sum_n Z_{k,n}(x,y)t^n,\quad \text{as } t\to 0.
+\end{equation*}$$
+
+代入热方程，$S_k$ 满足 Eikonal 方程 $|\nabla S_k|=1$，$Z_{k,n}$ 满足输运方程。$S_k$ 对应从 $y$ 到 $x$ 的测地线或可在边界反射的台球轨迹长度。对角项满足 $G_t(x,x)\sim(4\pi t)^{-d/2}$，故 $$\begin{equation*}
+\text{Tr}(G_t)=\int\limits_\Omega G_t(x,x)\,dx\sim\frac{|\Omega|}{(4\pi t)^{d/2}}
+\end{equation*}$$ 当 $t\to0$。
+
+### Weyl 定律的推导
+
+为研究 $N(\lambda)=\#\{\lambda_n<\lambda\}$，考察 $$\begin{equation*}
+\sum_{n=1}^\infty e^{-\lambda_n t} = \int_0^\infty e^{-\lambda t}\, dN(\lambda)\sim \frac{|\Omega|}{(4\pi t)^{d/2}}
+\end{equation*}$$ 假设 $N(\lambda)\sim c\lambda^\alpha$、$N'(\lambda)\sim\alpha c\lambda^{\alpha-1}$，则 $$\begin{eqnarray*}
+\frac{|\Omega|}{(4\pi t)^{d/2}}\sim\int\limits_0^\infty e^{-\lambda t}\alpha c \lambda^{\alpha-1}\,d\lambda &\underbrace{=}_\text{$s=\lambda t$}& \alpha c\int\limits_0^\infty e^{-s}\left(\frac{s}{t}\right)^{\alpha-1}\frac{ds}{t}\\
+&=&\frac{\alpha c}{t^\alpha}\underbrace{\int\limits_0^\infty e^{-s}s^{\alpha-1}ds}_\text{$\Gamma(\alpha)$}
+\end{eqnarray*}$$ 因而 $\alpha=d/2$，并有 $$\begin{equation*}
+\frac{|\Omega|}{(4\pi)^{d/2}} = \frac{d}{2}c \Gamma(\frac{d}{2}) \Rightarrow c=\frac{|\Omega|}{(4\pi)^{d/2}\frac{d}{2}\Gamma(\frac{d}{2})}\\
+\end{equation*}$$ 从而得到 Weyl 定律： $$\begin{equation}
+N(\lambda)\sim\frac{|\Omega|}{(4\pi)^{d/2}\frac{d}{2}\Gamma(\frac{d}{2})}\lambda^{d/2}
+\end{equation}$$ For $d=1$, we have $$\begin{eqnarray*}
+N(\lambda)&\sim&\frac{L}{\sqrt{4\pi}\frac{1}{2}\underbrace{\sqrt{\pi}}_\text{$\Gamma(\frac{1}{2})$}} \lambda^{1/2}\\
+&\sim&\frac{L}{\pi}\lambda^{1/2} \text{\hspace{1cm} (same as previous)}\\
+\end{eqnarray*}$$ For $d=2$, we have $$\begin{eqnarray*}
+N(\lambda)&\sim&\frac{|\Omega|}{4\pi}\lambda, \hspace{0.5cm}|\Omega|=L_xL_y \text{\hspace{1cm} (same as previous)}\\
+\end{eqnarray*}$$
+
+因此可由特征值增长率，例如观察对数图，推断区域的维数与体积。
+
+对 $d=2$，Kac 还给出了更高阶渐近项： $$\begin{equation*}
+\sum_{n=1}^\infty e^{-\lambda_n t} \sim \frac{|\Omega|}{4\pi t}-\frac{|\partial\Omega|}{8(\pi t)^{1/2}}+\frac{1}{6}(1-h)+O(\sqrt{t})
+\end{equation*}$$ 这说明除面积 $|\Omega|$ 外，还能从谱中“听出”边界长度 $|\partial\Omega|$ 与孔洞数 $h$。这些项实质上都与边界曲率积分有关：Gauss 公式给出面积，Gauss--Bonnet 定理给出 Euler 示性数等。
+
+但仅凭特征值通常无法*精确*确定流形或区域；不同区域可能具有相同谱，称为等谱区域。因此，不能完全听出鼓面的形状。不过特征值仍给出一种谱签名，近似于区域的哈希。\
+
+### 再论扩散映射
+
+定义区域或流形到 $\ell^2$ 的嵌入： $$\begin{equation*}
+\Phi_t(x) = \left(e^{-\lambda_1 t/2}\phi_1(x),e^{-\lambda_2 t/2}\phi_2(x), \ldots \right)
+\end{equation*}$$ 其中 $$\begin{equation}
+\Delta \phi_l = -\lambda_l \phi_l,
+\end{equation}$$ 是流形上满足 Neumann 边界条件的 Laplacian 特征函数，$0=\lambda_1<\lambda_2\leq\cdots$。确有 $$\begin{equation*}
+\Phi_t(x)\in\ell^2,
+\end{equation*}$$ 因为 $\|\Phi_t(x)\|^2=G_t(x,x)$；更一般地，
+$$\langle\Phi_t(x),\Phi_t(y)\rangle=G_t(x,y),$$
+再次说明 $G_t$ 半正定。
+
+由短时间渐近 $G_t(x,x)\sim(4\pi t)^{-d/2}$，当 $t\to0$ 时所有 $\Phi_t(x)$ 的范数大致相同；即 $\Phi_t$ 把流形映到半径 $(4\pi t)^{-d/4}$ 的球面子集。又因热核概率解释保证 $G_t(x,y)\geq0$，任意两个嵌入向量夹角均为锐角，所以像只占球面很小一部分。
+
+扩散距离为 $$\begin{eqnarray*}
+D_t^2(x,y) &=& \left\langle\Phi_t(x),\Phi_t(x)\right\rangle + \left\langle\Phi_t(y),\Phi_t(y)\right\rangle -2\left\langle\Phi_t(x),\Phi_t(y)\right\rangle\\
+&=& G_t(x,x)+G_t(y,y)-2 G_t(x,y)\\
+&\sim& \frac{1}{(4\pi t)^{d/2}} \left[1+1-2 e^{-\|x-y|^2/{4t}}\right]\\
+&=&\frac{2}{(4\pi t)^{d/2}} \left(1-e^{-\frac{\|x-y\|^2}{4t}}\right)\\
+&\sim&\frac{\|x-y\|^2}{(4\pi t)^{d/2} 2t}
+\end{eqnarray*}$$ 当 $\|x-y\|\ll\sqrt t$。因此扩散距离局部类似测地距离，但全局行为不同： $$\begin{equation*}
+D_t^2(x,y) \sim \frac{2}{(4\pi t)^{d/2}},
+\end{equation*}$$ 当 $\|x-y\|\gg\sqrt t$。也就是说，测地距离较大的点对具有近乎相同的扩散距离，距离会饱和。
+
+用热核嵌入 Riemann 流形的思想可追溯到 Bérard、Besson 与 Gallot 1994 年的工作 [@berard1994embedding]，约十年后才被应用数学界重新发现。
+
+### 通勤时间距离
+
+回顾第 [\[s:commute\]](#s:commute){reference-type="ref" reference="s:commute"} 章的通勤时间嵌入： $$\begin{equation*}
+\Psi(x) = \left(\frac{1}{\sqrt{\lambda_2}}\phi_2(x),\frac{1}{\sqrt{\lambda_3}}\phi_3(x),\ldots\right).
+\end{equation*}$$ 当 $d\geq2$ 时，该嵌入不属于 $\ell^2$。若反设 $\|\Psi(x)\|^2\leq M$，积分便给出 $\sum_{n\geq2}1/\lambda_n\leq M|\Omega|$。但 Weyl 定律有 $\lambda_n\sim n^{2/d}$，而 $\sum n^{-2/d}$ 在 $d\geq2$ 时发散，矛盾。仅 $d=1$ 时收敛，所以通勤时间嵌入只在一维属于 $\ell^2$。
+
+这也可由 $\mathbb R^d$ 中 Poisson 方程的 Green 函数理解。它是点电荷或点质量势的基本解：$d=2$ 时有 $\log r$ 奇性，$d\geq3$ 时有 $1/r^{d-2}$ 奇性，仅 $d=1$ 正则。对 $\Delta u=f$，满足 Neumann 条件的基本解给出
+$$u(x)=\int G(x,y)f(y)dy,\qquad G(x,y)=\sum_{n=2}^\infty\frac1{\lambda_n}\phi_n(x)\phi_n(y).$$
+
+### 双调和距离
+
+$\Delta^2$ 称为*双调和算子*，出现在线性弹性与流体问题中。$\Delta^2u=f$ 的 Green 函数为
+$$G(x,y)=\sum_{n=2}^\infty\frac1{\lambda_n^2}\phi_n(x)\phi_n(y).$$
+由 Weyl 定律，$\sum1/\lambda_n^2\sim\sum n^{-4/d}$ 在 $d<4$ 时收敛，此时基本解正则。双调和距离常用于计算机图形学中的曲面距离：网格细化时不会像通勤时间距离那样发散，又不像扩散距离那样饱和，是一种全局距离；除对数因子外，其行为类似测地距离。一般可按空间维数选取适当的 $\Delta^m$ 定义嵌入。
+
+## 向量扩散映射与图联络拉普拉斯算子 {#s:vectordiffusionmap}
+
+本章最后介绍向量扩散映射与图联络拉普拉斯算子，它们把扩散映射和图拉普拉斯算子从标量函数推广到向量场 [@ASinger_HTWu_2011_VDM]。
+
+### 扩散映射简要回顾
+
+先简要回顾标准扩散映射。数据点 $x_1,dots,x_n$ 通过加权图中的亲和度 $w_{ij}$ 相连，由此构造 $W$ 与随机游走矩阵 $A=D^{-1}W$，其中 $D$ 的对角元为度 $d_i=\sum_jw_{ij}$。$A$ 相似于对称矩阵 $D^{-1/2}WD^{-1/2}=V\Lambda V^T$；$\Lambda$ 的特征值按绝对值递减排列，$V$ 为特征向量矩阵。因此 $A$ 的特征向量是 $\phi_l=D^{-1/2}v_l$。
+
+*扩散映射*是从数据到 $\mathbb R^n$ 的映射
+
+$$\Phi_t(i):x_i\mapsto(\lambda_l^t\phi_l(i))_{l=1}^n.$$
+嵌入内积为
+$$\langle\Phi_t(i),\Phi_t(j)\rangle=\sum_l\lambda_l^{2t}\phi_l(i)\phi_l(j).$$
+由 $A$ 的谱分解及 $\psi_l(j)=d_j\phi_l(j)$，有
+$$A^{2t}(i,j)/d_j=\langle\Phi_t(i),\Phi_t(j)\rangle.$$
+$A^{2t}(i,j)$ 正是随机游走从 $i$ 出发，经 $2t$ 步到达 $j$ 的概率。
+
+### 向量扩散映射
+
+向量扩散映射的基本设定与扩散映射相似：数据点 $x_i$ 由标量亲和度 $w_{ij}$ 构成加权图；此外，每对点还有 $d\times d$ 正交矩阵 $O_{ij}$，提供额外的相似性信息。例如对已居中的二维图像，$O_{ij}$ 可以是使两幅图最佳对齐的平面旋转。
+
+<figure data-latex-placement="h">
+
+::: center
+`<img src="../assets/figures/VDM_slide.png" style="width:40.0%" />`{=html}
+:::
+
+<figcaption>
+向量扩散映射用权重 $w_{ij}$ 与正交变换 $O_{ij}$ 共同编码数据点之间的关系。
+</figcaption>
+</figure>
+<figure id="fig:digits" data-latex-placement="h">
+
+::: center
+:::
+
+<figcaption>
+带正交变换的加权图示例：$I_i,I_j$ 是数字 1 的两幅不同图像，对应节点 $i,j$。$2\times2$ 旋转矩阵 $O_{ij}$ 把 $I_j$ 最佳对齐到 $I_i$，$w_{ij}$ 衡量最佳对齐后的亲和度；由于 $I_i$ 与 $O_{ij}I_j$ 实际相同，$w_{ij}$ 很大。$I_k$ 则是数字 2，即使最佳对齐也与 $I_i$ 差异很大，因此 $w_{ik}$ 很小，甚至可能没有边连接 $i,k$；此时 $O_{ik}$ 也没有 $O_{ij}$ 那样明确的意义，不会出现在加权图中。
+</figcaption>
+</figure>
+
+更一般地，设抽象群 $G$ 作用于数据所在集合 $X$。若 $g_{ij}$ 是使两个数据点最佳对齐的群元素，$\rho$ 是 $G$ 的正交表示，则可取 $O_{ij}=\rho(g_{ij})$。
+
+有了这些信息，两个点的相似性不仅取决于图中连接它们的路径数，还取决于沿各路径复合 $O_{ij}$ 后得到的变换是否彼此一致。
+
+为利用这些变换，构造块矩阵 $W_1$：
+
+$$W_1(i,j) = w_{ij}O_{ij}, \quad 1\leq i,j \leq n.$$
+
+$W_1(i,j)$ 是 $d\times d$ 块，因此 $W_1$ 的大小为 $nd\times nd$，共有 $n\times n$ 个块；对角块取 $w_{ii}I$。由于 $O_{ij}=O_{ji}^T$，$W_1$ 对称。可把小亲和度对应的块置零，使其稀疏。
+
+类似扩散映射，定义 $nd\times nd$ 块对角度矩阵 $D_1$：
+
+$$D_1(i,i)=d_iI_{d\times d},$$
+其中 $d_i=\sum_jw_{ij}$。*图联络拉普拉斯算子*定义为 $L_1=D_1-W_1$。
+
+$$L_1(i,j) = \left\{\begin{array}{cc}
+                    -w_{ij}O_{ij} & i\neq j, \\
+                    \sum_{k\neq i} w_{ik}I_{d\times d} & i=j.
+                  \end{array}\right.$$
+
+把长度 $nd$ 的 $v$ 看成 $n$ 个 $\mathbb R^d$ 向量，则
+$$v^TL_1v=\frac12\sum_{i,j}w_{ij}\|v(i)-O_{ij}v(j)\|^2,$$
+证明留作习题。故 $L_1\succeq0$；且它有非平凡零空间，当且仅当存在非零 $v$，使每条边上 $v(i)=O_{ij}v(j)$。称 $v^TL_1v$ 为 $v$ 的*挫折度*，并可在所有 $\|v(i)\|=1$ 上取最小定义联络图挫折度。它可由 $L_1$ 特征值控制，是 Cheeger 不等式向图联络拉普拉斯算子的推广 [@Bandeira_Singer_Spielman_OdCheeger]。
+
+$D_1^{-1}W_1$ 相似于对称矩阵 $D_1^{-1/2}W_1D_1^{-1/2}$，因此也有完备特征向量基；现在共有 $nd$ 个长度 $nd$ 的特征向量，并按 $d$ 维块理解。
+
+考虑 $\tilde W_1=D_1^{-1/2}W_1D^{-1/2}$ 的谱分解：
+
+$$\tilde{W}_1(i,j) = \sum \limits_{l=1}^{nd} \lambda_lv_l(i)v_l(j)^T.$$
+
+这里的 $\lambda_l$ 不同于随机游走矩阵 $A=D^{-1}W$ 的特征值，而且共有 $nd$ 个。与扩散映射相同，可得
+
+$$\left(D_1^{-1}W_1\right)(i,j)=\sum_{l=1}^{nd}\lambda_lw_l(i)w_l(j)^Td_j,$$
+其中 $w_l(i)=d_i^{-1/2}v_l(i)$、$u_l(i)=d_i^{1/2}v_l(i)$。其 $2t$ 次幂为
+
+$$\left( D_1^{-1}W_1\right)^{2t}(i,j) = d_j\sum \limits_{l=1}^{nd} \lambda_l^{2t} w_l(i)w_l(j)^T.$$
+
+矩阵 $(D_1^{-1}W_1)^{2t}$ 是向量扩散映射的核心。其 $(i,j)$ 块汇总 $i$ 到 $j$ 的所有长度 $2t$ 路径：每条路径的遍历概率乘以沿路变换的复合，再对路径求和。若多条路径给出相近变换，总体幅度大；若相互抵消，幅度小。因此用 Frobenius（Hilbert--Schmidt）范数
+
+$$\left\|\frac{(D_1^{-1}W_1)^{2t}(i,j)}{d_j}\right\|_{\mathrm F}^2$$
+衡量该块大小。利用谱分解，
+
+$$\left\|\sum \limits_{l=1}^{nd} \lambda_l^{2t} w_l(i)w_l(j)^T\right\|_{\text{F}}^2 =
+\text{Tr}\left(\sum \limits_{l,r=1}^{nd} \lambda_l^{2t} \lambda_r^{2t}w_l(i)w_l(j)^T w_r(j)w_r(i)^T \right)$$
+
+利用 $w_l(j)^Tw_r(j)=\langle w_l(j),w_r(j)\rangle$、迹的线性及 $\operatorname{Tr}(AB)=\operatorname{Tr}(BA)$，可化为
+$$\sum_{l,r=1}^{nd}(\lambda_l\lambda_r)^{2t}\langle w_l(i),w_r(i)\rangle\langle w_l(j),w_r(j)\rangle.$$
+据此定义*向量扩散映射*
+$$V_t(i):i\mapsto\left((\lambda_l\lambda_r)^t\langle w_l(i),w_r(i)\rangle\right)_{l,r=1}^{nd},$$
+并有
+$$\left\|\frac{(D_1^{-1}W_1)^{2t}(i,j)}{d_j}\right\|_{\mathrm F}^2=\langle V_t(i),V_t(j)\rangle.$$
+
+与普通扩散映射一样，向量扩散映射把数据嵌入实 Euclidean 空间；但维数从 $n$ 增至 $(nd)^2$，坐标也由特征向量块之间的内积而非单个取值给出。$(l,r)$ 与 $(r,l)$ 坐标相同，存在近一半冗余。
+
+内积 $\langle V_t(i),V_t(j)\rangle$ 给出顶点亲和度，并可定义向量扩散距离
+$$d_{\text{VDM},t}^2=\langle V_t(i),V_t(i)\rangle+\langle V_t(j),V_t(j)\rangle-2\langle V_t(i),V_t(j)\rangle.$$
+
+高维看似不便，但 $D_1^{-1}W_1$ 的所有特征值绝对值不超过 1（证明留作习题），因此可像扩散映射一样只保留最大特征值来截断。这里甚至可能所有特征值绝对值都严格小于 1。不同归一化还会给出其他向量扩散映射；例如用 $v_l$ 代替 $w_l$ 的映射对应未归一化图联络拉普拉斯算子。
+
+### 流形学习中的向量扩散映射
+
+现在考虑流形学习：数据位于嵌入 $\mathbb R^p$ 的 $d$ 维流形 $\mathcal M$ 上，$d\ll p$。此时 $O_{ij}$ 可直接从数据估计，下面给出步骤。
+
+为简化起见，假设 $d$ 已知；否则可在各点、不同尺度上用 SVD 测量局部变异来估计 [@AVLittle_YMJung_MMaggioni_2009_ManDim]。
+
+**构造 $O_{ij}$。** 第一步是*局部 PCA*。选择 $\epsilon_{PCA}$，在每个 $x_i$ 的 $\sqrt{\epsilon_{PCA}}$ Euclidean 邻域上作 PCA；前 $d$ 个奇异向量数值逼近 $x_i$ 处切空间。使方法有效的 $\epsilon_{PCA}$ 渐近量级可由 $n,d$ 推导 [@ASinger_HTWu_2011_VDM]。
+
+<figure>
+
+::: center
+:::
+
+<figcaption>
+以 $x_i$ 为中心、半径 $\sqrt{\epsilon_{PCA}}$ 的 Euclidean 球内数据作局部 PCA，确定切空间 $T_{x_i}\MMM$ 的正交归一基。正交变换 $O_{ij}$ 最佳对齐 $T_{x_j}\MMM$ 与 $T_{x_i}\MMM$ 的基，可视为从前者到后者的映射。
+</figcaption>
+</figure>
+
+记局部 PCA 在 $x_i$ 得到的 $p\times d$ 矩阵为 $O_i$，其列正交归一：$O_i^TO_i=I$。切空间基并不唯一，但向量扩散映射只依赖内积，因而不受基选择影响。
+
+第二步是*对齐*。对邻近 $x_i,x_j$，由 $O_i,O_j$ 求 $d\times d$ 正交变换 $O_{ij}$。另取远大于 $\epsilon_{PCA}$ 的尺度 $\epsilon$，并把 $\|x_i-x_j\|>\sqrt\epsilon$ 的块置零，使 $W_1$ 稀疏。
+
+若流形是平坦的 $\mathbb R^2$，$O_i^TO_j$ 已为正交矩阵，表示从 $x_j$ 切空间基到 $x_i$ 切空间基的变换，可直接取 $O_{ij}=O_i^TO_j$。
+
+有曲率时 $O_i^TO_j$ 一般不正交，故取离它最近的正交变换：
+
+$$O_{ij}=\arg\min_{O\in O(d)}\|O_i^TO_j-O\|_{\mathrm{HS}}^2.$$
+若 $O_i^TO_j=U\Sigma V^T$，则解为 $O_{ij}=UV^T$。这样通过局部 PCA 与对齐两步得到 $O_{ij}$，继而构造 $W_1$ 并计算向量扩散映射。
+
+### 平行移动与联络拉普拉斯算子
+
+下面解释 $n\to\infty$、$\epsilon\to0$ 时的极限。此时 $O_{ij}$ 逼近微分几何中的*平行移动*算子。
+
+直观地，$P_{x_ix_j}$ 是从 $T_{x_j}$ 到 $T_{x_i}$ 的线性映射：沿连接 $x_j,x_i$ 的测地线，保持向量平行地滑动到另一端，所得向量就是平行移动像。
+
+可证明上述 $O_{ij}$ 对邻近点很好地逼近平行移动。为建立收敛定理，必须取最佳正交近似，而不能简单使用 $O_i^TO_j$ [@ASinger_HTWu_2011_VDM]。
+
+$D_1^{-1}W_1$ 可视为向量场上的平均算子：
+
+$$\left(D_1^{-1}W_1 v\right)(i) = \frac{1}{d_i}\sum_{j\sim i} w_{ij}O_{ij}v(j).$$
+
+每个 $v(j)$ 先由平行移动从 $T_{x_j}$ 送到 $T_{x_i}$，再按 $w_{ij}$ 加权平均。
+
+普通扩散映射在均匀采样的大样本极限下趋于作用在标量函数上的 Laplace--Beltrami 算子。现在向量含 $n$ 个 $d$ 维块，极限算子便作用于流形切向量场或 1-形式。对 $O_{ij}$ 取张量幂，还可推广到高阶形式。
+
+普通扩散映射对光滑 $f$ 有 $(D^{-1}W-I)f\to c\Delta f$；向量扩散映射相应满足
+$$(D_1^{-1}W_1-I)X\to c\nabla^2X,$$
+其中 $X$ 为向量场，$\nabla^2$ 是流形上的*联络 Laplacian*。
+
+### 可定向性与二重覆盖
+
+向量扩散映射还可提取流形拓扑。例如构造 $\det(O_{ij})$ 的符号矩阵并研究其谱，可检测可定向性 [@ASinger_HTWu_2011_OrDM]。把反射信息编码进对称矩阵 $Z$： $$\begin{equation*}
+Z_{ij} = \left\{\begin{array}{ccl} \det O_{ij} & & (i,j)\in E, \\ 0 & & (i,j)\notin E.
+\end{array} \right.
+\end{equation*}$$ 无需反射时 $Z_{ij}=1$，需要反射时为 $-1$，不邻近时为 0；再用节点度归一化，考察 $D^{-1}Z$ 的谱。
+
+若流形可定向，就能“同步”这些符号：存在 $z_i\in\{\pm1\}$ 使 $\det(O_{ij})=z_iz_j$，等价于图联络 Laplacian 无挫折；这恢复了各局部基的方向。若不可定向，则可在 Euclidean 空间构造其可定向二重覆盖。因此，仅凭数据的局部信息即可检测可定向性。
+
+<figure id="fig:vectordiffusion1" data-latex-placement="h">
+
+::: center
+:::
+
+<figcaption>
+$D^{-1}Z$ 最大特征向量各分量的直方图。
+</figcaption>
+</figure>
+
+用归一化矩阵的特征向量作嵌入，可得到不可定向流形的二重覆盖： $$\begin{equation*}
+\left[
+\begin{array}{rr}
+Z & -Z\\
+-Z & Z
+\end{array}
+\right] = \left(
+            \begin{array}{rr}
+              1 & -1 \\
+              -1 & 1 \\
+            \end{array}
+          \right) \otimes Z,
+\end{equation*}$$
+
+<figure id="double_rp2_klein" data-latex-placement="h">
+
+::: centering
+:::
+
+<figcaption>
+左：$\mathbb RP^2$ 的可定向二重覆盖 $S^2$；中：Klein 瓶的可定向二重覆盖 $T^2$；右：Möbius 带的可定向二重覆盖，即圆柱面。
+</figcaption>
+</figure>
+
+由随机样本学习流形拓扑仍是活跃领域 [@niyogi2008finding]。除图 Laplacian 和联络 Laplacian 外，Hodge Laplacian 可通过调和形式揭示 Betti 数等拓扑信息，如连通分支数与孔洞数。拓扑数据分析入门可参见 [@carlsson2009topology]。
+
+## 习题 {#exercises .unnumbered}
+
+::: myexercise
+在给定密度估计偏差时，寻找使方差项最小的“最优核” $K$（见式 [\[eq:density_estimation_MSE\]](#eq:density_estimation_MSE){reference-type="ref" reference="eq:density_estimation_MSE"}）。即在约束 $K\geq0$、$\int K=1$、$K(z)=K(-z)$、$\int K(z)z^2dz=m_2$ 下，最小化 $$\int_\mathbb R K^2(z)\,dz.$$
+:::
+
+:::: myexercise
+均匀采样时，证明若 $L_{rw}\phi=\lambda\phi$，则先令 $n\to\infty$ 再令 $\varepsilon\to0$ 后，$\phi$ 满足边界条件 $\partial\phi/\partial\nu=0$，其中 $\nu$ 是 $\partial\mathcal M$ 在 $x$ 处的法向量。\
+
+::: hint
+先研究一维区间 $[0,L]$。在端点处，核积分不能再近似为 Dirac delta 加 $O(\varepsilon)$ 的二阶导数修正：边界只积分核的一半，并因线性项不再消失而出现含*一阶导数*的 $O(\sqrt\varepsilon)$ 修正。论证该项必须为零，从而得到无通量条件。严格证明需按 $\sqrt\varepsilon$ 作渐近分析，并匹配外部解与边界层。
+:::
+::::
+
+::: myexercise
+设 $\alpha\in[0,1]$，采用归一化
+$$w_{ij}^{(\alpha)}=\frac{w_{ij}}{d_i^\alpha d_j^\alpha},\qquad W^{(\alpha)}=D^{-\alpha}WD^{-\alpha},$$
+并定义 $D_{ii}^{(\alpha)}=\sum_jw_{ij}^{(\alpha)}$。求 $L^{(\alpha)}$ 与 $L_{rw}^{(\alpha)}$ 的极限算子。已知 $\alpha=0$ 时随机游走极限为后向 Fokker--Planck 算子，$\alpha=1$ 时为 Laplace--Beltrami 算子；求一般 $0<\alpha<1$，尤其 $\alpha=1/2$ 的极限。
+:::
+
+::: myexercise
+求球面 $\mathbb S^2\subset\mathbb R^3$ 上 Laplacian 的特征函数、特征值及其重数。（提示：用链式法则写出球坐标 $(r,\theta,\phi)$ 下的 Laplacian，再限制到与 $r$ 无关的函数。）
+:::
+
+::: myexercise
+一维 Gaussian 密度为
+$$p(x)=\frac1{\sqrt{2\pi\sigma^2}}e^{-x^2/(2\sigma^2)},$$
+相应势函数 $U(x)=-2\log p(x)=x^2/\sigma^2+\mathrm{const}$。求后向 Fokker--Planck 算子
+$$\phi_n''-\frac{2x}{\sigma^2}\phi_n'=-\lambda_n\phi_n$$
+的特征函数 $\phi_n$ 与特征值 $\lambda_n$。
+:::
+
+::: myexercise
+从 $\mathbb R^2$ 上密度 $p(x,y)=p_1(x)p_2(y)$ 独立抽取 $n$ 个点 $z_i$，其中 $z=(x,y)$，且 $$p_1(x) = \left\{\begin{array}{cc}
+\frac{1}{L} & 0\leq x \leq L \\
+0 & otherwise \\
+\end{array}\right.$$ 以及 $$p_2(y)=\frac1{\sqrt{2\pi\sigma^2}}e^{-y^2/(2\sigma^2)}.$$ 即 $x$ 在 $[0,L]$ 上均匀分布，$y$ 服从均值 0、标准差 $\sigma$ 的正态分布。
+
+1.  求后向 Fokker--Planck 算子 $$\Delta f-\nabla U\cdot\nabla f=-\lambda f$$ 的特征函数与特征值，其中 $U(x,y)=-2\log(p_1(x)p_2(y))$，$\Delta=\partial_x^2+\partial_y^2$。
+
+    ::: hint
+    使用分离变量法。
+    :::
+
+2.  求关于 $\sigma,L$ 的条件，使第一个非平凡特征函数依赖 $x$ 而非 $y$；也就是使扩散映射第一坐标在 $n\to\infty$ 时恢复“内在坐标” $x$，而非“噪声方向” $y$。
+
+3.  求该密度的真实协方差矩阵 $\Sigma=\mathbb E[(Z-\mathbb EZ)(Z-\mathbb EZ)^T]$。求使第一主成分沿 $x$ 轴、第二主成分沿 $y$ 轴的 $\sigma,L$ 条件。与第 2 问比较，并解释为何一种方法比另一种更早找到内在轴。
+:::
+
+:::: myexercise
+证明二阶 ODE $f''-U'f'=-\lambda f$ 的第一个非平凡特征函数单调。由此说明，它基本按弧长排列开曲线上的样本，即 $x_i\mapsto\phi(x_i)$ 把高维数据嵌入一维。
+
+::: hint
+使用 Prüfer 变换，见 [@coddington_levinson]。
+:::
+::::
+
+:::: myexercise
+对带周期边界条件的一维 Fokker--Planck 算子，证明所得嵌入恰绕原点一周，并证明两个特征函数在曲线上各点形成的角度单调变化。
+
+::: hint
+关键仍是 Prüfer 变换。
+:::
+::::
+
+:::: myexercise
+求有限区间 $[0,L]$ 上端点满足 Neumann 条件的扩散热核。
+
+::: hint
+使用具有无穷多个镜像的镜像法。
+:::
+::::
+
+::: myexercise
+Riemann $\zeta$ 函数定义为 $\zeta(s)=\sum_{n\geq1}n^{-s}$。定义区域或流形的 $\zeta$ 函数
+$$\zeta(x,y,s)=\sum_{n=1}^\infty\lambda_n^{-s}\phi_n(x)\phi_n(y),$$
+即带 Dirichlet 条件的 $(-\Delta)^s$ 的 Green 函数。证明它是热核的 Mellin 变换：
+$$\Gamma(s)\zeta(x,y,s)=\int_0^\infty G_t(x,y)t^{s-1}dt.$$
+能否用首次通过或击中时间的矩，对右侧热核积分作概率解释？
+:::
+
+::: myexercise
+考虑区域 $\Omega\subset\mathbb R^d$ 的通勤时间嵌入
+$$x\mapsto(\lambda_2^{-1/2}\phi_2(x),\lambda_3^{-1/2}\phi_3(x),\ldots).$$
+结合静电学 Poisson 方程 $\Delta u=f$ 的 Green 函数（$d=2$ 时 $G(r)=\frac1{2\pi}\log r$，$d=3$ 时 $G(r)=-\frac1{4\pi r}$），解释该嵌入为何在 $d\geq2$ 失败。对区间 $[0,L]$ 的 Poisson Green 函数，求 $D^2(x,y)=G(x,x)+G(y,y)-2G(x,y)$，观察它与测地距离的关系。
+:::
+
+::: myexercise
+计算机图形学常研究 $\mathbb R^3$ 中二维曲面的类测地距离。文献 [@Lipman:2010:BD] 建议使用嵌入
+$$x\mapsto(\lambda_2^{-1}\phi_2(x),\lambda_3^{-1}\phi_3(x),\ldots),$$
+它对应双调和方程 $\Delta^2u=f$ 的 Green 函数。求 $\mathbb R^2$ 中该 Green 函数及平方距离 $D^2(x,y)$，并讨论它在多大程度上类似测地距离 $\|x-y\|$。
+:::
+
+::: myexercise
+证明图联络 Laplacian $L_1=D_1-W_1$ 对任意按 $n$ 个 $\RR^d$ 向量理解的 $v\in\RR^{nd}$ 满足
+$$v^TL_1v=\frac12\sum_{i,j=1}^nw_{ij}\|v(i)-O_{ij}v(j)\|^2.$$
+:::
+
+::: myexercise
+证明若 $\lambda$ 是 $\tilde W_1=D_1^{-1/2}W_1D^{-1/2}$ 的特征值，则 $-1\leq\lambda\leq1$。
+:::
+
+::: myexercise
+用计算机在单位球面 $S^2\subset\mathbb R^3$ 上生成 $n$ 个点，自选 $\epsilon_{\mathrm{PCA}},\epsilon$，计算 $D_1^{-1}W_1$ 的特征值及重数。对应特征向量场称为“向量球谐函数”，常用于地球物理等领域。尝试对标量球谐函数取梯度并投影到球面切平面，以推导向量球谐函数。
+:::
+
+::: myexercise
+实射影平面 $\mathbb RP^2$ 是 $\mathbb R^3$ 中所有过原点直线的空间，也可视为球面 $S^2$ 关于对径关系 $(x,y,z)\sim(-x,-y,-z)$ 的商。它是二维不可定向流形，无法无自交地嵌入 $\mathbb R^3$，但可嵌入 $\mathbb R^4$ 及更高维 Euclidean 空间。
+
+1.  从 $S^2$ 上均匀抽取 $n$ 个点 $x_i$，定义亲和度 $w_{ij}=K(|\langle x_i,x_j\rangle|)$，例如
+    $$w_{ij}=|\langle x_i,x_j\rangle|^2\quad\text{或}\quad w_{ij}=\exp\left\{\frac{1-|\langle x_i,x_j\rangle|^2}{\epsilon}\right\}.$$
+    求 $n\to\infty$ 时相应扩散映射矩阵的特征函数与特征值。
+
+    ::: hint
+    区分球面上的奇函数与偶函数，并注意极限算子与反射可交换。
+    :::
+
+2.  说明如何利用上述扩散映射特征函数，把 $\mathbb RP^2$ 嵌入 $\mathbb R^5$。
+
+3.  用计算机按上述方法把 $\mathbb RP^2$ 嵌入 $\mathbb R^5$；再作局部 PCA 与对齐，构造向量扩散映射的 $O_{ij}$，尺度自选。求 $D_1^{-1}W_1$ 特征值的重数，并解释数值结果。
+
+4.  用计算机构造对称矩阵 $Z$：若 $\|\Phi(x_i)-\Phi(x_j)\|<\epsilon$，取 $Z_{ij}=\det O_{ij}$；否则取 0。这里 $\Phi$ 是 $\mathbb R^5$ 中的扩散映射嵌入，因此 $Z_{ij}\in\{-1,0,1\}$。检查 $D^{-1}Z$ 的最大特征值与特征向量，判定 $\mathbb RP^2$ 不可定向。
+
+5.  用计算机构造 $2n\times2n$ 对称矩阵 $$\tilde{Z} = Z \otimes \left(
+                                                                                   \begin{array}{rr}
+                                                                                     1 & -1 \\
+                                                                                     -1 & 1 \\
+                                                                                   \end{array}
+                                                                                 \right).$$ 观察 $\tilde D^{-1}\tilde Z$ 特征值的数值重数，其中 $\tilde D$ 为加权度对角矩阵。
+
+6.  $S^2$ 是 $\mathbb RP^2$ 的可定向二重覆盖。利用 $\tilde D^{-1}\tilde Z$ 的特征函数把 $S^2$ 嵌入 $\mathbb R^3$。注意，起点是嵌入 $\mathbb R^5$ 的 $\mathbb RP^2$ 上 $n$ 个点，终点是其二重覆盖 $S^2$ 在 $\mathbb R^3$ 中的 $2n$ 个点。说明如何把该过程推广到任意不可定向流形的二重覆盖嵌入。
+:::

@@ -1,0 +1,145 @@
+/*-- scss:rules --*/
+body {
+  letter-spacing: 0;
+  line-height: 1.78;
+  overflow-x: clip;
+}
+
+main.content img {
+  height: auto !important;
+  max-width: 100%;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.navbar {
+  border-bottom: 1px solid var(--mds-rule);
+  backdrop-filter: blur(12px);
+}
+
+.sidebar {
+  border-right: 1px solid var(--mds-rule);
+}
+
+.sidebar-title {
+  font-family: $font-family-serif;
+  font-weight: 700;
+}
+
+.sidebar-item-text {
+  line-height: 1.45;
+}
+
+.quarto-title-block .title {
+  max-width: 22ch;
+  line-height: 1.2;
+}
+
+main:has(.index-subtitle) > #title-block-header {
+  display: none;
+}
+
+.index-subtitle {
+  margin-top: -0.25rem;
+  color: var(--mds-muted);
+  font-family: $font-family-serif;
+  font-size: 1.2rem;
+}
+
+.book-cover {
+  display: block;
+  width: min(100%, 21rem);
+  height: auto;
+  margin: 1.5rem auto 2.5rem;
+  border: 1px solid var(--mds-rule);
+  box-shadow: 0 1.25rem 3rem rgba(18, 32, 26, 0.16);
+}
+
+.home-intro {
+  max-width: 52rem;
+  margin: 0 auto 3rem;
+  font-family: $font-family-serif;
+  font-size: 1.12rem;
+}
+
+.home-intro .btn {
+  min-height: 2.5rem;
+  margin: 0.75rem 0.5rem 0 0;
+  font-family: $font-family-sans-serif;
+}
+
+.chapter-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+  padding: 1.5rem 0 2.5rem;
+  border-block: 1px solid var(--mds-rule);
+}
+
+.chapter-map > section {
+  min-width: 0;
+}
+
+.chapter-map h3 {
+  font-size: 1.15rem;
+}
+
+.callout {
+  border-radius: 0.25rem;
+}
+
+.math.display,
+.table-responsive,
+main.content > table {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+main.content > table {
+  display: block;
+  width: 100%;
+}
+
+.math.display {
+  display: block;
+  max-width: 100%;
+  padding-block: 0.5rem;
+}
+
+.math.display > mjx-container[display="true"] {
+  max-width: 100%;
+}
+
+.nav-footer {
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .chapter-map {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .book-cover {
+    width: min(82vw, 19rem);
+    margin-top: 0.75rem;
+  }
+
+  .home-intro {
+    font-size: 1.05rem;
+  }
+
+  .home-intro .btn {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

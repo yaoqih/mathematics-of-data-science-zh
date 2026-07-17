@@ -1,18 +1,964 @@
 ---
 title: "随机投影与线性降维"
 description: "Johnson–Lindenstrauss 引理、随机 SVD 与矩阵草图"
-status: 待翻译
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `dimensionreduction-JL.tex`，尚待翻译。
+前面两章分别介绍了线性与非线性降维。本章将看到高维测度集中最迷人的推论之一，也就是高维空间带来的又一项“福祉”：把高维数据随机投影到低维空间，在下一节给出的精确条件下，仍能保持数据的若干几何特征。更惊人的是，这个“低维”可以低得多。
+
+因此，在许多数据处理任务中，先作随机投影能够显著节省计算。相同思想也是**随机化线性代数**的主要动力；本章会以随机化 SVD 为例。它还有一个不那么显然、却很实用的含义：投影与数据无关，所以即使数据集无法显式列出，例如“所有自然图像”或“所有可能的脑扫描”，也能预先采用同一个投影。这正是后面压缩感知一章的核心思想。
+
+## Johnson--Lindenstrauss 引理
+
+设 $X=\{x_1,\ldots,x_n\}\subset\mathbb R^p$，其中 $p$ 很大。若 $p>n$，这些点实际落在某个至多 $n$ 维的子空间中；向该子空间的投影
+$f:\mathbb R^p\to\mathbb R^n$ 不扭曲 $X$ 的几何：
+
+$$
+\|f(x_i)-f(x_j)\|^2=\|x_i-x_j\|^2.
+$$
+
+也就是说，$f$ 在 $X$ 上是等距映射。若允许少量失真，希望找到
+$f:\mathbb R^p\to\mathbb R^d$，使其成为 $\epsilon$-等距映射[^epsilon-convention]：
+
+$$
+(1-\epsilon)\|x_i-x_j\|^2
+\le\|f(x_i)-f(x_j)\|^2
+\le(1+\epsilon)\|x_i-x_j\|^2.
+$$ {#eq-epsilon-isometry}
+
+能否让 $d$ 明显小于 $n$？
+
+[^epsilon-convention]: 另一种约定直接要求距离满足
+$(1-\epsilon)\|x_i-x_j\|\le\|f(x_i)-f(x_j)\|\le(1+\epsilon)\|x_i-x_j\|$。两种定义只在 $\epsilon$ 上相差常数因子，因为 $0\le\epsilon\le1$ 时，
+$1+\epsilon\le(1+\epsilon)^2\le1+3\epsilon$，且
+$1-2\epsilon\le(1-\epsilon)^2\le1-\epsilon$。
+
+Johnson 与 Lindenstrauss 在 1984 年给出了肯定答案。
+
+::: {.theorem #thm-jl-random}
+**定理（Johnson--Lindenstrauss 引理）** [@Johnson_Lindenstrauss_84]。给定 $0<\epsilon<1$ 与正整数 $n$，若
+
+$$
+d\ge4\frac{\log n}{\epsilon^2/2-\epsilon^3/3},
+$$ {#eq-jl-dimension}
+
+则对任意 $n$ 点集合 $X\subset\mathbb R^p$，都存在一个线性映射
+$f:\mathbb R^p\to\mathbb R^d$，在 $X$ 上满足 @eq-epsilon-isometry。该映射可在随机多项式时间内找到[^randomized-polynomial]。
 :::
 
-## Johnson–Lindenstrauss 引理
+[^randomized-polynomial]: 随机多项式时间是指：随机算法在多项式时间内，以高概率给出正确结果。
+
+::: {.proof}
+**证明。** 采用 @Dasgupta_Gupta_JLsimpleproof 的初等证明。先固定一对 $x_i,x_j$。适当缩放后，投影到随机 $d$ 维子空间将以高概率满足 @eq-epsilon-isometry。不妨令
+$u=x_i-x_j$ 且 $\|u\|=1$。$u$ 在随机 $d$ 维子空间上的投影范数，与单位球面 $S^{p-1}$ 上均匀随机点在固定 $d$ 维子空间，例如前 $d$ 个标准基向量张成的空间，上的投影范数同分布。
+
+球面均匀随机点又可由 $\mathbb R^p$ 中标准 Gaussian 向量归一化得到。因此，我们研究的是该随机单位向量前 $d$ 个分量的平方和。
+
+令 $g:\mathbb R^p\to\mathbb R^d$ 为到随机 $d$ 维子空间的投影，并定义
+
+$$
+f=\sqrt{\frac pd}\,g.
+$$
+
+对任意不同的 $x_i,x_j$，比值
+$\|f(x_i)-f(x_j)\|^2/\|x_i-x_j\|^2$ 与测度集中一章相应引理中的 $(p/d)L$ 同分布。由该引理，
+
+$$
+\mathbb P\left\{
+\frac{\|f(x_i)-f(x_j)\|^2}{\|x_i-x_j\|^2}
+\le1-\epsilon\right\}
+\le\exp\left[\frac d2\bigl(\epsilon+\log(1-\epsilon)\bigr)\right].
+$$
+
+利用 $\log(1-\epsilon)\le-\epsilon-\epsilon^2/2$ 及 @eq-jl-dimension，
+
+$$
+\mathbb P\left\{
+\frac{\|f(x_i)-f(x_j)\|^2}{\|x_i-x_j\|^2}
+\le1-\epsilon\right\}
+\le e^{-d\epsilon^2/4}
+\le e^{-2\log n}=\frac1{n^2}.
+$$
+
+另一方面，
+
+$$
+\mathbb P\left\{
+\frac{\|f(x_i)-f(x_j)\|^2}{\|x_i-x_j\|^2}
+\ge1+\epsilon\right\}
+\le\exp\left[\frac d2\bigl(-\epsilon+\log(1+\epsilon)\bigr)\right].
+$$
+
+由
+$\log(1+\epsilon)\le\epsilon-\epsilon^2/2+\epsilon^3/3$，
+
+$$
+\mathbb P\left\{
+\frac{\|f(x_i)-f(x_j)\|^2}{\|x_i-x_j\|^2}
+\ge1+\epsilon\right\}
+\le\exp\left[-\frac d4(\epsilon^2-2\epsilon^3/3)\right]
+\le\frac1{n^2}.
+$$
+
+对上下两个尾部取并集界，固定点对失真的概率至多 $2/n^2$。共有 ${n\choose2}$ 个点对，再取一次并集界：
+
+$$
+\mathbb P\left\{\exists i,j:
+\frac{\|f(x_i)-f(x_j)\|^2}{\|x_i-x_j\|^2}
+\notin[1-\epsilon,1+\epsilon]\right\}
+\le\frac2{n^2}\frac{n(n-1)}2=1-\frac1n.
+$$
+
+所以，适当缩放的随机 $d$ 维投影以至少 $1/n$ 的概率在 $X$ 上成为 $\epsilon$-等距映射。尝试 $\mathcal O(n)$ 个独立随机投影，便能把成功概率提高到任意固定常数，因此可在随机多项式时间内找到所需映射。证毕。
+:::
+
+稍微增大 $d$，第一次随机尝试就能以高概率成功。直接调整上面的证明得到：
+
+::: {.proposition #prop-jl-high-probability}
+**命题。** 给定 $0<\epsilon<1$、$\tau>0$ 与正整数 $n$，若
+
+$$
+d\ge\frac{2(2+\tau)}{\epsilon^2/2-\epsilon^3/3}\log n,
+$$
+
+则对任意 $n$ 点集合 $X\subset\mathbb R^p$，取适当缩放的随机 $d$ 维投影
+$f:\mathbb R^p\to\mathbb R^d$，它以至少 $1-n^{-\tau}$ 的概率在 $X$ 上满足 @eq-epsilon-isometry。
+:::
+
+这个结论对流式高维数据尤其重要。PCA 与扩散映射都要先看到整个数据集，再以数据自适应方式计算降维映射；随机投影却可在数据到达前就选好，只需知道数据规模对数的粗略估计。随后每来一个点就立即投影，无需等待下一个点。上述命题保证，这个看似朴素的在线过程以高概率不会使几何失真超过 $\epsilon$。
+
+这种惊人的低维嵌入并不能原样推广到其他范数。$\ell_1$ 下存在阻止如此剧烈降维的下界 [@lee2004embedding]；$\ell_\infty$ 下也容易构造不可能降维的例子。因此，Johnson--Lindenstrauss 引理体现了 Euclidean 范数的一种精妙特性。
+
+### 快速 Johnson--Lindenstrauss 变换
+
+继续考虑流式数据。抽取随机投影矩阵 $M$ 后，每个点 $x$ 仍需计算 $Mx$。普通随机矩阵通常稠密，含
+$\mathcal O(\epsilon^{-2}\log(n)p)$ 个元素，所以时间和存储代价都可能过高[^projection-abuse]。另一方面，JL 引理在阶数意义下已经最优，不能显著减少行数 [@Alon_JL_lowerbound_2003; @Larsen_Nelson_JL]。
+
+[^projection-abuse]: 严格的正交投影 $P$ 满足 $P=P^*$ 与 $P^2=P$。这里真正的投影是 $M^*M$，但近似保范降维只需应用 $M$；下文沿用习惯，稍微宽泛地称 $M$ 为投影。
+
+可否用稀疏矩阵 $S$ 替代稠密 $M$，同时加速乘法并降低存储？这一思路由 @Ailon_Chazelle_fast_JL 提出；这里介绍一个稍作简化的版本，另见 @cohen2015optimal。
+
+令 $S$ 为极稀疏的 $d\times p$ 矩阵：每行恰有一个非零元，其位置均匀随机，数值为 $\sqrt{p/d}$。对 $x\in\mathbb R^p$，
+
+$$
+\mathbb E[(Sx)_i^2]
+=\sum_{j=1}^p\mathbb P(S_{ij}\ne0)\frac pdx_j^2
+=\frac1d\|x\|^2,
+$$
+
+故 $\mathbb E\|Sx\|^2=\|x\|^2$。期望无偏，即使 $d=1$ 也成立；问题在于方差。若 $x$ 只有一个非零分量，就要 $d=\mathcal O(p)$ 才能以不可忽略的概率使 $\|Sx\|\ne0$。只要一个坐标远大于其他坐标，保证 $\|Sx\|\approx\|x\|$ 就需要很大的 $d$。
+
+向量的“尖峰程度”可由**峰均比** $\|x\|_\infty/\|x\|$ 衡量[^peak-wireless]。非零 $x$ 满足
+
+$$
+\frac1{\sqrt p}\le\frac{\|x\|_\infty}{\|x\|}\le1.
+$$
+
+只有一个非零元时取上界，等模向量取下界。因此，若
+
+$$
+\frac{\|x\|_\infty}{\|x\|}\approx\frac1{\sqrt p},
+$$ {#eq-peak-average}
+
+稀疏抽样就有希望保持 Euclidean 范数。
+
+[^peak-wireless]: 峰均比在无线通信中也很重要。高峰均比信号通过手机功率放大器时容易产生非线性失真；OFDM 的高峰均比被认为是 CDMA 曾长期占优的原因之一。
+
+因此先作旋转，把稀疏向量在新基中摊开，减小无穷范数而保持二范数。自然选择有离散 Fourier 变换，以及它在 $\mathbb Z_2$ 上的对应物 Walsh--Hadamard 变换[^hadamard-padding]。但变换也可能把原本稠密的向量变稀疏；为使构造对所有向量有效，先随机翻转 $x$ 的各坐标符号，再作旋转。这个随机化既避免坏情形，又可高效计算。
+
+[^hadamard-padding]: Hadamard 矩阵并非每个维数都存在，但总可给 $x$ 补零，达到合适长度。
+
+::: {.definition #def-fast-jl}
+**定义（快速 Johnson--Lindenstrauss 变换）。** 定义
+$\Psi:\mathbb C^p\to\mathbb C^d$ 为 $\Psi=SFD$，其中：
+
+- $S$ 是 $d\times p$ 随机矩阵，每行恰有一个非零元 $\sqrt{p/d}$，位置均匀随机；
+- $F$ 是 $p\times p$ DFT 或 Hadamard 矩阵，并按 $1/\sqrt p$ 归一化为酉矩阵；
+- $D$ 是 $p\times p$ 随机对角矩阵，对角元独立地以各 $1/2$ 的概率取 $\pm1$。
+:::
+
+借助 FFT，$Fx$ 可在 $\mathcal O(p\log p)$ 次运算内完成；Walsh--Hadamard 变换也有类似快速算法。
+
+::: {.theorem #thm-fast-jl}
+**定理（快速 Johnson--Lindenstrauss 变换）。** 给定
+$0<\epsilon,\delta<1$，存在 $d\times p$ 随机矩阵 $\Psi$，其中
+
+$$
+d=\mathcal O\!\left(
+\frac{\log(p/\delta)\log(1/\delta)}{\epsilon^2}
+\right),
+$$
+
+使对每个 $x\in\mathbb C^p$，以至少 $1-\delta$ 的概率有
+
+$$
+\|\Psi x\|\in[1-\epsilon,1+\epsilon]\|x\|.
+$$
+
+计算 $\Psi x$ 只需 $\mathcal O(p\log p+d)$ 次运算。
+:::
+
+为简化叙述，只证明 $F$ 为 Walsh--Hadamard 矩阵的实数情形；DFT 情形完全类似。定理由以下两个引理推出。
+
+::: {.lemma #lem-random-rotation-flat}
+**引理。** 令 $y=FDx$，其中 $F,D$ 如 @def-fast-jl，则
+
+$$
+\mathbb P_D\left\{
+\frac{\|y\|_\infty}{\|y\|}
+\ge\sqrt{\frac{2\log(4p/\delta)}p}
+\right\}\le\frac\delta2.
+$$ {#eq-jl-peak-bound}
+:::
+
+::: {.proof}
+**证明。** $FD$ 酉，所以该比值不随 $x$ 缩放；不妨令 $\|x\|=1$。记 $D$ 的第 $j$ 个对角元为独立 Rademacher 变量 $\xi_j$。则
+
+$$
+y_i=\sum_{j=1}^p\xi_jF_{ij}x_j.
+$$
+
+取 $X_j=\xi_jF_{ij}x_j$，则 $\mathbb E X_j=0$，且
+$|X_j|\le a_j=|F_{ij}x_j|$。Hadamard 矩阵每个归一化元素的模为 $p^{-1/2}$，故
+
+$$
+\sum_{j=1}^pa_j^2
+=\frac1p\sum_{j=1}^px_j^2=\frac1p.
+$$
+
+对 Hoeffding 不等式取
+$t=\sqrt{2\log(4p/\delta)/p}$，得到
+
+$$
+\mathbb P\{|y_i|>t\}
+\le2\exp\left(-\frac{2\log(4p/\delta)/p}{2/p}\right)
+=\frac\delta{2p}.
+$$
+
+对 $p$ 个坐标取并集界即得结论。证毕。
+:::
+
+::: {.lemma #lem-sparse-sampling}
+**引理。** 设 $0<\epsilon<1$，$\|y\|=1$ 且
+
+$$
+\|y\|_\infty^2<\frac{2\log(4p/\delta)}p.
+$$
+
+取
+$d\asymp\epsilon^{-2}\log(p/\delta)\log(1/\delta)$，则
+
+$$
+\mathbb P\{|\|Sy\|^2-1|\le\epsilon\}
+\ge1-\frac\delta2.
+$$
+:::
+
+::: {.proof}
+**证明。** 使用 Bernstein 不等式。写
+$S_{ji}=\sqrt{p/d}\,\delta_{ji}$，其中 $\delta_{ji}\in\{0,1\}$ 且每行满足
+$\sum_i\delta_{ji}=1$。令 $z=Sy$，则
+
+$$
+q_j=z_j^2
+=\frac pd\left(\sum_i\delta_{ji}y_i\right)^2
+=\frac pd\sum_i\delta_{ji}y_i^2.
+$$
+
+我们要控制
+$\|z\|^2-1=\sum_j(q_j-1/d)$。各 $q_j$ 独立且
+$\mathbb E(q_j-1/d)=0$。Bernstein 参数满足
+
+$$
+a\le\frac pd\|y\|_\infty^2
+\le\frac{2\log(4p/\delta)}d,
+$$
+
+以及
+
+$$
+\begin{aligned}
+d\sigma^2
+&\le d\mathbb E q_1^2
+=\frac{p^2}d\frac1p\sum_i y_i^4\\
+&\le\frac pd\|y\|_\infty^2\sum_i y_i^2
+\le\frac{2\log(4p/\delta)}d.
+\end{aligned}
+$$
+
+代入 Bernstein 不等式，并用 $\epsilon<1$：
+
+$$
+\begin{aligned}
+\mathbb P\{|\|Sy\|^2-1|>\epsilon\}
+&\le2\exp\left[
+-\frac{\epsilon^2}{2d(2\log(4p/\delta)/d^2)
++\frac23(2\log(4p/\delta)/d)\epsilon}
+\right]\\
+&\le2\exp\left[-\frac{3\epsilon^2d}{16\log(4p/\delta)}\right].
+\end{aligned}
+$$
+
+取
+
+$$
+d=\frac{16}{3\epsilon^2}\log(4p/\delta)\log(4/\delta)
+$$
+
+便使失败概率不超过 $\delta/2$。证毕。
+:::
+
+对两个引理的失败事件取并集界，并注意 $D,F$ 酉，所以 $\|x\|=1$ 时 $\|FDx\|=1$，即得 @thm-fast-jl。除加速外，FJLT 还比无结构稠密随机投影节省大量内存。
+
+许多应用要求在保持几何的同时，对含无限多个点的集合，例如子空间，降维。通过 $\epsilon$-网论证可以证明：对 $N$ 个点有效的 JL 随机矩阵，也近似保持一个 $\mathcal O(\log N)$ 维子空间的几何。这类映射称为**无关数据的子空间嵌入**；快速 JL 构造正是一例，参见 @KireevaTropp。下一节会用类似思想，以随机投影近似最大奇异值对应的奇异子空间，得到大规模线性代数中的主力算法随机化 SVD。Gaussian 分析一章还会通过 Gordon 的“逃逸网格”定理，把 JL 引理推广到更一般的集合。
 
 ## 随机化 SVD
 
+随机化线性代数能够高效处理传统方法难以承受的大规模数据，因而日益重要。上一节的 JL 降维就是代表性例子；其中的随机投影也自然成为**随机化 SVD** 的核心部件。随机化 SVD 先用随机投影缩小矩阵维度，再对较小矩阵作传统 SVD，特别适合规模大、稠密且具有良好低秩近似的矩阵。
+
+回忆 $A\in\mathbb R^{m\times n}$ 的 SVD：
+
+$$
+A=U\Sigma V^*,
+$$ {#eq-rsvd-svd}
+
+其中 $U\in\mathbb R^{m\times m}$ 与
+$V\in\mathbb R^{n\times n}$ 正交，$\Sigma\in\mathbb R^{m\times n}$ 的对角元是按降序排列的奇异值。实践中往往只关心最大的 $k$ 个奇异值及相应奇异向量：
+
+$$
+A\approx U_k\Sigma_kV_k^*,
+$$
+
+其中 $U_k\in\mathbb R^{m\times k}$、
+$\Sigma_k\in\mathbb R^{k\times k}$、
+$V_k\in\mathbb R^{n\times k}$。
+
+投影到前 $k$ 个左奇异向量张成空间的正交投影为
+
+$$
+P_k=\sum_{i=1}^ku_iu_i^*.
+$$
+
+由最佳低秩逼近定理，
+
+$$
+\min_{\operatorname{rank}(B)\le k}\|A-B\|_F
+=\|A-P_kA\|_F
+=\left(\sum_{i>k}\sigma_i^2\right)^{1/2}.
+$$
+
+也就是说，最佳逼近来自捕获 $A$ 中“主要活动”的 $k$ 维子空间。实际应用通常只要求中等精度。依照 @HMT11，取 $s=k+p$，其中 $p$ 是较小的过采样参数，目标是构造秩 $s$ 近似 $\widehat A_s$，使
+
+$$
+\|A-\widehat A_s\|_F^2
+\le(1+\epsilon)\sum_{i>k}\sigma_i^2.
+$$
+
+随机化 SVD 分两步：先找一个能捕获 $A$ 值域的低维子空间，再把 $A$ 投影到该子空间，对所得小矩阵作精确 SVD。我们不知道 $P_k$ 的子空间，便按 JL 思想，从旋转不变分布抽取若干“探测向量”，用它们估计主左奇异方向。
+
+令 $\Psi\in\mathbb R^{n\times(k+p)}$ 的元素独立服从 $\mathcal N(0,1)$，并计算
+
+$$
+Y=A\Psi\in\mathbb R^{m\times(k+p)}.
+$$
+
+$Y$ 捕获 $A$ 在随机 $(k+p)$ 维子空间上的作用；其列空间以高概率良好近似前 $k$ 个左奇异向量张成的空间[^implicit-matrix]。对 $Y$ 作经济型 QR 分解：
+
+$$
+Y=QR,
+$$
+
+其中 $Q\in\mathbb R^{m\times(k+p)}$ 列正交，
+$R\in\mathbb R^{(k+p)\times(k+p)}$ 上三角。再把 $A$ 压缩为
+
+$$
+B=Q^*A\in\mathbb R^{(k+p)\times n},
+$$
+
+并计算小矩阵的经济型 SVD：
+
+$$
+B=U_B\Sigma_BV_B^*.
+$$
+
+于是
+
+$$
+A\approx\widetilde U\widetilde\Sigma\widetilde V^*,
+\qquad
+\widetilde U=QU_B,quad
+\widetilde\Sigma=\Sigma_B,quad
+\widetilde V=V_B.
+$$
+
+[^implicit-matrix]: 若 $A$ 只通过矩阵--向量乘法隐式提供，计算 $Y$ 只需 $k+p$ 次这样的乘法。
+
+::: {.algorithm #alg-randomized-svd}
+**算法：随机化 SVD。**
+
+**输入：** $A\in\mathbb R^{m\times n}$、目标秩 $k>0$、过采样参数 $p>0$；令 $s=k+p$。
+
+1. 生成 $\Psi\in\mathbb R^{n\times s}$，元素独立服从标准 Gaussian 分布。
+2. 计算 $Y=A\Psi$。
+3. 计算经济型 QR 分解 $Y=QR$，其中
+   $Q\in\mathbb R^{m\times s}$、$R\in\mathbb R^{s\times s}$。
+4. 计算 $B=Q^*A$。
+5. 计算经济型 SVD
+   $B=U_B\Sigma_BV_B^*$，其中
+   $U_B,\Sigma_B\in\mathbb R^{s\times s}$、
+   $V_B\in\mathbb R^{n\times s}$。
+6. 令
+   $\widetilde U=QU_B$、
+   $\widetilde\Sigma=\Sigma_B$、
+   $\widetilde V=V_B$。
+
+**输出：** 列正交的
+$\widetilde U\in\mathbb R^{m\times s}$、
+$\widetilde V\in\mathbb R^{n\times s}$ 与对角矩阵
+$\widetilde\Sigma\in\mathbb R^{s\times s}$，使
+$A\approx\widehat A_s=\widetilde U\widetilde\Sigma\widetilde V^*$。
+:::
+
+::: {.callout-note title="原稿勘误"}
+原算法把探测矩阵行数写成未定义的 $N$，并把 $U_B$ 的尺寸写成 $m\times(k+p)$；按矩阵乘法应分别为 $n\times(k+p)$ 与 $(k+p)\times(k+p)$，译稿已校正。
+:::
+
+::: {.theorem #thm-randomized-svd}
+**定理** [@HMT11]。设 $A\in\mathbb R^{m\times n}$ 的奇异值满足
+$\sigma_1\ge\sigma_2\ge\cdots$，目标秩
+$k\le\min(m,n)$。当 $s=k+p\ge k+2$ 时，随机化 SVD 产生的随机秩 $s$ 近似 $\widehat A_s$ 满足
+
+$$
+\mathbb E\|A-\widehat A_s\|_F
+\le\left(1+\frac{k}{p-1}\right)^{1/2}
+\left(\sum_{j>k}\sigma_j^2\right)^{1/2}.
+$$ {#eq-randomized-svd-bound}
+:::
+
+右端由最佳秩 $k$ 误差，以及用随机投影代替最优投影 $P_k$ 所付出的额外因子组成。
+
+为证明定理，把 @eq-rsvd-svd 分块：
+
+$$
+A=
+\begin{bmatrix}U_k&U_\perp\end{bmatrix}
+\begin{bmatrix}\Sigma_k&0\\0&\Sigma_\perp\end{bmatrix}
+\begin{bmatrix}V_k^*\\V_\perp^*\end{bmatrix}.
+$$
+
+令
+
+$$
+\Psi_k=V_k^*\Psi,
+\qquad
+\Psi_\perp=V_\perp^*\Psi.
+$$
+
+前者衡量 $\Psi$ 与主右奇异方向的对齐，后者衡量它与尾部方向的对齐。记 $P_Y$ 为到 $\operatorname{range}(Y)$ 的正交投影，则 $P_Y=QQ^*$。
+
+::: {.lemma #lem-rsvd-deterministic}
+**引理（确定性误差界）。** 沿用上述记号。若
+$\Psi\in\mathbb R^{n\times(k+p)}$ 且 $\Psi_k$ 满行秩，则算法输出满足
+
+$$
+\|A-\widehat A_s\|_F^2
+\le\|\Sigma_\perp\|_F^2
++\|\Sigma_\perp\Psi_\perp\Psi_k^\dagger\|_F^2.
+$$ {#eq-rsvd-deterministic}
+:::
+
+::: {.callout-note title="原稿勘误"}
+原引理把条件写成 $\operatorname{rank}(\Psi)=k$，并把第二项写成维数不相容的
+$\|\Sigma_k\Psi_k\Psi_\perp^\dagger\|_F^2$；其后证明与 @HMT11 的标准结论均要求 $\Psi_k$ 满行秩，第二项应为译稿所示。
+:::
+
+::: {.proof}
+**证明。** 固定 $k,p$，令 $s=k+p$。记
+$\widetilde A=U^*A$、$\widetilde Y=\widetilde A\Psi$。Frobenius 范数酉不变，且
+$P_{\widetilde Y}=U^*P_YU$，所以
+
+$$
+\|A-\widehat A_s\|_F^2
+=\|(I-P_Y)A\|_F^2
+=\|(I-P_{\widetilde Y})\widetilde A\|_F^2.
+$$ {#eq-rsvd-det-1}
+
+定义
+
+$$
+Z=\widetilde Y\Psi_k^\dagger\Sigma_k^{-1}
+=\begin{bmatrix}I\\F\end{bmatrix},
+\qquad
+F=\Sigma_\perp\Psi_\perp\Psi_k^\dagger\Sigma_k^{-1}.
+$$
+
+因为 $\operatorname{range}(Z)\subseteq\operatorname{range}(\widetilde Y)$，投影到较大子空间的残差更小：
+
+$$
+\|(I-P_{\widetilde Y})\widetilde A\|_F^2
+\le\|(I-P_Z)\widetilde A\|_F^2
+=\operatorname{tr}[\Sigma(I-P_Z)\Sigma].
+$$ {#eq-rsvd-det-2}
+
+$Z$ 的投影矩阵为
+
+$$
+P_Z=
+\begin{bmatrix}I\\F\end{bmatrix}
+(I+F^*F)^{-1}
+\begin{bmatrix}I\\F\end{bmatrix}^*.
+$$
+
+直接作分块矩阵运算可得
+
+$$
+0\preceq I-P_Z
+\preceq
+\begin{bmatrix}
+F^*F&B\\B^*&I
+\end{bmatrix},
+\qquad
+B=-(I+F^*F)^{-1}F^*.
+$$
+
+在两侧乘 $\Sigma$，并利用半正定锥上迹的单调性，结合
+@eq-rsvd-det-1 与 @eq-rsvd-det-2，得到
+
+$$
+\begin{aligned}
+\|A-\widehat A_s\|_F^2
+&\le\operatorname{tr}[\Sigma(I-P_Z)\Sigma]\\
+&\le\|\Sigma_kF^*\|_F^2+\|\Sigma_\perp\|_F^2\\
+&=\|\Sigma_\perp\Psi_\perp\Psi_k^\dagger\|_F^2
++\|\Sigma_\perp\|_F^2.
+\end{aligned}
+$$
+
+证毕。
+:::
+
+该引理对任何满足条件的 $\Psi$ 都成立。第一项是每个秩 $k$ 近似都无法避免的尾部奇异值损失；第二项才是降维矩阵造成的误差 [@KireevaTropp]。理想情况下，主方向分量 $\Psi_k$ 条件良好，而尾方向分量 $\Psi_\perp$ 尽可能小。
+
+::: {.lemma #lem-gaussian-pseudoinverse}
+**引理。** 设 $G\in\mathbb R^{m\times n}$ 为标准 Gaussian 随机矩阵，$m\ge2$ 且 $n-m\ge2$，则
+
+$$
+\mathbb E\|G^\dagger\|_F^2=\frac{m}{n-m-1}.
+$$ {#eq-gaussian-pseudoinverse}
+:::
+
+::: {.proof}
+**证明。** 沿用 @HMT11 附录的证明。$GG^*$ 几乎必然可逆，且
+
+$$
+\|G^\dagger\|_F^2
+=\operatorname{tr}[(G^\dagger)^*G^\dagger]
+=\operatorname{tr}[(GG^*)^{-1}].
+$$
+
+$(GG^*)^{-1}$ 服从逆 Wishart 分布。应用 @muirhead2009aspects 第 97 页公式 (12) 的期望迹公式，即得 @eq-gaussian-pseudoinverse。证毕。
+:::
+
+::: {.proof}
+**证明 @thm-randomized-svd。** Gaussian 分布在正交变换下不变，因此
+$\Psi_k=V_k^*\Psi$ 与 $\Psi_\perp=V_\perp^*\Psi$ 仍是相互独立的标准 Gaussian 矩阵；$\Psi_k$ 几乎必然满行秩。
+
+对 @eq-rsvd-deterministic 取期望，并用 Cauchy--Schwarz 不等式，
+
+$$
+\mathbb E\|A-\widehat A_s\|_F
+\le\left[
+\|\Sigma_\perp\|_F^2
++\mathbb E\|\Sigma_\perp\Psi_\perp\Psi_k^\dagger\|_F^2
+\right]^{1/2}.
+$$ {#eq-rsvd-exp-1}
+
+先对 $\Psi_\perp$ 条件取期望。标准 Gaussian 矩阵 $G$ 满足
+$\mathbb E\|AGB\|_F^2=\|A\|_F^2\|B\|_F^2$，故独立性与 @lem-gaussian-pseudoinverse 给出
+
+$$
+\begin{aligned}
+\mathbb E\|\Sigma_\perp\Psi_\perp\Psi_k^\dagger\|_F^2
+&=\|\Sigma_\perp\|_F^2
+\mathbb E\|\Psi_k^\dagger\|_F^2\\
+&=\frac{k}{p-1}\sum_{j>k}\sigma_j^2.
+\end{aligned}
+$$
+
+代入 @eq-rsvd-exp-1，便得 @eq-randomized-svd-bound。证毕。
+:::
+
+::: {.callout-note title="原稿勘误"}
+原证明在若干行中把 $\Psi_k,\Psi_\perp$ 及 $\Sigma_k,\Sigma_\perp$ 的位置互换，导致维数不相容；译稿按确定性引理与标准 Gaussian 条件期望公式统一校正。另原文称使用 Holder 不等式，此处实际只需 $\mathbb E Z\le(\mathbb EZ^2)^{1/2}$，即 Cauchy--Schwarz。
+:::
+
+### 随机化 SVD 的计算复杂度
+
+主要代价为：
+
+1. 计算 $A\Psi$：若 $\Psi$ 是无结构稠密矩阵，需
+   $\mathcal O(mn(k+p))$；
+2. 对 $Y$ 作 QR：$\mathcal O(m(k+p)^2)$；
+3. 计算 $Q^*A$：$\mathcal O(mn(k+p))$；
+4. 对小矩阵 $B$ 作 SVD：$\mathcal O((k+p)^2n)$。
+
+总复杂度为 $\mathcal O(mn(k+p))$。当 $k\ll n$ 时，远低于经典 SVD 的 $\mathcal O(mn^2)$。采用快速 JL 一类有结构或稀疏的 $\Psi$，还可降低 $A\Psi$ 的代价，但为保证同等精度通常要多付若干对数因子。
+
+若 $A$ 的奇异值衰减很慢，基本算法在 $k\ll n$ 时精度不佳，因为 $Q$ 必须与前 $k+p$ 个左奇异向量充分对齐，而尾部奇异方向会干扰 $A\Psi$。可借鉴幂迭代，把
+
+$$
+Y=A\Psi
+$$
+
+替换为
+
+$$
+Y=(AA^*)^qA\Psi.
+$$
+
+这样把奇异值变成 $\sigma_i^{2q+1}$，增强谱衰减，却不改变奇异向量方向。通常 $q=1$ 或 $2$ 已足够，同时宜增大 $p$。误差界见 @HMT11，进一步讨论见 @tropp2023randomized。
+
+随机化 SVD 的核心思想也用于随机最小二乘与随机 Cholesky 分解，参见 @rokhlin2008fast、@HMT11 与 @KireevaTropp。
+
 ## 矩阵草图
+
+本章方法与**矩阵草图**密切相关 [@liberty2013simple; @mahoney2011randomized; @rudelson2007sampling; @HMT11]。它用低维表示近似保留大矩阵的关键线性代数结构。给定 $A\in\mathbb R^{n\times d}$，以小得多的“草图”近似范数、内积或主奇异子空间。
+
+常见方法有两类。投影式方法构造 $SA$，其中
+$S\in\mathbb R^{m\times n}$ 是 Gaussian 或子采样随机 Hadamard 等嵌入，把 JL 引理从有限向量推广到整个子空间 [@woodruff2014sketching; @tropp2017practical]。采样式方法则随机抽取并缩放 $A$ 的行或列，常用杠杆分数保留信息量最大的方向 [@frieze2004fast; @mahoney2009cur; @drineas2006subspace]。二者本质上都在近似保持 $A$ 列空间的几何。
+
+矩阵草图不仅支撑随机化 SVD，也以可控误差换取显著的时间与内存节省，使分布式线性代数 [@woodruff2014sketching] 和高维流式计算成为可能 [@harvey2008sketching; @mahoney2011randomized]。流式模型只用有限内存，按顺序一遍或少数几遍处理数据，不保存整个数据集 [@muthukrishnan2005data; @woodruff2014sketching]；当数据太大、连续到达或必须在线计算时尤其重要。
+
+::: {.definition #def-subspace-embedding}
+**定义。** 若矩阵 $S$ 对 $A\in\mathbb R^{n\times d}$ 的所有 $x\in\mathbb R^d$ 都满足
+
+$$
+(1-\epsilon)\|Ax\|^2\le\|SAx\|^2
+\le(1+\epsilon)\|Ax\|^2,
+$$
+
+则称 $S$ 是 $A$ 列空间的 $(1\pm\epsilon)$ **$\ell_2$ 子空间嵌入**。也常简称 $S$ 是 $A$ 的子空间嵌入；该性质只依赖列空间，与所选基无关。
+:::
+
+::: {.theorem #thm-l2-subspace-embedding}
+**定理（$\ell_2$ 子空间嵌入）。** 设
+$U\subset\mathbb R^n$ 是固定 $r$ 维子空间。若随机矩阵
+$S\in\mathbb R^{m\times n}$ 对任意固定 $x$ 满足
+
+$$
+\mathbb P\{|\|Sx\|^2-\|x\|^2|>\epsilon\|x\|^2\}
+\le2e^{-c\epsilon^2m},
+$$
+
+并且
+
+$$
+m\ge C\frac{r+\log(1/\delta)}{\epsilon^2},
+$$
+
+则以至少 $1-\delta$ 的概率，对所有 $x\in U$ 同时有
+
+$$
+(1-\epsilon)\|x\|^2\le\|Sx\|^2
+\le(1+\epsilon)\|x\|^2.
+$$
+:::
+
+::: {.proof}
+**证明。** 由齐次性，只需考虑单位球面
+$\mathbb S_U=\{x\in U:\|x\|=1\}$。取常数精度（例如 $1/4$）网
+$\mathcal N\subset\mathbb S_U$，则 $|\mathcal N|\le9^r$。对每个网点以精度 $\epsilon/2$ 应用集中界，再取并集界，得到失败概率
+
+$$
+2|\mathcal N|e^{-c'\epsilon^2m}
+\le2e^{Cr-c'\epsilon^2m}\le\delta.
+$$
+
+在成功事件上，对所有 $x\in\mathcal N$，
+$|\|Sx\|^2-1|\le\epsilon/2$。令
+$T=S^*S-I$ 限制在 $U$ 上。对任意单位向量 $y$，选网点 $x$ 使
+$\|x-y\|\le1/4$。由极化与
+$|y^*Ty-x^*Tx|\le2\|T\|\|x-y\|$，
+
+$$
+\|T\|\le\max_{x\in\mathcal N}|x^*Tx|+\frac12\|T\|.
+$$
+
+所以 $\|T\|\le\epsilon$。这等价于对所有 $y\in U$ 有
+$|\|Sy\|^2-\|y\|^2|\le\epsilon\|y\|^2$。证毕。
+:::
+
+Gaussian 矩阵与快速 JL 中的子采样随机 Hadamard/Fourier 变换都满足定理假设。另一个实用构造是 **CountSketch** [@charikar2002finding; @thorup2012tabulation]，它极为稀疏，适合超大数据与高速数据流，也常用于估计流中元素频率。
+
+CountSketch 矩阵 $S\in\mathbb R^{m\times n}$ 由两个独立哈希函数定义：桶哈希
+$h:[n]\to[m]$，符号哈希 $g:[n]\to\{\pm1\}$，并令
+
+$$
+S_{ij}=\begin{cases}g(j),&h(j)=i,\\0,&\text{其他情形}.
+\end{cases}
+$$
+
+每列恰有一个非零元。计算 $Sx$ 时只需对每个 $x_j$ 更新
+$\operatorname{sketch}[h(j)]\mathrel{+}=g(j)x_j$；计算 $SA$ 只需
+$\mathcal O(\operatorname{nnz}(A))$ 次运算。一个实例是
+
+$$
+S=\begin{bmatrix}
+0&0&0&0&-1&0\\
+1&0&0&0&0&0\\
+0&0&0&1&0&0\\
+0&-1&0&0&0&1\\
+0&0&-1&0&0&0\\
+0&0&0&0&0&0
+\end{bmatrix}.
+$$
+
+这里 $h(1),\ldots,h(6)=(2,4,5,3,1,4)$，第 2、6 列在第 4 行碰撞，第 6 行为空；符号为 $(+,-,-,+,-,+)$。
+
+::: {.lemma #lem-countsketch-inner-product}
+**引理。** 对任意 $x,y\in\mathbb R^n$，
+
+$$
+\mathbb E\langle Sx,Sy\rangle=\langle x,y\rangle.
+$$
+:::
+
+证明留作习题。
+
+::: {.theorem #thm-countsketch-subspace}
+**定理。** 设 $U\subset\mathbb R^n$ 是 $d$ 维子空间。若
+
+$$
+m\ge\frac{2d^2}{\delta\epsilon^2},
+$$
+
+则 CountSketch 以至少 $1-\delta$ 的概率对所有 $x\in U$ 满足
+
+$$
+(1-\epsilon)\|x\|^2\le\|Sx\|^2
+\le(1+\epsilon)\|x\|^2.
+$$
+:::
+
+::: {.proof}
+**证明。** 用同一字母 $U\in\mathbb R^{n\times d}$ 表示该子空间的一组标准正交基。子空间嵌入等价于
+
+$$
+\|(SU)^T(SU)-I_d\|\le\epsilon.
+$$
+
+谱范数不超过 Frobenius 范数，所以只需证明
+$\mathbb P\{\|(SU)^T(SU)-I_d\|_F^2>\epsilon^2\}\le\delta$。
+
+令 $M=(SU)^T(SU)-I_d$。其 $(j,k)$ 元由
+$X_{jk}=\langle Su_j,Su_k\rangle$ 给出。上一引理与
+$\langle u_j,u_k\rangle=\delta_{jk}$ 说明 $\mathbb EM=0$。展开符号哈希并只保留成对出现的指标，得到
+
+$$
+\operatorname{Var}(X_{jk})
+=\frac1m(\|u_j\|^2\|u_k\|^2+\langle u_j,u_k\rangle^2)
+-\frac2m\sum_a u_{aj}^2u_{ak}^2.
+$$
+
+所以
+
+$$
+\begin{aligned}
+\mathbb E\|M\|_F^2
+&=\sum_{j,k}\operatorname{Var}(X_{jk})\\
+&\le\frac1m\sum_{j,k}
+(\|u_j\|^2\|u_k\|^2+\langle u_j,u_k\rangle^2)\\
+&=\frac{d^2+d}{m}\le\frac{2d^2}{m}.
+\end{aligned}
+$$
+
+Markov 不等式给出
+
+$$
+\mathbb P\{\|M\|_F^2>\epsilon^2\}
+\le\frac{2d^2}{m\epsilon^2}\le\delta.
+$$
+
+证毕。
+:::
+
+这个证明并不最优：它只用二阶矩尾界，还控制了通常比谱范数大约 $\sqrt d$ 倍的 Frobenius 范数。矩阵集中工具可显著改善结论，见 @nelson2013osnap。CountSketch 为获得同等保证通常需要比 Gaussian 草图更多行，但当 $n,d$ 大到一次稠密乘法都不可承受时，它往往是首选。
+
+::: {.theorem #thm-sketched-regression}
+**定理（草图近似回归）。** 设 $A\in\mathbb R^{n\times d}$、$y\in\mathbb R^n$，且 $S$ 是
+$\operatorname{range}([A\ y])$ 的 $(1\pm\eta)$ 子空间嵌入。令
+
+$$
+\widetilde x=\arg\min_x\|SAx-Sy\|.
+$$
+
+若取 $\eta=\epsilon/(2+\epsilon)$，则
+
+$$
+\|A\widetilde x-y\|
+\le(1+\epsilon)\min_x\|Ax-y\|.
+$$
+:::
+
+::: {.proof}
+**证明。** 令 $r(x)=Ax-y$，并令
+$x^*=\arg\min_x\|r(x)\|$。因为 $r(x)\in\operatorname{range}([A\ y])$，
+
+$$
+(1-\eta)\|r(x)\|\le\|Sr(x)\|
+\le(1+\eta)\|r(x)\|.
+$$
+
+由 $\widetilde x$ 的最优性，
+$\|Sr(\widetilde x)\|\le\|Sr(x^*)\|$，故
+
+$$
+\|A\widetilde x-y\|
+\le\frac{1+\eta}{1-\eta}\|Ax^*-y\|
+=(1+\epsilon)\|Ax^*-y\|.
+$$
+
+证毕。
+:::
+
+::: {.callout-note title="原稿勘误"}
+原定理混用了 $\widetilde z$ 与 $\widetilde x$，且以嵌入误差 $\epsilon$ 直接声称 $1+\epsilon$，证明实际给出 $(1+\epsilon)/(1-\epsilon)$。译稿统一变量并通过重参数化给出精确陈述。
+:::
+
+### 用草图快速近似矩阵乘法？
+
+经典 $n\times n$ 矩阵乘法需 $\mathcal O(n^3)$。Strassen 在 1969 年用七次而非八次半尺寸块乘法，加上十八次块加法，得到递归复杂度
+$\mathcal O(n^{\log_27})\approx\mathcal O(n^{2.8074})$ [@Strassen1969]。Coppersmith--Winograd 一系算法把指数进一步降至约 $2.37$，但常数、数值稳定性、内存、缓存和通信开销使这些渐近快速方法很少用于实际数值库[^fast-mm-practice]。能否构造实用的
+$\mathcal O(n^{2+\epsilon})$ 甚至 $\mathcal O(n^2\log n)$ 任意矩阵乘法仍是重要问题。
+
+[^fast-mm-practice]: 实际库通常使用高度优化的经典算法，因为其硬件利用率更好。
+
+若只需近似 $AB$，随机算法可以降低代价。对
+$A\in\mathbb R^{m\times n}$、$B\in\mathbb R^{n\times p}$，写成秩一外积之和
+
+$$
+AB=\sum_{i=1}^nA^{(i)}B_{(i)}.
+$$
+
+按概率 $p_i$ 有放回抽取 $c$ 个指标 $i_t$，构造 [@drineas2006fast]
+
+$$
+\widetilde C=\sum_{t=1}^c\frac1{cp_{i_t}}A^{(i_t)}B_{(i_t)},
+$$
+
+等价于 $(AS)(S^TB)$。取
+
+$$
+p_i=\frac{\|A^{(i)}\|\|B_{(i)}\|}
+{\sum_j\|A^{(j)}\|\|B_{(j)}\|},
+$$
+
+可得
+
+$$
+\mathbb E\|AB-\widetilde C\|_F
+\le\frac1{\sqrt c}\|A\|_F\|B\|_F.
+$$
+
+当矩阵本来含噪，或 $n$ 达数百万而 $c$ 约一万时，这一界可能足够；但计算全部 $p_i$ 的代价也须计入。
+
+SRHT 或 Gaussian 草图还可得到
+
+$$
+\|AB-(AS)(S^TB)\|
+\le\|AB-(AB)_k\|+\epsilon\|A\|_F\|B\|_F,
+$$
+
+其中 $(AB)_k$ 是最佳秩 $k$ 近似 [@HMT11; @cohen2015optimal]。因此随机乘积能捕获最重要的奇异方向。若输出本身很大、要求很强的谱保证，或矩阵稳定秩很高，收益会受限；当乘积只是回归、低秩逼近或图计算的中间步骤时，草图最有效。
 
 ## 习题 {.unnumbered}
 
+::: {.exercise}
+**JL 引理的最优性。** 称 $S\subset\mathbb R^d$ 为 $\epsilon$-分离的，若不同 $s,t\in S$ 都满足 $\|s-t\|_2>\epsilon$。定义包装数
+
+$$
+\mathcal D(T,\epsilon)=\max\{|S|:S\subseteq T\text{ 且 }S\text{ 为 }\epsilon\text{-分离}\}.
+$$
+
+1. 用体积论证证明
+   $\mathcal D(B^d(1),\epsilon)\le((2+\epsilon)/\epsilon)^d$。
+2. 在 $\mathbb R^n$ 中取 $x_i=e_i$（$i<n$）、$x_n=0$。若
+   $f:\mathbb R^n\to\mathbb R^d$ 在该集合上是 $\epsilon$-等距，证明 $f(X)$ 是某个平移后的 $B_d(1+\epsilon)$ 中的 $(1-\epsilon)$-分离集。
+3. 推出 $n\le((3+\epsilon)/(1-\epsilon))^d$，说明 $d\asymp\log n$ 的依赖最优。
+:::
+
+::: {.exercise}
+**JL 引理的另一版本。** 令 $P:\mathbb R^n\to\mathbb R^m$ 取前 $m$ 个坐标，$z$ 在 $S^{n-1}$ 上均匀。
+
+1. 证明 $\mathbb E\|Pz\|_2^2=(m/n)\|z\|_2^2$。
+2. 用 Lipschitz 集中证明：以至少 $1-2e^{-c\epsilon^2m}$ 的概率，
+   $$
+   (1-\epsilon)\sqrt{m/n}\|z\|_2
+   \le\|Pz\|_2\le
+   (1+\epsilon)\sqrt{m/n}\|z\|_2.
+   $$
+3. 可不加证明地使用“随机向量投到固定子空间”等价于“固定向量投到均匀随机子空间”。对 $n$ 点集合证明：若
+   $m\ge C\epsilon^{-2}\log n$，则缩放投影
+   $Q=\sqrt{n/m}P$ 以高概率同时近似保持所有点对距离。
+:::
+
+::: {.exercise}
+**随机投影使向量平坦化。**
+
+1. 设 $A\in\mathbb R^{m\times n}$ 固定，$\|v\|=1$，$D$ 为独立 Rademacher 对角矩阵。证明
+   $$
+   \mathbb P\{\|ADv\|_\infty\ge\|A\|_\infty t\}
+   \le2me^{-t^2/2}.
+   $$
+2. 对均匀随机投影矩阵 $P$，证明
+   $\mathbb P\{\|P\|_\infty\ge t/\sqrt n\}\le2mne^{-ct^2}$。可使用 $P$ 每行在球面均匀这一事实。
+3. 推出：对 $k$ 个单位向量组成的 $\mathcal X$，以至少 $1-C/n$ 的概率，对所有 $x\in\mathcal X$，
+   $$
+   \sqrt{n/m}\|Px\|_\infty
+   \le C'\sqrt{\log(nmk)/m}.
+   $$
+:::
+
+::: {.exercise}
+实现随机化 SVD，近似 $1000\times1000$ Hilbert 矩阵的秩 $10$ SVD，取 $p=5$。计算真实 SVD 与随机化 SVD；在同一图中画奇异值；报告误差。
+:::
+
+::: {.exercise}
+构造 $A=U\Sigma V^T\in\mathbb R^{1000\times1000}$，比较两种奇异值衰减：
+$\sigma_j=e^{-\alpha j}$ 与 $\sigma_j=j^{-p}$（$p>1$）。分别计算无幂迭代和有幂迭代的秩 $k$ 随机化 SVD 相对 Frobenius 误差，并与最优截断 SVD 比较。
+:::
+
+::: {.exercise}
+证明：若 $S$ 是 $A$ 的 $(1\pm\epsilon)$ 子空间嵌入，则它也是 $A$ 列空间任意标准正交基 $U$ 的同参数子空间嵌入。
+:::
+
+::: {.exercise #exr-countsketch-inner}
+证明 @lem-countsketch-inner-product。
+:::
+
+::: {.exercise}
+**最小二乘中的草图比较。** 生成
+$A\in\mathbb R^{2000\times50}$ 与 $x_0\in\mathbb R^{50}$，元素均独立标准 Gaussian；令
+$b=Ax_0+\eta$，$\eta\sim\mathcal N(0,0.01I)$。先用 QR 或 SVD 求精确最小二乘解并记录残差与时间。
+
+对 $m\in\{100,200,400,800\}$，分别用 Gaussian 草图
+$S_{ij}\sim\mathcal N(0,1/m)$、SRHT
+$S=\sqrt{n/m}RHD$、每列一个非零元的 CountSketch，各重复 10 次，求
+$\widetilde x=\arg\min_x\|SAx-Sb\|$。记录相对解误差、相对残差及构造/求解时间；绘制平均残差与平均时间随 $m$ 的变化，讨论达到给定精度所需的最小 $m$、最快方法及稀疏性影响。
+
+:::
+
+::: {.exercise}
+把上一题中的 $A$ 改为每行仅 10 个随机非零元的稀疏矩阵；每行非零位置与数值均随机选择。重复上一实验，比较 CountSketch 相对 Gaussian 与 SRHT 的性能变化。
+:::
+
+::: {.exercise}
+设 $L$ 为图拉普拉斯矩阵，$S$ 为 Gaussian、SRHT 或 CountSketch。
+
+1. 定义 $q_S(x)=\|SL^{1/2}x\|^2$。若 $S$ 是 $L^{1/2}U$ 列空间的子空间嵌入，证明对所有 $x\in U$，
+   $$
+   (1-\epsilon)x^TLx\le q_S(x)\le(1+\epsilon)x^TLx.
+   $$
+2. 在单位方形中均匀采样 2000 点，距离不超过 $r$ 时连边。分别用完整拉普拉斯矩阵、Gaussian 草图与 CountSketch 草图计算前五个非平凡特征向量；比较时间、特征值误差与子空间主角误差。
+3. 解释 $L$ 的零空间为何要求草图计算格外谨慎。
+:::

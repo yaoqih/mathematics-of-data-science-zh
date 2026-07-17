@@ -1,26 +1,747 @@
 ---
 title: "分类"
-description: "线性分类、逻辑回归、SVM 与泛化界"
-status: 待翻译
+description: "线性分类、逻辑回归、支持向量机与泛化界"
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `classification.tex`，尚待翻译。
-:::
+<!-- 原稿章节标签：c:classification -->
+
+分类是数据科学与机器学习中最基本的任务之一，广泛见于医学诊断、金融、计算机视觉、文本分析和科学数据分析等领域。例如，我们可以根据症状、化验结果和影像特征判断患者是否患病，也可以依据影像或基因组特征区分肿瘤的良恶性；银行可以结合财务历史与人口统计特征，将贷款申请人划分为低风险或高风险；视觉系统可以判断图像中是自行车还是汽车；文本系统可以把新闻归入政治、体育、科技或金融等主题。在蛋白质折叠研究中，分类模型还可由氨基酸序列推断蛋白质的功能类别，这对于药物发现至关重要。尽管应用各异，核心目标始终相同：根据观测到的特征，把对象指派到有限个预先规定的类别中。
+
+聚类与分类都在划分特征空间，但二者解决的是本质不同的问题。聚类属于无监督学习，面对没有标签的数据，目标是从中发现潜在结构或群组；分类属于监督学习，借助已有标签的样本，学习如何把新数据归入已知类别。因而，聚类主要是描述性的：它通过优化揭示当前数据集的内部结构；分类则是预测性的：它通过优化构造一条能够推广到未见数据的决策规则。
+
+本章研究两类核心分类方法：
+
+1.  *逻辑回归*：从概率建模与似然最大化出发 [@cox1958regression]；
+
+2.  *支持向量机*：从几何上的间隔最大化出发 [@cortes1995support]。
+
+两种方法最终都会导向凸优化问题，并且都在现代数据科学中占据重要位置。
+
+面对大规模数据时，基于深度学习的分类已经成为主流技术；我们将在第 [\[c:deeplearning\]](#c:deeplearning){reference-type="ref" reference="c:deeplearning"} 章专门讨论。
 
 ## 二元分类与线性分类器
 
-## 逻辑回归
+我们从一个特殊但极其重要、也最能说明基本思想的情形开始：*二元分类*。给定带标签的数据 $\{(x_i,y_i)\}_{i=1}^n$，其中 $x_i\in\mathbb{R}^d$ 是特征向量，二元标签 $y_i$ 通常取值于 $\{-1,+1\}$，目标是学出一条规则，用来预测新观测 $x$ 的标签 $y$。
 
-## 分类器评估、混淆矩阵与 ROC
+所谓线性分类器，就是决策边界为线性的分类器。严格地说，它由参数 $(w,b)\in\mathbb{R}^d\times\mathbb{R}$ 定义，决策规则为 $$f(x)=\operatorname{sign}(w^Tx+b).$$ 相应的决策边界
+$$\{x\in\mathbb{R}^d:w^Tx+b=0\}$$
+是一张把输入空间分成两个半空间的超平面。因此，学习线性分类器，就是选择合适的 $w$ 与 $b$，使不同标签的样本落在超平面的不同侧。
 
-## 支持向量机
+图 [1.1](#fig:linearclass){reference-type="ref" reference="fig:linearclass"} 给出了一个简单例子：两组点可以被两张不同的超平面正确分开。事实上，候选分隔面可能有无穷多个。我们应当选择哪一个？是否存在某种意义下的最优选择？如果存在，又该怎样求出？
 
-## 多分类问题
+<figure id="fig:linearclass">
 
-## Rademacher 复杂度与泛化界
+::: center
+`<img src="../assets/figures/linearclass1.png" />`{=html}
+:::
+
+<figcaption>
+空心圆与实心圆表示两个不同类别的数据。两组点可由超平面线性分隔；图中的 [`<em>`{=html}H`</em>`{=html}`<sub>`{=html}1`</sub>`{=html}]{.math .inline} 和 [`<em>`{=html}H`</em>`{=html}`<sub>`{=html}2`</sub>`{=html}]{.math .inline} 只是无穷多个候选分隔超平面中的两个。究竟应选哪一个作为分类器？
+</figcaption>
+</figure>
+
+## 逻辑回归 {#s:logisticregression}
+
+逻辑回归的思想源流[^1]可以追溯到 Verhulst [@verhulst1844recherches]、Berkson [@berkson1944application] 与 Cox [@cox1958regression] 等人的工作。它是最常用的二元分类算法之一。虽然名称中带有“回归”，其本质却不是预测连续数值，而是估计一个输入属于某一类别的概率。
+
+先考虑二元标签这一随机变量 $y\in\{0,1\}$，设 $\P(y=1)=p$、$\P(y=0)=1-p$，其中 $p\in[0,1]$。我们假定概率 $p$ 取决于一个或多个解释变量，并把它们汇集成向量 $x\in\R^n$。例如，要预测患者是否患有某种疾病，可用 $y=1$ 表示患病、$y=0$ 表示未患病；患病概率则由年龄、性别、体重、血压、体温等解释变量共同决定，这些变量都包含在 $x$ 中。
+
+在线性回归中，我们把输出建模为输入的线性组合
+$$z=w^Tx+b.$$
+但 $z$ 可以取遍 $(-\infty,+\infty)$，而概率必须落在 $[0,1]$ 内，所以不能直接用 $z$ 表示概率。
+
+为把线性预测量映射到概率区间，我们使用 logistic sigmoid 函数 $\sigma(z)=(1+e^{-z})^{-1}$。于是
+$$\P(y=1\mid x;w,b)=\sigma(w^Tx+b)=\frac{1}{1+\exp(-(w^Tx+b))}.$$
+
+逻辑回归也可以理解为：对概率 $p$ 的对数几率（log-odds，也称 logit）建立线性模型。若 $p=\P(y=1\mid x)$，则几率定义为 $p/(1-p)$；取自然对数后容易得到
+$$\log\Big(\frac{p}{1-p}\Big)=w^Tx+b.$$
+
+因此，当 $p=0.5$ 时得到决策边界 $w^Tx+b=0$，它仍是一张超平面。
+
+线性回归通常采用普通最小二乘估计参数，而逻辑回归中的 $w$ 和 $b$ 一般通过最大似然估计得到。假设各观测独立同分布（i.i.d.），$n$ 个观测的似然函数为[^2]
+$$L(w,b)=\prod_{i=1}^n[\sigma(w^Tx_i+b)]^{y_i}[1-\sigma(w^Tx_i+b)]^{1-y_i}.$$
+
+最大化似然等价于最小化*负对数似然*
+$$J(w,b)=-\frac1n\sum_{i=1}^n[y_i\log\sigma(w^Tx_i+b)+(1-y_i)\log\bigl(1-\sigma(w^Tx_i+b)\bigr)],$$
+这个目标也称为*逻辑损失*或*交叉熵损失*。
+
+不难验证 $J$ 是凸函数。因此，除数据本身存在退化情形外，逻辑回归具有唯一的全局极小点，并可用梯度下降、Newton 法等一阶或二阶优化方法高效求解。
+
+损失函数的梯度具有非常简洁的形式
+$$\nabla_{w,b}J(w,b)=\frac1n\sum_{i=1}^n\bigl(\sigma(w^Tx_i+b)-y_i\bigr)x_i.$$
+它与线性回归中的梯度颇为相似，尽管这里的预测函数本身是非线性的。
+
+基本逻辑回归模型有一个值得警惕的现象：若数据线性可分，优化过程会倾向于把权重 $w$ 的范数推向无穷。原因是 $\|w\|$ 越大，$\sigma(w^Tx+b)$ 的跃迁越陡，预测概率就越接近 $0$ 或 $1$。这样不仅容易过拟合，使模型对训练数据的微小扰动变得敏感，还可能造成数值不稳定乃至“梯度爆炸”。
+
+这一问题有多种处理方式。为了推导正则化版本，我们可以不把 $w$ 仅仅看作待求的固定参数，而把它视为带有先验分布的随机变量；这就得到最大后验（MAP）估计。
+
+具体地，假设权重服从以零为中心的 Gaussian 先验 $w\sim\mathcal N(0,\eta^2I)$，而对截距 $b$ 不施加实质性的先验约束。后者可写成“平坦”先验 $b\sim\mathcal N(0,\gamma^2)$ 且令 $\gamma\to\infty$，有时也简记为 $b\sim\mathcal N(0,\infty)$。
+
+由 Bayes 定理 [@casella2024statistical Chapter 7.2.3]，给定数据 $(x,y)$ 后，参数的后验分布满足 $$\begin{equation}
+\label{eq:bayes}
+\pi(w,b | x, y)  \propto  \pi(w)\pi(b) \pi(y | x, w,b) ,
+\end{equation}$$ 其中 $\pi(y\mid x,w,b)$ 是基本逻辑回归中的标准似然函数。直观地说，式 [\[eq:bayes\]](#eq:bayes){reference-type="eqref" reference="eq:bayes"} 就是
+$$\quad\text{后验}\propto\text{先验}\times\text{似然}.$$
+求 MAP 估计，就是最大化对数后验
+$$\log\pi(w,b\mid x,y)=\log\pi(w)+\log\pi(b)+\log\pi(y\mid x,w,b)+C,$$
+其中 $C$ 是与 $w$ 无关的常数。
+
+代入 $b$ 的平坦先验，有 $\log\pi(b)=-\frac{b}{2\gamma^2}+C$；当 $\gamma\to\infty$ 时，这一项趋于零，因而不会对 $b$ 形成有效惩罚。
+
+代入 $w$ 的 Gaussian 先验，得到
+$$\log\pi(w)=-\frac12w^T(\eta^2I)^{-1}w+C=-\frac{1}{2\eta^2}\|w\|+C.$$
+改变符号，把最大化改写为最小化，就得到带 $\ell_2$ 正则的目标函数
+$$J(w,b)=-\frac1n\sum_{i=1}^n\left[y_i\log\sigma(w^Tx_i+b)+(1-y_i)\log(1-\sigma(w^Tx_i+b))\right]+\lambda\|w\|^2,$$
+其中 $\lambda>0$ 控制拟合数据与压缩权重之间的权衡。
+
+$\ell_2$ 项 $\|w\|^2$ 是严格凸的；凸函数加上严格凸函数后仍严格凸。因此，只要 $\lambda>0$，即使数据存在退化，目标函数也有唯一极小点。正则项还会使目标函数成为强凸函数，从而显著改善梯度下降的收敛性质（参见第 [\[c:optimization\]](#c:optimization){reference-type="ref" reference="c:optimization"} 章）。
+
+逻辑回归直接输出的是概率，而不是二元决策；严格来说，它本身还不是完整的分类器。它产生一个*得分*
+$$s(x):=\sigma(w^Tx+b)\in(0,1),$$
+可解释为后验概率的估计。真正分类时，通常还要选定阈值 $\tau\in[0,1]$，并采用决策规则
+$$\hat y_\tau=
+\begin{cases}
+1, & s(x) \ge \tau,\\
+0, & s(x) < \tau,
+\end{cases}$$
+这等价于使用依赖于 $\tau$ 的*线性决策边界*
+$$w(\tau)^Tx+b(\tau)=0,$$
+即用超平面分开两个类别。因此，逻辑回归属于线性分类器，尽管它的目标函数与概率解释不同于支持向量机一类基于间隔的方法。
+
+那么，阈值 $\tau$ 应怎样选择？取 $\tau=\frac12$ 看似自然，却未必最合适。降低阈值通常会减少假阴性，却增加假阳性；提高阈值则恰好相反。阈值选择因此牵涉一个更基本的问题：我们究竟应当如何评价监督学习分类器？下一节先暂时离开模型训练，专门讨论这个问题。
+
+## 分类器评估、混淆矩阵与 ROC 曲线
+
+混淆矩阵把算法的预测与真实标签逐一对照，是观察二元分类器表现的最直接工具。所有预测可分为四类：
+
+- 真阳性（TP）：真实类别为正，模型也正确预测为正。
+
+- 真阴性（TN）：真实类别为负，模型也正确预测为负。
+
+- 假阳性（FP）：真实类别为负，模型却误判为正，也称第一类错误。
+
+- 假阴性（FN）：真实类别为正，模型却误判为负，也称第二类错误。
+
+| | 预测为正 | 预测为负 |
+|---|---:|---:|
+| **真实为正** | 真阳性（TP） | 假阴性（FN） |
+| **真实为负** | 假阳性（FP） | 真阴性（TN） |
+
+这里顺便引入几个实践中常用的评价术语。*灵敏度*（sensitivity，也就是真阳性率）是在对象确为正类的条件下，检验给出阳性结果的概率；*特异度*（specificity，也就是真阴性率）是在对象确为负类的条件下，检验给出阴性结果的概率。将负类误判为正类的假阳性称为*第一类错误*，将正类误判为负类的假阴性称为*第二类错误*。
+
+由混淆矩阵中的四个计数，可以导出若干常用指标： $$\begin{align}
+\label{def:recall}
+\begin{split}
+\text{准确率} = \frac{\text{TP}+\text{TN}}{\text{TP}+\text{FP}+\text{TN}+\text{FN}},& \quad
+\text{精确率} = \frac{\text{TP}}{\text{TP}+\text{FP}},\\
+\text{F1} = 2 \cdot \frac{\text{精确率}\cdot \text{召回率}}{\text{精确率 + 召回率}}, & \quad
+\text{召回率（TPR）} = \frac{\text{TP}}{\text{TP}+\text{FN}}.
+\end{split}
+\end{align}$$
+
+为了观察阈值变化时真阳性率（TPR）与假阳性率（FPR）之间的权衡，通常使用受试者工作特征（ROC）曲线[^3]，见图 [1.2](#fig:ROC){reference-type="ref" reference="fig:ROC"}。随机分类器对应一条对角线（灰线）；有实际判别能力的分类器应位于对角线上方（蓝色曲线）；完美分类器则到达左上角 $(0,1)$（红色曲线）。
+
+<figure id="fig:ROC" data-latex-placement="h!">
+
+::: center
+`<img src="../assets/figures/roc2.png" style="width:50.0%" />`{=html}
+:::
+
+<figcaption>
+ROC（受试者工作特征）曲线遍历所有可能的分类阈值，以假阳性率为横轴、真阳性率为纵轴，展示分类模型的整体表现。
+</figcaption>
+</figure>
+
+曲线下面积（AUC）把整条 ROC 曲线概括成一个数。AUC=1 表示两个类别被完美分离；AUC=0.5 则相当于随机猜测。AUC 还有一个很直观的概率解释：随机抽取一个正样本和一个负样本，分类器给正样本打出更高分数的概率。
+
+当类别极不平衡时，ROC 曲线可能产生误导，此时精确率--召回率（PR）曲线往往更合适。它描绘不同阈值下精确率与召回率之间的关系（两者定义见式 [\[def:recall\]](#def:recall){reference-type="eqref" reference="def:recall"}），因而更突出模型在正类上的表现。这一点对欺诈识别、疾病诊断等稀有事件检测尤其重要。
+
+回到最初的问题：逻辑回归的阈值 $\tau$ 究竟怎么选？ROC 曲线本身并不会指定唯一的决策阈值。当两个类别的先验概率大致相同，且假阳性与假阴性的代价相近时，默认值 $\tau=0.5$ 是合理的基线，但在实际问题中很少真正最优。如果不同错误的影响尚不清楚，最大化 F1 分数是一种务实的阈值选择方法 [@van2004geometry]。另一种常见做法，是选择使 ROC 曲线上的点到左上角 $(0,1)$ 距离最短的 $\tau$，即
+$$\tau^*=\argmin_\tau\sqrt{(1-\text{TPR}(\tau))^2+\text{FPR}(\tau)^2},$$
+这种准则对假阳性与假阴性采取对称的惩罚。
+
+归根结底，阈值是*决策参数*，而不是模型参数。因此，并不存在脱离应用语境的“正确”阈值；$\tau$ 的选择必须反映具体任务对假阳性与假阴性的代价权衡。
+
+## 支持向量机 {#s:svm}
+
+构造线性分类器时，一个自然想法是寻找仿射函数，使误分类样本数尽可能少。然而，直接最小化误分类数通常会得到计算上难以承受的组合优化问题。绕开这一困难的一条思路，是转而把两个类别之间的“间隔”尽量拉大，并让最终边界只依赖一小部分关键样本，也就是*支持向量*。因此，支持向量机（SVM） [@cortes1995support] 把逻辑回归的概率视角转换为几何视角。和逻辑回归一样，SVM 的一个关键优点是：模型参数可通过凸优化问题确定。
+
+### 硬间隔 SVM
+
+考虑线性可分数据集 $\{(x_i,y_i)\}_{i=1}^n$，其中 $y_i\in\{-1,1\}$。我们希望找到超平面 $w^Tx+b=0$，把两个类别分开。
+
+先求点 $x_i$ 到该超平面的距离。可将 $x_i$ 分解为
+$$x_i=x_i^*+r\frac{w}{\|w\|},$$
+其中 $x_i^*$ 是 $x_i$ 在超平面上的正交投影，故 $w^Tx_i^*+b=0$；$r$ 是带符号距离：若 $x_i$ 位于 $w$ 指向的一侧，则 $r>0$，否则 $r<0$。由于
+$$x_i^*=x_i-r\frac{w}{\|w\|}$$
+位于超平面上，所以
+$$w^T\!\left(x_i-r\frac{w}{\|w\|}\right)+b=0.$$
+整理可得
+$$r=\frac{w^Tx_i+b}{\|w\|}.$$
+因此，沿单位法向量 $w/\|w\|$ 测得的带符号距离就是 $r$，而 $|r|$ 则是通常所说的几何距离。
+
+现在把标签 $y_i$ 纳入距离定义，以得到带符号间隔。当 $x_i$ 位于超平面朝向 $w$ 的一侧时，$r=(w^Tx_i+b)/\|w\|$ 为正；位于另一侧时为负。若 $y_i=+1$，正确分类要求 $w^Tx_i+b>0$，于是 $r>0$；若 $y_i=-1$，则应有 $w^Tx_i+b<0$，于是 $r<0$。
+
+两种情况下都有 $y_i r>0$。乘上标签会翻转负类样本的距离符号，使所有正确分类样本的间隔都为正：
+$$\gamma_i=y_ir=\frac{y_i(w^Tx_i+b)}{\|w\|}.$$
+
+SVM 的目标是最大化间隔 $\gamma$，也就是决策边界到最近样本的距离，见图 [1.3](#fig:margin){reference-type="ref" reference="fig:margin"}。
+
+<figure id="fig:margin">
+
+::: center
+`<img src="../assets/figures/plotmargin.png" />`{=html}
+:::
+
+<figcaption>
+间隔定义为决策边界（红线）到最近数据点的距离。
+</figcaption>
+</figure>
+
+为方便起见，同时缩放 $w$ 与 $b$，使最近的样本满足 $y_i(w^Tx_i+b)=1$。SVM 文献把这种归一化称为*规范缩放*，并把 $y_i(w^Tx_i+b)$ 称为*函数间隔*。由于按同一倍数缩放 $w$ 与 $b$ 不会改变超平面的方向，所以不失一般性地可把最近点的函数间隔规定为 $1$。此时几何间隔就是 $1/\|w\|$。
+
+最大化 $1/\|w\|$ 等价于最小化 $\frac12\|w\|^2$： $$\begin{align}
+\label{svm}
+\begin{split}
+\min_{w, b} & \quad \frac{1}{2}\|w\|^2 \\
+\text{s.t.} & \quad y_i(w^T x_i + b) \geq 1, \quad \forall i.
+\end{split}
+\end{align}$$
+
+按照第 [\[s:duality\]](#s:duality){reference-type="ref" reference="s:duality"} 章介绍的方法，用 Lagrange 乘子处理这个约束优化问题。Lagrange 函数为
+$$\mathcal L(w,b,\alpha)=\frac12\|w\|^2-\sum_{i=1}^n\alpha_i[y_i(w^Tx_i+b)-1],$$
+其中 $\alpha_i\geq0$ 是 Lagrange 乘子。
+
+令 $\mathcal L$ 对 $w$ 和 $b$ 的偏导数为零，得到 $$\begin{align*}
+& \nabla_{w} \mathcal{L} = w - \sum \alpha_i y_i x_i = 0 \implies w = \sum_{i=1}^n \alpha_i y_i x_i, \\
+& \frac{\partial \mathcal{L}}{\partial b} = \sum \alpha_i y_i = 0.
+\end{align*}$$ 将其代回 Lagrange 函数，得到对偶问题 $$\begin{align}
+\label{SVMdual}
+\begin{split}
+ \max_{\alpha} & \quad \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i,j=1}^n \alpha_i \alpha_j y_i y_j \langle x_i, x_j\rangle \\
+\text{s.t.}      & \quad \sum \alpha_i y_i = 0,  \\
+& \quad \,\, \alpha_i \geq 0.
+\end{split}
+\end{align}$$
+
+由 KKT 互补松弛条件 [\[eq:slackness\]](#eq:slackness){reference-type="eqref" reference="eq:slackness"}，
+$$\alpha_i[y_i(w^Tx_i+b)-1]=0.$$
+
+这个等式精确决定了哪些样本会在最终模型中“留下痕迹”。根据上述 KKT 条件，所有训练点 $x_i$ 恰好分为两类：
+
+1.  **非紧约束（“消失”的样本）**：若 $x_i$ 严格位于间隔之外，则其函数间隔大于 $1$，即
+    $$y_i(w^Tx_i+b)>1.$$
+    要使 KKT 条件中的乘积为零，必须有
+    $$\alpha_i=0.$$
+    再看权重向量的表达式
+    $$\begin{equation}
+    \label{eq:svmweight}
+    w = \sum_{i=1}^n \alpha_i y_i x_i,
+    \end{equation}$$
+    可见这类样本对求和毫无贡献。即使把它们从数据集中删去再训练，所得超平面也不会改变。在互补松弛的语境中（参见第 [\[ss:KKT\]](#ss:KKT){reference-type="ref" reference="ss:KKT"} 章），也称这些点具有“松弛”。
+
+2.  **紧约束（支持向量）**：若 $x_i$ 恰好位于间隔边界上，则
+    $$y_i(w^Tx_i+b)=1.$$
+    此时约束是活跃的，$\alpha_i$ 可以非零（$\alpha_i>0$）。这些点就是*支持向量*，也只有它们真正“支撑”着分隔超平面。
+
+令 $S=\{i:y_i(w^Tx_i+b)=1\}$ 为支持向量的指标集合，并以 $w^*$ 表示最优权重。式 [\[eq:svmweight\]](#eq:svmweight){reference-type="eqref" reference="eq:svmweight"} 可改写为
+$$w^*=\sum_{i\in S}\alpha_i y_i x_i.$$
+因此，$w^*$ 只由支持向量的线性组合构成。
+
+将这一结论概括为如下定理。
+
+::: theorem
+支持向量机的最优权重向量 $w^*$，完全由规范函数间隔恰好等于 $1$ 的那部分训练样本决定。
+:::
+
+图 [1.4](#fig:svm){reference-type="ref" reference="fig:svm"} 展示了 SVM 的工作方式：图中给出线性可分数据集、求解问题 [\[svm\]](#svm){reference-type="eqref" reference="svm"} 得到的分隔超平面、相应的最大间隔以及支持向量。
+
+<figure id="fig:svm">
+
+::: center
+`<img src="../assets/figures/svm_plot.png" style="width:60.0%" />`{=html}
+:::
+
+<figcaption>
+求解优化问题 `<a href="#svm" data-reference-type="eqref" data-reference="svm">`{=html}\[svm\]`</a>`{=html}，可得到使两组数据间隔最大的仿射函数。从几何上看，就是寻找能够分开两组点的最厚平板区域。图中空心圆表示支持向量。
+</figcaption>
+</figure>
+
+### 软间隔 SVM
+
+真实数据中的类别常常彼此重叠。为了在间隔（两张临界超平面之间的距离）与训练集分类误差之间作权衡，引入松弛变量 $\xi_i\geq0$，允许某些样本落到间隔的“错误一侧”。在这种*软间隔*约束下，原始问题为 $$\begin{align*}
+\min_{w, b, \xi} & \quad \frac{1}{2}\|w\|^2 + \mu \sum_{i=1}^n \xi_i, \\
+\text{s.t.} & \quad y_i(w^T x_i + b) \geq 1 - \xi_i, \\
+& \quad \xi_i \ge 0.
+\end{align*}$$
+这是一个带线性约束的凸二次规划。超参数 $\mu$ 控制最大化间隔与减少分类错误之间的权衡；当 $\mu\to\infty$ 时，就恢复为前面的硬间隔支持向量机。
+
+软间隔 SVM 寻找的是在大间隔与小训练误差之间取得平衡的分类器，因此通常对噪声更稳健，泛化也更好。它对离群点同样更为稳定，因为单个异常样本无法再独自左右整条决策边界。
+
+<figure id="fig:softsvm">
+
+::: center
+`<img src="../assets/figures/softsvm_plot.png" />`{=html}
+:::
+
+<figcaption>
+软间隔 SVM 的分类结果。空心圆表示支持向量；在这个例子中，更大的间隔以误分一个蓝色样本为代价。通过在间隔最大化与分类错误最小化之间权衡，软间隔 SVM 往往能获得更好的泛化性能。
+</figcaption>
+</figure>
+
+把软间隔 SVM 改写为无约束优化问题很有启发性。先把 $\xi_i$ 完全表示成 $w,b$ 与数据的函数。由约束可知：若样本被正确分类且位于间隔之外，即 $y_i(w^Tx_i+b)\geq1$，满足约束的最小 $\xi_i$ 是 $0$；若样本违反间隔，即 $y_i(w^Tx_i+b)<1$，则满足第一个约束的最小值为 $1-y_i(w^Tx_i+b)$。合并两种情形可写成
+$$\xi_i=\max(0,1-y_i(w^Tx_i+b)).$$
+将它代回原始目标，得到
+$$\min_{w,b}\ \sum_{i=1}^n\max(0,1-y_i(w^Tx_i+b))+\lambda\|w\|^2.$$
+
+$\max(0,1-z)$ 称为*合页损失*。这个名称来自其折线形状：当 $z\geq1$ 时函数为零且保持水平；当 $z<1$ 时则线性增长。合页损失是 0--1 指示损失（即误分类计数）的上界，因此，最小化 SVM 目标相当于用一个凸的替代问题逼近误分类误差最小化。
+
+也可以把逻辑回归看成 SVM 的一个变体：把合页函数 $\max(0,1-z)$ 换成光滑且凸的 logistic 函数 $\ln(1+e^{-z})$。对于远离边界的样本，合页损失严格等于零，其梯度也严格为零；这正是 SVM 具有稀疏性的原因，只有支持向量会影响解。另一方面，合页损失在“折点” $y_i(w^Tx_i+b)=1$ 处不可微，实践中可用次梯度下降求解。
+
+图 [1.6](#fig:compsvmlogreg){reference-type="ref" reference="fig:compsvmlogreg"} 比较了逻辑回归与软间隔 SVM；两者得到的决策边界有所不同。逻辑回归中 sigmoid 的导数永远不会严格为零，所以每个样本都会对梯度产生非零影响；SVM 则不同，一旦样本被正确分类并越过间隔边界，其梯度便严格为零。
+
+<figure id="fig:compsvmlogreg">
+
+::: center
+`<img src="../assets/figures/compsvmlogreg.png" />`{=html}
+:::
+
+<figcaption>
+逻辑回归与软间隔 SVM 的比较。逻辑回归中，即使一个点远离决策边界，仍会对解产生微弱的“牵引”；SVM 的合页损失则有一段平坦区域，样本一旦被正确分类且越过间隔，其梯度便严格为零，从优化问题中“消失”。
+</figcaption>
+</figure>
+
+### 核 SVM
+
+此前讨论的 SVM 只适用于（近似）线性可分的数据，但许多真实数据并不满足这一条件。一种解决办法是利用非线性映射 $\Phi(x)$，把输入特征 $x\in\mathbb R^d$ 送入更高维的特征空间，希望原空间中无法线性分开的数据，在高维空间里变得线性可分。
+
+然而，显式计算 $\Phi(x)$ 会带来巨大的计算负担。SVM 的对偶目标需要计算变换后向量的内积；因此，式 [\[SVMdual\]](#SVMdual){reference-type="eqref" reference="SVMdual"} 在特征空间中的对应形式为 $$\begin{align}
+\label{SVMdualkernel}
+\begin{split}
+     \max_{\alpha} & \quad
+ \sum \alpha_i - \frac{1}{2} \sum \alpha_i \alpha_j y_i y_j \langle \Phi(x_i), \Phi(x_j) \rangle \\
+\text{s.t.} & \quad \alpha_i \geq 0 \\
+            & \quad \sum \alpha_i y_i = 0.
+ \end{split}
+\end{align}$$
+当特征空间维数很高时，先逐一计算 $\Phi(x_i)$，再为每对样本计算内积 $\langle\Phi(x_i),\Phi(x_j)\rangle$，往往在计算上不可行。
+
+第 [\[s:kernellearning\]](#s:kernellearning){reference-type="ref" reference="s:kernellearning"} 章介绍的*核技巧*恰好可以化解这一难题：直接用核函数 $K(x_i,x_j)$ 替换式 [\[SVMdualkernel\]](#SVMdualkernel){reference-type="eqref" reference="SVMdualkernel"} 中的内积 $\langle\Phi(x_i),\Phi(x_j)\rangle$。这样一来，我们实际上是在高维空间中求决策边界，计算却只涉及原始低维空间里的简单运算。SVM 的这一变体称为*核 SVM* [@boser1992training; @scholkopf2002learning]。Gaussian 核
+$$K(x,x')=\exp(-\|x-x'\|^2/2\eps)$$
+是核 SVM 常用的默认选择。
+
+<figure id="fig:kernelsvm">
+
+::: center
+<p>
+`<img src="../assets/figures/kernelsvm1.png" style="width:45.0%;height:45.5mm" alt="image" />`{=html} `<img src="../assets/figures/kernelsvm2.png" style="width:45.0%;height:45mm" alt="image" />`{=html}
+</p>
+:::
+
+<figcaption>
+在线性不可分的二类数据上比较线性 SVM（左）与采用 Gaussian 核 [$K(x,x')=\exp(-\|x-x'\|^2/2\eps)$]{.math .inline}、[$\eps=1$]{.math .inline} 的核 SVM（右）。红色和蓝色表示类别，黑线表示决策边界，空心圆表示支持向量。线性 SVM 显然无法分开两簇数据；选择合适超参数后，核 SVM 则能成功将它们解开。
+</figcaption>
+</figure>
+
+## 超越二元分类
+
+二元分类只处理两种可能的结果，但许多实际与科学问题天然包含多个类别，因此多类分类不可或缺。例如，医学诊断要区分多种疾病，目标识别要辨认汽车、行人、自行车等对象，文档分类也要在政治、体育、科技等多个主题之间作选择。
+
+### 多类逻辑回归（Softmax 回归）
+
+二元逻辑回归用 sigmoid 函数把得分映射为概率；多类逻辑回归也称 Softmax 回归，它用 Softmax 函数完成相应的推广。
+
+对于 $K$ 个类别，分别设置 $K$ 个权重向量 $\{w_1,w_2,\dots,w_K\}$。给定输入 $x$，它属于第 $k$ 类的概率为 $$\begin{equation}
+    \label{multiclass}
+\P(y=k \mid x) = \frac{\exp(w_k^T x+b_k)}{\sum_{j=1}^K \exp(w_j^T x + b_j)},
+\end{equation}$$ 式 [\[multiclass\]](#multiclass){reference-type="eqref" reference="multiclass"} 右侧就是 Softmax 函数。
+
+分母保证 $\sum_{k=1}^K\P(y=k\mid x)=1$，因而这些数构成合法的概率分布。优化目标相应推广为类别交叉熵损失
+$$J(W)=-\sum_{i=1}^n\sum_{k=1}^K\mathbf1\{y_i=k\}\log(\P(y_i=k\mid x_i)).$$
+其中，指示函数 $\mathbf1\{y_i=k\}$ 是二元逻辑回归中 $y$ 与 $(1-y)$ 的多类版本：第 $i$ 个样本的真实类别为 $k$ 时取 $1$，否则取 $0$。矩阵 $W$ 的每一列（或每一行）对应某一类别的权重 $w_k$。预测时选择概率最大的类别，即 $\hat y=\arg\max_k\P(y=k\mid x)$。
+
+### 多类支持向量机
+
+与逻辑回归不同，SVM 的目标函数不会自然地产生多类别概率分布。因此，通常借助元策略把多类问题拆成若干二元问题 [@hsu2002comparison]。
+
+最常见的是“一对其余”（one-vs-all）策略：训练 $K$ 个独立的二元 SVM。对每个类别 $k$，把该类标为正类（$+1$），其余所有类别合并为负类（$-1$）。预测时计算全部 $K$ 个决策函数 $f_k(x)=w_k^Tx+b_k$，把输入归入得分最高的类别。缺点是每个分类器面对的训练集往往不平衡：一个类别要与其余所有类别对抗。
+
+“一对一”（one-vs-one）策略可以缓解这一问题：为每一对类别训练一个二元 SVM，共需 $K(K-1)/2$ 个分类器。预测采用多数投票；例如，类别 1 与类别 2 的分类器选择类别 1，类别 1 就得到一票，最终票数最多者获胜。这样每个二元问题更小、更平衡，代价则是计算量明显增加。
+
+## Rademacher 复杂度与泛化界 {#ss:rademacher}
+
+本节系统建立几何复杂度度量与 SVM 泛化保证之间的联系。我们将看到，*Rademacher 复杂度*提供了一种自然的度量，并可直接导出基于间隔的风险界 [@bartlett2002rademacher; @koltchinskii2000rademacher; @shalev2014understanding]。简言之，它衡量一个二值或实值函数类相对于给定概率分布究竟有多丰富。
+
+先做一个思想实验[^4]。设存在未知分布 $\mathcal D$，从中独立同分布地抽取样本 $S=\{(x_1,y_1),\dots,(x_n,y_n)\}$。给定损失函数 $\ell$，假设 $f\in\mathcal F$ 的经验损失为 $\loss_S(f)=\frac1n\sum_{i=1}^n\ell(f(x_i),y_i)$，其中 $\mathcal F$ 是一个可能无限的假设类[^5]；真实（总体）损失则为 $\loss_\mathcal D(f)=\mathbb E_{(x,y)\sim\mathcal D}[\ell(f(x),y)]$。经验损失可以由数据计算，但分布 $\mathcal D$ 通常未知，真实损失无法直接求出。建立泛化界的目标，就是证明对所有 $f\in\mathcal F$，这两个量之间的差距都一致地很小。
+
+为建立直觉，固定假设 $f$ 与样本 $S$，并尝试估计 $\loss_S(f)-\loss_\mathcal D(f)$。自然的做法是仿照交叉验证，把 $S$ 随机分成互不相交的训练集 $S_1$ 与测试集 $S_2$；为简化起见，设 $|S_1|=|S_2|=|S|/2$。于是可用
+$$\loss_S(f)-\loss_\mathcal D(f)\approx\loss_{S_1}(f)-\loss_{S_2}(f)$$
+近似泛化差距。令 ${\textbf1}_{(f,x_i)}$ 表示误分类指示函数：$f$ 在样本 $x_i$ 上出错时取 $1$，否则取 $0$。上式便可写成 $$\begin{equation}
+\label{eq:rademacher1}
+\loss_S(f) - \loss_{\mathcal D}(f)
+\approx
+\frac{1}{|S_1|}\sum_{x_i \in S_1} {\textbf 1}_{(f, x_i)}
+- \frac{1}{|S_2|}\sum_{x_i \in S_2} {\textbf 1}_{(f, x_i)}.
+\end{equation}$$
+
+固定 $S$ 后，若 $x_i\in S_1$，损失项 ${\textbf1}_{(f,x_i)}$ 的系数为 $+1$；若 $x_i\in S_2$，系数为 $-1$。把这个符号记为 $\sigma_i$，则
+$$\loss_{S_1}(f)-\loss_{S_2}(f)=\frac2n\sum_i\sigma_i
+{\textbf 1}_{(f, x_i)}.$$
+
+若固定样本 $S$，再均匀随机地划分 $S_1,S_2$，就等价于让各 $\sigma_i$ 独立且等概率地取 $\pm1$。此时，上面的和可看作泛化差距的随机估计，通常称为 Rademacher 平均。粗略地说，Rademacher 复杂度就是再对 $f\in\mathcal F$ 取上确界后的这个量。
+
+下面给出严格定义，并区分基于特定样本计算的经验版本，以及对所有可能样本再取平均的总体版本。
+
+::: definition
+[]{#de:empiricalrademacher label="de:empiricalrademacher"} 设 $\mathcal F$ 是实值函数类 $f:\mathcal X\to\mathbb R$，$S=(x_1,x_2,\ldots,x_n)$ 是取自 $\mathcal X$ 的固定样本。令 $\sigma_1,\ldots,\sigma_n$ 为相互独立的 Rademacher 随机变量，即 $$\mathbb P(\sigma_i=+1)=\mathbb P(\sigma_i=-1)=\tfrac12.$$ $\mathcal F$ 关于 $S$ 的*经验 Rademacher 复杂度*定义为 $$\widehat{\Rade}_S(\mathcal{F})
+\coloneqq
+\mathbb{E}_{\sigma} \Big[
+\sup_{f \in \mathcal{F}}
+\frac{1}{n}
+\sum_{i=1}^n \sigma_i  f(x_i)
+\Big].$$
+:::
+
+对这一依赖数据的量关于样本再取期望，就得到分布层面的总体 Rademacher 复杂度。
+
+::: definition
+[]{#de:empiricalrademacher label="de:empiricalrademacher"} 设 $\mathcal D$ 是 $\mathcal X$ 上的分布。$\mathcal F$ 关于来自 $\mathcal D$ 的 $n$ 个样本的（总体）Rademacher 复杂度定义为 $$\Rade_n(\mathcal{F})
+\coloneqq
+\mathbb{E}_{S \sim {\mathcal D}^n}
+\left[\widehat{\Rade}_S(\mathcal{F})
+\right] =
+\mathbb{E}_{S \sim {\mathcal D}^n} \mathbb{E}_{\sigma}
+\left[\sup_{f \in \mathcal{F}} \frac{1}{n}
+\sum_{i=1}^n \sigma_i f(x_i) \right].$$
+:::
+
+若 $\mathcal F\subseteq\{f:\mathcal X\to\{0,1\}\}$，上述定义原封不动地适用，只需注意 $f(x_i)\in\{0,1\}$。
+
+Rademacher 复杂度与*Gaussian 宽度*密切相关；后者源于高维几何与统计学习理论，我们将在第 [\[s:gordon\]](#s:gordon){reference-type="ref" reference="s:gordon"} 章深入讨论。这里仅需知道：对闭集 $T\subset\mathbb R^n$，Gaussian 宽度定义为
+$$w(T)=\mathbb E_{g\sim\mathcal N(0,I_n)}\left[\sup_{t\in T}\langle g,t\rangle\right].$$
+Rademacher 复杂度本质上是把这里的 Gaussian 随机变量换成 Rademacher 随机变量。二者的紧密联系还体现在以下不等式中（见习题 [\[ex:rademacher\]](#ex:rademacher){reference-type="ref" reference="ex:rademacher"}）：
+$$\sqrt{\frac2\pi}\,w(\mathcal F)\leq\Rade_n(\mathcal F)\leq\sqrt{2\ln(2n)}\,w(\mathcal F).$$
+
+Rademacher 复杂度是经典统计学习理论的核心工具之一。以下分析表明，假设类的 Rademacher 复杂度（或 Gaussian 宽度）越小，泛化通常越好。
+
+::: definition
+[]{#de:risk label="de:risk"} 给定假设 $f\in\mathcal F$、损失函数 $\loss$ 与训练样本 $S=\{(x_1,y_1),\dots,(x_n,y_n)\}$，经验风险定义为 $$\hat R_S(f)=\frac1n\sum_{i=1}^n\loss(f(x_i),y_i).$$
+:::
+
+“真实风险”（或“期望风险”）描述模型在未来所有未见数据上的预期误差；经验风险则是我们能够利用现有训练集实际计算的误差。
+
+下面的定理利用总体 Rademacher 复杂度联系真实风险与经验风险。直观上，若一个假设类连随机噪声都无法很好拟合，那么它在训练样本上的表现就能较可靠地预示真实表现。
+
+::: theorem
+[]{#th:rademachergeneralization label="th:rademachergeneralization"} 设 $\mathcal F$ 是取值于 $[0,1]$ 的假设类。对任意 $\delta>0$，关于大小为 $n$ 的随机样本 $S$，以至少 $1-\delta$ 的概率，所有 $f\in\mathcal F$ 同时满足 $$\begin{equation}
+\label{eq:radebound}
+R(f) \leq \hat{R}_S(f) + 2\Rade_n(\mathcal{F}) + \sqrt{\frac{\ln(1/\delta)}{2n}},
+\end{equation}$$ 其中 $R(f)=\mathbb E[\loss(f(x),y)]$ 是期望风险，$\hat R_S(f)$ 是样本 $S$ 上的经验风险，$\Rade_n(\mathcal F)$ 是总体 Rademacher 复杂度。
+:::
+
+::: proof
+*证明。* 证明分三步：（i）集中；（ii）对称化；（iii）归约到 Rademacher 复杂度。
+
+（i）**由 McDiarmid 不等式得到集中性。** 定义
+$$\Phi(S)=\sup_{f\in\mathcal F}(R(f)-\hat R_S(f)),$$
+它表示该函数类中真实风险与经验风险的最大差距。我们先说明：改变 $S$ 中的一个元素，不会使 $\Phi(S)$ 发生太大变化。设 $S,S'$ 只在第 $i$ 个元素上不同（$x_i$ 与 $x_i'$），则
+$$|\Phi(S)-\Phi(S')|\leq\sup_{f\in\mathcal F}|\hat R_{S'}(f)-\hat R_S(f)|=\sup_{f\in\mathcal F}\frac1n|f(x_i')-f(x_i)|\leq\frac1n,$$
+最后一步使用了 $f$ 的值域为 $[0,1]$。由 McDiarmid 不等式 [@mcdiarmid1989method]，以概率 $1-\delta$ 有 $$\begin{equation}
+\label{eq:rade4}
+\Phi(S) \leq \mathbb{E}_S[\Phi(S)] + \sqrt{\frac{\ln(1/\delta)}{2n}}.
+\end{equation}$$
+
+（ii）**对称化。** 现在估计期望
+$$\mathbb E_S[\Phi(S)]=\mathbb E_S\left[\sup_{f\in\mathcal F}(R(f)-\hat R_S(f))\right].$$
+为此，引入从同一分布独立抽取的“幽灵样本” $S'=\{x_1',\dots,x_n'\}$。注意 $R(f)=\mathbb E_{S'}[\hat R_{S'}(f)]$，于是 $$\begin{align*}
+&\mathbb{E}_S[\Phi(S)]  =  \mathbb{E}_S \left[ \sup_{f \in \mathcal{F}} (\mathbb{E}_{S'}[\hat{R}_{S'}(f)] - \hat{R}_S(f)) \right] \\
+& \quad \quad \leq \mathbb{E}_{S, S'} \left[ \sup_{f \in \mathcal{F}} (\hat{R}_{S'}(f) - \hat{R}_S(f)) \right] = \mathbb{E}_{S, S'} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n (f(x'_i) - f(x_i)) \right],
+\end{align*}$$ 最后一步使用了 Jensen 不等式。
+
+（iii）**引入 Rademacher 变量。** 由于 $x_i$ 与 $x_i'$ 独立同分布，$f(x_i')-f(x_i)$ 的分布关于零对称。因此，乘上 $\sigma_i\in\{-1,1\}$ 不改变期望，从而得到 $$\begin{align}
+\label{eq:rade5}
+\begin{split}
+& \mathbb{E}_{S, S', \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n \sigma_i (f(x'_i) - f(x_i)) \right]
+\le  \\
+& \qquad \leq \mathbb{E}_{S', \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n \sigma_i f(x'_i) \right] + \mathbb{E}_{S, \sigma} \left[ \sup_{f \in \mathcal{F}} \frac{1}{n} \sum_{i=1}^n -\sigma_i f(x_i) \right],
+\end{split}
+\end{align}$$ 这里使用了上确界的性质 $\sup(A-B)\leq\sup A+\sup(-B)$。右侧两项相同，且都等于总体 Rademacher 复杂度 $\Rade_n(\mathcal F)$，故 $\mathbb E_S[\Phi(S)]\leq2\Rade_n(\mathcal F)$。
+
+把式 [\[eq:rade5\]](#eq:rade5){reference-type="eqref" reference="eq:rade5"} 的结论代回式 [\[eq:rade4\]](#eq:rade4){reference-type="eqref" reference="eq:rade4"} 的 McDiarmid 界，得到
+$$\Phi(S)\leq2\Rade_n(\mathcal F)+\sqrt{\frac{\ln(1/\delta)}{2n}}.$$
+又因为对每个 $f\in\mathcal F$ 都有 $R(f)-\hat R_S(f)\leq\Phi(S)$，定理得证。 ◻
+:::
+
+若希望使用能够从数据实际计算的经验 Rademacher 复杂度 $\hat\Rade_S(\mathcal F)$，还需补偿样本波动，因此界会略松： $$\begin{equation}
+\label{eq:radebound2}
+R(f) \leq \hat{R}_S(f) + 2\hat{\Rade}_S(\mathcal{F}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.
+\end{equation}$$ 该结论的证明留给读者，见习题 [\[ex:rademacher2\]](#ex:rademacher2){reference-type="ref" reference="ex:rademacher2"}。
+
+下面给出线性函数类的 Rademacher 复杂度界。
+
+::: theorem
+[]{#th:rademacher_linear label="th:rademacher_linear"} 记 $\mathcal F_B:=\{x\mapsto\langle w,x\rangle:\|w\|\leq B\}$。若样本 $S=\{x_1,\dots,x_n\}$ 满足所有 $\|x_i\|\leq r$，则 $\mathcal F_B$ 的经验 Rademacher 复杂度满足 $$\hat\Rade_S(\mathcal F_B)\leq\frac{Br}{\sqrt n}.$$
+:::
+
+::: proof
+*证明。* 由定义，
+$$\hat{\Rade}_S(\mathcal{F}_B)=\mathbb E_\sigma\left[\sup_{\|w\|\leq B}\frac1n\sum_{i=1}^n\sigma_i\langle w,x_i\rangle\right]=\frac1n\mathbb E_\sigma\left[\sup_{\|w\|\leq B}\left\langle w,\sum_{i=1}^n\sigma_ix_i\right\rangle\right].$$
+在约束 $\|w\|\leq B$ 下，要使内积最大，应让 $w$ 与 $\sum_i\sigma_i x_i$ 同向；具体地，最优解为 $w^*=B\frac{\sum_i\sigma_ix_i}{\|\sum_i\sigma_ix_i\|}$。代入得到 $$\begin{align}
+\label{eq:rade6}
+\begin{split}
+\hat{\Rade}_S(\mathcal{F}_B) & = \frac{1}{n} \mathbb{E}_{\sigma} \Big[ B \Big\| \sum_{i=1}^n \sigma_i x_i \Big\| \Big] = \frac{B}{n} \mathbb{E}_{\sigma} \Big[ \Big( \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 \Big)^{\frac{1}{2}} \Big] \\
+& \leq \frac{B}{n} \sqrt{ \mathbb{E}_{\sigma} \Big[ \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 \Big] },
+\end{split}
+\end{align}$$ 其中利用了平方根函数的凹性与 Jensen 不等式。
+
+另一方面， $$\begin{equation}
+\mathbb{E}_{\sigma} \Big\| \sum_{i=1}^n \sigma_i x_i \Big\|^2 =
+\mathbb{E}_{\sigma} \Big[ \sum_{i,j} \sigma_i \sigma_j \langle x_i, x_j \rangle \Big] = \sum_{i,j} \mathbb{E}_{\sigma}[\sigma_i \sigma_j] \langle x_i, x_j \rangle.
+\end{equation}$$
+
+由于各 $\sigma_i$ 相互独立且均值为零，$i\neq j$ 时 $\mathbb E[\sigma_i\sigma_j]=\mathbb E[\sigma_i]\mathbb E[\sigma_j]=0$，而 $i=j$ 时 $\mathbb E[\sigma_i^2]=1$。所以双重求和坍缩为 $\sum_{i=1}^n\mathbb E[\sigma_i^2]\langle x_i,x_i\rangle=\sum_{i=1}^n\|x_i\|^2$。
+
+由假设 $\|x_i\|\leq R$，有 $\sum_i\|x_i\|^2\leq nR^2$。代回式 [\[eq:rade6\]](#eq:rade6){reference-type="eqref" reference="eq:rade6"}，得到
+$$\hat\Rade_S(\mathcal F_B)\leq\frac Bn\sqrt{nR^2}=\frac{BR}{\sqrt n}.$$ ◻
+:::
+
+下面的 Talagrand 收缩引理，是在 SVM 分析中从线性预测量过渡到合页损失、逻辑损失等 Lipschitz 损失的关键工具。它把复合函数类“损失 $\circ$ 假设”的复杂度重新控制在原假设类的复杂度之下。
+
+::: theorem
+[]{#th:talagrandcontraction label="th:talagrandcontraction"} 设 $\mathcal F$ 是从 $\mathcal X$ 到 $\mathbb R$ 的函数类，且每个 $\phi_i:\mathbb R\to\mathbb R$ 都是 $L$-Lipschitz 的。则对任意样本 $S=\{x_1,\dots,x_n\}$，
+$$\mathbb E_\sigma\left[\sup_{f\in\mathcal F}\sum_{i=1}^n\sigma_i\phi_i(f(x_i))\right]\leq L\,\mathbb E_\sigma\left[\sup_{f\in\mathcal F}\sum_{i=1}^n\sigma_if(x_i)\right].$$
+:::
+
+::: proof
+*证明。* 不失一般性设 $L=1$，并对样本数 $n$ 作归纳。
+
+当 $n=1$ 时，要证
+$$\mathbb E_{\sigma_1}[\sup_f\sigma_1\phi_1(f(x_1))]\leq\mathbb E_{\sigma_1}[\sup_f\sigma_1f(x_1)].$$
+展开左侧期望，得到
+$$\frac12\left(\sup_f\phi_1(f(x_1))+\sup_g[-\phi_1(g(x_1))]\right)=\frac12\sup_{f,g}[\phi_1(f(x_1))-\phi_1(g(x_1))].$$
+由 Lipschitz 性，差值不超过 $|f(x_1)-g(x_1)|$。右侧则为 $\frac12\sup_{f,g}[f(x_1)-g(x_1)]$。由于在上确界中 $f,g$ 可交换，$\sup_{f,g}|f-g|=\sup_{f,g}(f-g)$，故结论成立。
+
+假设结论对 $n-1$ 成立，记 $U_{n-1}(f):=\sum_{i=1}^{n-1}\sigma_i\phi_i(f(x_i))$。考察 $$\begin{equation}
+\label{eq:radeE}
+E := \mathbb{E}_{\sigma_{1:n}} \left[ \sup_{f \in \mathcal{F}} U_{n-1}(f) + \sigma_n \phi_n(f(x_n)) \right],
+\end{equation}$$ 其中 $\sigma_{1:n}=(\sigma_1,\dots,\sigma_n)$。先对 $\sigma_n$ 取期望，得到
+$$E=\mathbb E_{\sigma_{1:n-1}}\left[\frac12\sup_f(U_{n-1}(f)+\phi_n(f(x_n)))+\frac12\sup_g(U_{n-1}(g)-\phi_n(g(x_n)))\right].$$
+固定 $\sigma_{1:n-1}$，设 $f^*,g^*$ 分别达到上述两个上确界，则外层期望中的表达式为 $$\begin{equation}
+\label{eq:radeU}
+\frac{1}{2} \left[ U_{n-1}(f^*) + \phi_n(f^*(x_n)) + U_{n-1}(g^*) - \phi_n(g^*(x_n)) \right].
+\end{equation}$$
+由 Lipschitz 性，$\phi_n(f^*(x_n))-\phi_n(g^*(x_n))\leq|f^*(x_n)-g^*(x_n)|$。若 $f^*(x_n)\geq g^*(x_n)$，式 [\[eq:radeU\]](#eq:radeU){reference-type="eqref" reference="eq:radeU"} 不超过 $\frac12[U_{n-1}(f^*)+U_{n-1}(g^*)+f^*(x_n)-g^*(x_n)]$；反之则不超过 $\frac12[U_{n-1}(f^*)+U_{n-1}(g^*)-f^*(x_n)+g^*(x_n)]$。
+
+两种情形都恰好对应于未变换的第 $n$ 个变量所给出的上确界
+$$\frac12\left[\sup_f(U_{n-1}(f)+f(x_n))+\sup_g(U_{n-1}(g)-g(x_n))\right].$$
+代回式 [\[eq:radeE\]](#eq:radeE){reference-type="eqref" reference="eq:radeE"}，可得
+$$E\leq\mathbb E_{\sigma_{1:n-1}}\mathbb E_{\sigma_n}\left[\sup_f\sum_{i=1}^{n-1}\sigma_i\phi_i(f(x_i))+\sigma_nf(x_n)\right].$$
+依次对 $\sigma_{n-1},\sigma_{n-2},\dots,\sigma_1$ 重复同一论证，逐个去掉 $\phi_i$，最终得到
+$$\mathbb E_\sigma\left[\sup_f\sum_{i=1}^n\sigma_i\phi_i(f(x_i))\right]\leq\mathbb E_\sigma\left[\sup_f\sum_{i=1}^n\sigma_if(x_i)\right].$$
+证明完成。 ◻
+:::
+
+容易验证，合页损失与逻辑损失都是 1-Lipschitz 的。因此，由 Talagrand 收缩引理，线性预测量的泛化界会自动推广到 SVM 与逻辑回归，下面的定理 [\[th:marginbound\]](#th:marginbound){reference-type="ref" reference="th:marginbound"} 正体现了这一点。
+
+定义间隔损失（又称斜坡损失）$\Phi_\gamma:\mathbb R\to[0,1]$：
+$$\Phi_\gamma(u)=\min\Big(1,\max\big(0,1-\frac u\gamma\big)\Big)=\begin{cases}1&u\leq0,\\1-u/\gamma&0<u\leq\gamma,\\0&u>\gamma.\end{cases}$$
+
+::: theorem
+[]{#th:marginbound label="th:marginbound"} 设 $\mathcal D$ 是 $\mathcal X\times\{-1,+1\}$ 上的分布，并且所有 $x\in\mathcal X$ 都满足 $\|x\|\leq R$。令
+$$\mathcal F_B=\{x\mapsto\langle w,x\rangle:\|w\|\leq B\}.$$
+对任意间隔 $\gamma>0$ 与 $\delta\in(0,1)$，从 $\mathcal D$ 独立同分布抽取样本 $S=\{(x_1,y_1),\dots,(x_n,y_n)\}$ 时，以至少 $1-\delta$ 的概率，所有 $f\in\mathcal F_B$ 同时满足
+$$\P_{(x,y)\sim\mathcal D}(yf(x)\leq0)\leq\frac1n\sum_{i=1}^n\Phi_\gamma(y_if(x_i))+\frac{2BR}{\gamma\sqrt n}+3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+:::
+
+::: proof
+*证明。* 我们要控制真实风险 $R(f)=P_{(x,y)\sim\mathcal D}(yf(x)\leq0)$。定义 0--1 损失 $\loss_{0/1}(u)=\mathbb1_{u\leq0}$。由间隔损失的定义，对所有 $u\in\mathbb R$ 都有 $\mathbf1_{u\leq0}\leq\Phi_\gamma(u)$，故
+$$R(f)=\mathbb E[\mathbb1_{yf(x)\leq0}]\leq\mathbb E[\Phi_\gamma(yf(x))].$$
+令 $\mathcal G=\{(x,y)\mapsto\Phi_\gamma(yf(x)):f\in\mathcal F_B\}$。由于 $\Phi_\gamma$ 取值于 $[0,1]$，应用式 [\[eq:radebound2\]](#eq:radebound2){reference-type="eqref" reference="eq:radebound2"}，对任意 $\delta>0$，以至少 $1-\delta$ 的概率有 $$\begin{equation}
+\label{eq:rade7}
+\mathbb{E}[\Phi_\gamma(yf(x))] \leq \frac{1}{n} \sum_{i=1}^n \Phi_\gamma(y_i f(x_i)) + 2\hat{\mathcal{R}}_S(\mathcal{G}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.
+\end{equation}$$
+
+注意 $\Phi_\gamma$ 是 $L=1/\gamma$ 的 Lipschitz 函数。由 Talagrand 收缩引理， $$\begin{equation}
+\label{eq:radem8}
+\hat{\mathcal{R}}_S(\mathcal{G}) = \mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i \Phi_\gamma(y_i h(x_i)) \right] \leq \frac{1}{\gamma} \mathbb{E}_\sigma \left[ \sup_{f \in \mathcal{F}_B} \frac{1}{n} \sum_{i=1}^n \sigma_i y_i h(x_i) \right].
+\end{equation}$$
+
+考察 $\mathbb E_\sigma[\sup\frac1n\sum_i\sigma_i y_i f(x_i)]$。在经验复杂度中，$y_i\in\{-1,1\}$ 是固定常数，而 $\sigma_i$ 是独立 Rademacher 变量，所以 $\sigma_i y_i$ 仍与 $\sigma_i$ 同分布。因此
+$$\mathbb E_\sigma\left[\sup_{f\in\mathcal F_B}\frac1n\sum_i\sigma_i y_if(x_i)\right]=\hat{\mathcal R}_S(\mathcal F_B)\leq\frac{BR}{\sqrt n},$$
+最后一步用了定理 [\[th:rademacher_linear\]](#th:rademacher_linear){reference-type="ref" reference="th:rademacher_linear"}。结合式 [\[eq:radem8\]](#eq:radem8){reference-type="eqref" reference="eq:radem8"} 得到 $$\begin{equation}
+\label{eq:rade9}
+\hat{\mathcal{R}}_S(\mathcal{G}) \leq \frac{1}{\gamma} \cdot \frac{BR}{\sqrt{n}}.
+\end{equation}$$
+
+把式 [\[eq:rade9\]](#eq:rade9){reference-type="eqref" reference="eq:rade9"} 代入式 [\[eq:rade7\]](#eq:rade7){reference-type="eqref" reference="eq:rade7"}，得到
+$$\mathbb E[\Phi_\gamma(yf(x))]\leq\frac1n\sum_i\Phi_\gamma(y_if(x_i))+\frac{2BR}{\gamma\sqrt n}+3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+再用 $R(f)\leq\mathbb E[\Phi_\gamma(yf(x))]$ 即得结论。 ◻
+:::
+
+标准 SVM 假设数据基本线性可分。若严格线性可分，硬间隔优化保证所有训练点满足 $y_if(x_i)\geq1$。取理论间隔参数 $\gamma=1$ 后，每个样本都有 $\Phi_\gamma(y_if(x_i))=0$，所以定理 [\[th:marginbound\]](#th:marginbound){reference-type="ref" reference="th:marginbound"} 中的经验风险项消失。此时真实误差完全由复杂度项 $2BR/\sqrt n$ 与集中项控制。
+
+软间隔 SVM 则通过松弛变量 $\xi_i$ 允许部分样本违反间隔。回顾合页损失 $\loss_{\text{Hinge}}(u)=\max(0,1-u)$，它是斜坡损失 $\Phi_\gamma(u)$ 的上界。定理采用取值于 $[0,1]$ 的斜坡损失以得到紧界；实际软间隔 SVM 却最小化合页损失，因为后者凸且易于用二次规划求解。由于 $\loss_{\text{Hinge}}\geq\Phi_\gamma$，最小化合页损失正是压低间隔泛化界中经验项的一种有理论依据的方法。
+
+这些泛化界同样适用于核 SVM。不难证明下面的结论，另见习题 [\[ex:kernelSVMbound\]](#ex:kernelSVMbound){reference-type="ref" reference="ex:kernelSVMbound"}。
+
+::: theorem
+[]{#th:marginkernelSVM label="th:marginkernelSVM"} 设 $K:\mathcal X\times\mathcal X\to\mathbb R$ 是对称正定核，$\mathbb H_K$ 是相应的再生核 Hilbert 空间，其范数记为 $\|\cdot\|_K$。假设存在 $R>0$，使所有 $x\in\mathcal X$ 都满足 $K(x,x)\leq R^2$。令
+$$\mathcal F_B=\{f\in\mathbb H_K:\|f\|_K\leq B\}.$$
+则以至少 $1-\delta$ 的概率，
+$$R(f)\leq\hat R_{S,\gamma}(f)+\frac{2B\sqrt{\tr(K)/n}}{\gamma\sqrt n}+3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+:::
+
+在 RKHS 中，经验 Rademacher 复杂度可由核矩阵的迹严格控制：
+$$\hat{\mathcal R}_S(\mathcal F_B)\leq\frac Bn\sqrt{\sum_{i=1}^nK(x_i,x_i)}\leq\frac{BR}{\sqrt n}.$$
+
+因此，定理 [\[th:marginkernelSVM\]](#th:marginkernelSVM){reference-type="ref" reference="th:marginkernelSVM"} 表明：即使 $\mathbb H_K$ 是无限维的（如 Gaussian 核对应的空间），学习任务的复杂度也只取决于函数范数参数 $B$ 和核在数据上的行为参数 $R$，而不取决于空间维数。
 
 ## 其他分类方法
 
-## 习题 {.unnumbered}
+分类方法的选择高度依赖数据的内在结构，例如维数、稀疏性和线性程度；也取决于具体应用场景：高频交易平台可能把速度放在首位，医学诊断则更看重准确性与可解释性。此外，还要考虑可用算力、标注数据量以及信噪比。
 
+因此，最佳分类器未必是最复杂的模型，而是在目标应用的约束下，最能兼顾准确性、可解释性、稳健性与可实现性的模型。下面简要介绍几种在实践中广泛使用、不同于线性模型和间隔分类器的方法。
+
+$k$ 近邻（k-NN）方法 [@cover1967nearest] 根据样本在特征空间中的局部邻近关系分类，几乎不需要建模假设，但随维数升高，性能和计算效率都会迅速恶化。
+
+随机森林及相关的树集成方法 [@ho1998random; @breiman2001random] 聚合大量随机化决策树来构造分类器，经验表现强、稳健性好，代价是整体模型的可解释性有所降低。
+
+提升方法，如 AdaBoost 与梯度提升 [@freund1997decision; @friedman2001greedy; @chen2016xgboost]，通过迭代重加权把多个弱学习器组合成强分类器；在适当条件下，它们还具有有力的理论保证。
+
+神经网络是当前多类分类的前沿方法。当输入特征与类别之间的关系高度非线性或十分复杂，例如图像、音频和自然语言任务，并且拥有大量训练数据时，神经网络尤其出色。
+
+事实上，多类逻辑回归可以解释为“单层”神经网络。深度学习在输入与最终 Softmax 输出之间加入隐藏层，从而扩展了这一模型。第 [\[c:deeplearning\]](#c:deeplearning){reference-type="ref" reference="c:deeplearning"} 章将更深入地讨论神经网络。
+
+## 习题 {#exercises .unnumbered}
+
+::: myexercise
+\(a\) 写出软间隔 SVM 的 KKT 条件。\
+(b) 从几何上解释每一条 KKT 条件。\
+(c) 说明互补松弛条件如何刻画支持向量。
+:::
+
+::: myexercise
+按如下方式在 $\mathbb R^2$ 中生成二元分类数据集：
+
+- $\bullet$   类别 $+1$：从 $\mathcal N((2,2),I)$ 中抽取 100 个样本；
+
+- $\bullet$   类别 $-1$：从 $\mathcal N((-2,-2),I)$ 中抽取 100 个样本。
+
+\(a\) 拟合不带正则化的逻辑回归；\
+(b) 分别取 $\lambda=0.01,0.1,1$，拟合带 $\ell_2$ 正则化的逻辑回归。\
+比较权重向量范数、分类准确率与间隔宽度，并可视化决策边界。
+:::
+
+::: myexercise
+[]{#ex:rademacher label="ex:rademacher"} 证明 Rademacher 复杂度与 Gaussian 宽度满足 $$\sqrt{\frac{2}{\pi}}\,w(\mathcal{F}) \leq  \Rade_n(\mathcal{F})\leq \sqrt{2 \ln(2n)} \,w(\mathcal{F}).$$
+:::
+
+::: myexercise
+[]{#ex:rademacher2 label="ex:rademacher2"} 证明下面依赖数据的泛化界：若假设类 $\mathcal F$ 取值于 $[0,1]$，则关于大小为 $n$ 的样本 $S$，以至少 $1-\delta$ 的概率，每个 $f\in\mathcal F$ 都满足 $$R(f) \leq \hat{R}_S(f) + 2\hat{\Rade}_S(\mathcal{F}) + 3\sqrt{\frac{\ln(2/\delta)}{2n}}.$$
+:::
+
+::: myexercise
+[]{#ex:kernelSVMbound label="ex:kernelSVMbound"} 证明定理 [\[th:marginkernelSVM\]](#th:marginkernelSVM){reference-type="ref" reference="th:marginkernelSVM"}。
+:::
+
+::: myexercise
+考虑一个带样本权重的软间隔 SVM。每个训练样本是三元组 $(x_i,y_i,p_i)$，其中 $0<p_i\leq1$ 表示第 $i$ 个样本的重要程度。
+
+- 修改原始优化问题，使样本 $i$ 违反间隔约束的惩罚按 $p_i$ 缩放。
+
+- 推导相应的对偶优化问题，并说明重要性权重如何影响对偶变量。
+
+- 简要解释 $p_i$ 对解的作用。
+:::
+
+::: myexercise
+考虑一维二元分类问题。两个类别 $\mathcal C_0$ 与 $\mathcal C_1$ 分别服从 Gaussian 分布：
+
+- 类别 0（负类）：$p(x\mid\mathcal C_0)\sim\mathcal N(\mu_0,\sigma^2)$；
+
+- 类别 1（正类）：$p(x\mid\mathcal C_1)\sim\mathcal N(\mu_1,\sigma^2)$。
+
+假设 $\mu_1>\mu_0$，且两类先验概率相同：$\P(\mathcal C_0)=\P(\mathcal C_1)=0.5$。定义阈值为 $\tau$ 的分类器：当 $x>\tau$ 时预测为 $\mathcal C_1$，否则预测为 $\mathcal C_0$。
+
+推导下列指标关于阈值 $\tau$、均值 $\mu_0,\mu_1$ 与方差 $\sigma^2$ 的解析表达式。答案可使用标准正态累积分布函数 $\Phi(z)$ 或余误差函数 $\text{erfc}(z)$。
+
+1.  真阳性率（灵敏度）$\text{TPR}(\tau)$。
+
+2.  真阴性率（特异度）$\text{TNR}(\tau)$。
+
+3.  假阳性率 $\text{FPR}(\tau)$。
+
+4.  混淆矩阵：对大小为 $N$ 的数据集，写出各矩阵元素的期望。
+
+5.  ROC 曲线方程：消去 $\tau$，推导 $\text{TPR}$ 与 $\text{FPR}$ 的函数关系。
+
+6.  曲线下面积：证明这一维 Gaussian 情形的 AUC 为 $\Phi\big(\frac{\mu_1-\mu_0}{\sqrt{2\sigma^2}}\big)$。
+:::
+
+::: myexercise
+MNIST 数据集包含手写数字 $0,1,\dots,9$ 的灰度图像，每幅图表示为 $\mathbb R^{784}$ 中的向量。本题考虑区分数字 3 与 8 的二元分类任务。记数据集为 $${(x_i,y_i)}_{i=1}^n\subset\mathbb R^{784}\times\{-1,+1\},$$ 其中 $y_i=+1$ 对应数字 8，$y_i=-1$ 对应数字 3。从 MNIST 中提取所有数字 3 和 8 的图像，将像素值归一化到 $[0,1]$，再按 $80\%$ 与 $20\%$ 划分训练集和测试集。\
+(a) 从分类准确率、收敛行为以及对误分类样本的稳健性三方面比较逻辑回归与软间隔 SVM。\
+(b) 分别可视化两种方法误分类的若干测试图像。
+:::
+
+::: myexercise
+（Wisconsin 乳腺癌诊断数据集）下载 *Breast Cancer Wisconsin (Diagnostic) dataset*，例如从 UCI 机器学习仓库获取。本题根据半径、纹理、光滑度等 30 个特征，预测肿瘤为恶性还是良性。\
+(a) 先在原始数据上训练 SVM；然后将各特征标准化（减去均值并除以标准差）后重新训练。为什么缩放会如此显著地改变 SVM 的表现，而逻辑回归相对更稳健？\
+(b) 提取逻辑回归模型的权重 $w$。哪个物理特征（例如“面积”或“凹度”）对恶性肿瘤的预测作用最强？
+:::
+
+::: myexercise
+Spambase 数据集（UCI 机器学习仓库）把电子邮件表示为含 57 个属性的特征向量，并将每封邮件标为*垃圾邮件*或*非垃圾邮件*。记数据集为 $${(x_i,y_i)}_{i=1}^n\subset\mathbb R^{57}\times\{-1,+1\},$$ 其中 $y_i=+1$ 表示垃圾邮件，$y_i=-1$ 表示非垃圾邮件。\
+(a) 分别训练采用 $\ell_1$ 正则、$\ell_2$ 正则以及不加正则的逻辑回归模型。\
+(b) 训练软间隔 SVM。\
+从分类准确率、学习参数的稀疏性以及对正则化参数选择的稳健性三个方面，比较逻辑回归与软间隔 SVM。
+:::
+
+::: myexercise
+本题考察支持向量机与前馈神经网络的性能如何随训练集大小变化，项目分为四部分。
+
+载入 MNIST 数据集，只保留数字 4 和 9。这两个数字在视觉上有一定相似性，因此能构成有意义的挑战。把 $28\times28$ 图像展平为 784 维向量，将像素值缩放到 $[0,1]$，并固定留出 1,000 幅图像作为测试集。
+
+训练以下两个模型：
+
+- 模型 A（SVM）：采用 Gaussian 核，取 $C=10$、$\gamma=0.01$。
+
+- 模型 B（神经网络）：一个简单的多层感知机（MLP），含一个由 100 个神经元组成的隐藏层，使用 ReLU 激活函数与 Sigmoid 输出层；优化器取 Adam，学习率为 $0.001$。
+
+在规模逐渐增大的训练子集上训练两个模型。对每个 $N\in\{20,50,100,500,1000,5000\}$，记录测试准确率。为保证统计稳定性，每种规模都应使用不同的随机子集重复训练五次，并报告平均准确率。
+
+- 当 $N$ 大约达到多少时，神经网络开始优于 SVM？解释为何在 $N$ 很小时 SVM 表现更好。
+
+- 过拟合：当 $N=50$ 时，比较神经网络的训练准确率与测试准确率。二者的差距说明模型复杂度与数据规模之间存在怎样的关系？
+
+- 支持向量：对 $N=500$ 的 SVM 模型计算支持向量数目，并与神经网络的参数总数比较。
+:::
+
+::: myexercise
+本题研究实践中经常遇到的类别高度不平衡问题。
+
+从 MNIST 中选择两个类别：数字 0 作为多数类，数字 8 作为少数类。取 5,000 个数字 0 的样本，却只取 50 个数字 8 的样本，合成少数类约占 1% 的不平衡训练集。测试集则保持平衡，每类各取 500 个样本，以观察模型的泛化。先在该不平衡训练集上训练标准逻辑回归或 SVM 作为基线，然后计算准确率；结果很可能接近 99%，为什么？再计算精确率、召回率和 F1 分数。若模型对每幅图像都预测为“0”，准确率会是多少？这样的模型真的有用吗？
+
+下面探索几种应对类别不平衡的干预策略。
+
+1.  类别加权：修改 SVM 或逻辑回归的损失函数，对少数类上的错误施加更重的惩罚。
+
+2.  精确率--召回率阈值调整：不使用默认的 0.5 概率阈值，而是移动决策边界。绘制 PR 曲线，找出使召回率至少达到 0.80 的阈值，并报告相应的精确率。ROC 曲线和 PR 曲线都可评价分类器；在这个不平衡实验中，哪条曲线更“如实”地反映了模型在少数类上的糟糕表现？为什么？
+
+3.  数据增强：自行设计策略，生成更多数字 8 的合成版本。但只能使用现有的 50 个数字 8 样本，不能直接从 MNIST 或其他现成数据集中加入更多数字 8。
+
+4.  子采样：把多数类下采样到 50 个样本，构造平衡数据集。
+
+从准确率、数字 8 的精确率、数字 0 的精确率和 F1 分数等方面，将上述策略与基线比较。讨论每种策略的优缺点，并判断哪一种干预策略最有前景。
+:::
+
+[^1]: 关于逻辑回归发展史的详细梳理，参见 [@Cramer2002]。
+
+[^2]: 回顾 Bernoulli 随机变量的概率质量函数：$\P(Y=y)=p^y(1-p)^{1-y}$，其中 $y\in\{0,1\}$。
+
+[^3]: ROC 曲线最初用于雷达信号检测，“受试者工作特征”这一名称也由此而来。
+
+[^4]: 这一思想实验受 Aditya Bhaskara 的《机器学习理论》课程讲义启发，<https://utah.instructure.com/courses/1023142>。
+
+[^5]: 在统计学习理论中，假设类是学习算法获准选择的全部预测规则的集合。例如，线性分类器的假设类为 $\mathcal F=\{x\mapsto\operatorname{sign}(w^\top x+b):w\in\mathbb R^d,b\in\mathbb R\}$。

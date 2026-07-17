@@ -1,18 +1,620 @@
 ---
 title: "矩阵集中不等式"
-description: "非交换 Khintchine 不等式与矩阵集中"
-status: 待翻译
+description: "非交换 Khintchine 不等式、矩阵集中与自由性改进"
+status: 待校对
 ---
 
-::: {.callout-note title="翻译状态"}
-本章对应英文原稿 `probability-matrixconcentration.tex`，尚待翻译。
-:::
+# 矩阵集中不等式 {#c:probability-matrixconcentration}
+
+许多应用都需要控制随机矩阵的谱。视具体问题而定，这类矩阵可能代表谱算法中的噪声，其影响由谱范数衡量；也可能代表某个对偶变量，只有控制住它的大小，才能证明凸松弛是精确的，例如第 [\[c:community\]](#c:community){reference-type="ref" reference="c:community"} 章的情形。第 [\[c:surprises\]](#c:surprises){reference-type="ref" reference="c:surprises"} 章的一些工具可以逐项控制随机矩阵元素，再间接推出谱界，但这种做法往往会引入并非本质的维数因子。
+
+下面将陈述并证明若干矩阵集中结果，它们与第 [\[sc:matrixBernstein\]](#sc:matrixBernstein){reference-type="ref" reference="sc:matrixBernstein"} 节的矩阵 Bernstein 定理 [\[thm:4:MatrixBernstein\]](#thm:4:MatrixBernstein){reference-type="ref" reference="thm:4:MatrixBernstein"} 一脉相承。我们的重点是通过上界 $\EE\|X\|$ 来理解随机矩阵谱范数的典型尺度。谱范数本身通常是高维对象的稳定函数，因而一旦期望得到控制，尾界往往可由集中不等式轻易推出；第 [\[c:probability-gaussiananalysis\]](#c:probability-gaussiananalysis){reference-type="ref" reference="c:probability-gaussiananalysis"} 章的命题 [\[proposition:4:WignerSpectralNormTail\]](#proposition:4:WignerSpectralNormTail){reference-type="ref" reference="proposition:4:WignerSpectralNormTail"} 已展示这一点。本章将依赖上一章建立的高斯分析工具。非交换 Khintchine 不等式与后面的矩阵集中不等式主要参考 [@Ramon-StFlour-2022; @Tropp_MatrixConcentrationElementary]。[^1]
 
 ## 非交换 Khintchine 不等式
 
-## 矩阵集中不等式
+先看一个控制随机矩阵期望的关键不等式。它与非交换 Khintchine 不等式 [@Pis03] 密切相关，因此本书也简称它为非交换 Khintchine 不等式（例如参见 [@Tropp:TailBoundsRM] 的式 (4.9)）。证明将在第 [1.1.2](#subsec:proofNCK){reference-type="ref" reference="subsec:proofNCK"} 节给出。
 
-## 利用内在自由性的改进
+::: theorem
+[]{#thm:4:Gaussianseries label="thm:4:Gaussianseries"} 设 $A_1,\dots,A_n\in\RR^{d\times d}$ 为对称矩阵，$g_1,\dots,g_n$ 独立同分布且服从 $\NNN(0,1)$。则
+$$\begin{equation}
+\label{logterm}
+\EE \Big\| \sum_{k=1}^{n} g_k A_k \Big\| \leq \Big(  2\lceil \log d \rceil+1  \Big)^{\frac12} \sigma,
+\end{equation}$$
+其中
+$$\begin{equation}
+\label{eq:4:sigma:forGaussianseries}
+\sigma^2 = \Big\| \sum_{k=1}^n A_k^2  \Big\|.
+\end{equation}$$
+:::
 
-## 习题 {.unnumbered}
+与命题 [\[proposition:4:WignerSpectralNormTail\]](#proposition:4:WignerSpectralNormTail){reference-type="ref" reference="proposition:4:WignerSpectralNormTail"} 类似，还可用高斯集中得到 $\|\sum_{k=1}^ng_kA_k\|$ 的尾界。考虑函数
+$$F:\RR^n\to\Big\|\sum_{k=1}^ng_kA_k\Big\|.$$
+先估计它的 Lipschitz 常数。对 $g,h\in\RR^n$，
+$$\begin{eqnarray*}
+ \left| \Big\| \sum_{k=1}^n g_kA_k \Big\| -  \Big\| \sum_{k=1}^n h_kA_k \Big\| \right| & \leq & \Big\| \Big(\sum_{k=1}^n g_kA_k\Big) -  \Big( \sum_{k=1}^n h_kA_k \Big) \Big\| \\
+ & = & \Big\| \sum_{k=1}^n (g_k-h_k)A_k \Big\| \\
+ & = & \max_{v:\,\|v\|=1 } \Big|v^T\Big( \sum_{k=1}^n (g_k-h_k)A_k \Big) v \Big|\\
+ & = & \max_{v:\,\|v\|=1 } \Big| \sum_{k=1}^n (g_k-h_k)\Big(v^TA_kv\Big) \Big| \\
+ & \leq & \max_{v:\,\|v\|=1 } \sqrt{\sum_{k=1}^n (g_k-h_k)^2} \sqrt{\sum_{k=1}^n \Big(v^TA_kv\Big)^2}\\
+ & = & \sqrt{ \max_{v:\,\|v\|=1 } \sum_{k=1}^n \Big(v^TA_kv\Big)^2}\,  \|g-h\|_2,
+\end{eqnarray*}$$
+第一个不等式使用三角不等式，最后一个不等式使用 Cauchy--Schwarz 不等式。
 
+这自然引出一个新参数：弱方差 $\sigma_\ast$。
+
+::: definition
+给定对称矩阵 $A_1,\dots,A_n\in\RR^{d\times d}$，定义弱方差参数
+$$\sigma_\ast^2=\max_{v:\,\|v\|=1}\sum_{k=1}^n(v^TA_kv)^2.$$
+:::
+
+因此应用高斯集中定理 [\[theorem:4:gaussianconcentration\]](#theorem:4:gaussianconcentration){reference-type="ref" reference="theorem:4:gaussianconcentration"}，并取 $t=u\sigma_\ast$，可得
+$$\begin{equation}
+\Prob\left\{ \Big\| \sum_{k=1}^{n} g_k A_k \Big\| \geq \Big(  2\lceil \log d \rceil+1 \Big)^{\frac12} \sigma + u\sigma_\ast \right\} \leq \exp\Big( - \frac12u^2 \Big).
+\end{equation}$$
+
+可见，$\|\sum_{k=1}^ng_kA_k\|$ 的期望由 $\sigma$ 控制，而它围绕期望的波动则由 $\sigma_\ast$ 控制。下面比较这两个量。
+
+::: proposition
+设 $A_1,\dots,A_n\in\RR^{d\times d}$ 为对称矩阵。回顾
+$$\sigma=\sqrt{\Big\|\sum_{k=1}^nA_k^2\Big\|},\qquad
+\sigma_\ast=\sqrt{\max_{v:\,\|v\|=1}\sum_{k=1}^n(v^TA_kv)^2}.$$
+则 $\sigma_\ast\leq\sigma$。
+:::
+
+::: proof
+*证明.* 由 Cauchy--Schwarz 不等式，
+$$\begin{eqnarray*}
+ \sigma_\ast^2 & = & \max_{v:\,\|v\|=1 } \sum_{k=1}^n \left(v^TA_kv\right)^2  =  \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \left(v^T \left[A_kv\right]\right)^2 \\
+ & \leq & \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \left( \|v\| \|A_kv\|\right)^2  =  \max_{v:\,\|v\|=1 } \sum_{k=1}^n  \|A_kv\|^2 \\
+ & = & \max_{v:\,\|v\|=1 } \sum_{k=1}^n  v^TA_k^2v  =  \Big\| \sum_{k=1}^n  A_k^2 \Big\|  =  \sigma^2.
+\end{eqnarray*}$$ ◻
+:::
+
+### 非交换 Khintchine 不等式有多紧？ {#sec:tightnessNCK}
+
+下面的简单计算表明，定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 中的 $\sigma$ 的确是理解 $\EE\|\sum_{k=1}^ng_kA_k\|$ 的正确尺度：
+$$\begin{eqnarray}
+ \EE \Big\| \sum_{k=1}^{n} g_k A_k \Big\|^2 & = & \EE \Big\| \Big( \sum_{k=1}^{n} g_k A_k \Big)^2 \Big\| = \EE \max_{v:\ \|v\|=1} v^T\Big( \sum_{k=1}^{n} g_k A_k \Big)^2v \nonumber\\
+ & \geq & \max_{v:\ \|v\|=1} \EE  v^T\Big( \sum_{k=1}^{n} g_k A_k \Big)^2v = \max_{v:\ \|v\|=1}  v^T\Big( \sum_{k=1}^{n} A_k^2 \Big)v = \sigma^2. \nonumber
+\end{eqnarray}$$
+
+不过，式 [\[logterm\]](#logterm){reference-type="eqref" reference="logterm"} 中的对数因子是否必需？下面用两个例子考察这个问题。
+
+::: example
+[]{#example:WignerMatrix label="example:WignerMatrix"} 回顾第 [\[subsection:WignerMatrices\]](#subsection:WignerMatrices){reference-type="ref" reference="subsection:WignerMatrices"} 节。$d\times d$ Wigner 矩阵 $W$ 可写成高斯级数：对 $i\leq j$，当 $i\neq j$ 时取
+$$A_{ij}=e_ie_j^T+e_je_i^T,$$
+而对角项取
+$$A_{ii}=\sqrt2e_ie_i^T.$$
+不难验证 $\sum_{i\leq j}A_{ij}^2=(d+1)I_{d\times d}$，故 $\sigma=\sqrt{d+1}$。定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 因而只给出
+$$\EE\|W\|\lesssim\sqrt{d\log d}.$$
+然而我们知道 $\EE\|W\|\asymp\sqrt d$。因此在这个例子中，非交换 Khintchine 界多出了一个对数因子。[^2]
+:::
+
+下一个例子则说明，对数因子在一般情形下确实不能去掉。
+
+::: example
+对 $k=1,\dots,d$ 取 $A_k=e_ke_k^T\in\RR^{d\times d}$。此时 $\sum_{k=1}^ng_kA_k$ 是对角矩阵，对角元是独立标准高斯变量，故其谱范数等于 $\max_k|g_k|$。已知
+$\max_{1\leq k\leq d}|g_k|\asymp\sqrt{\log d}$，而直接计算却有 $\sigma=1$。所以一般而言，对数因子无法消除。
+:::
+
+这促使我们进一步追问：额外的维数因子究竟在什么情况下才必需？上面两个例子中，所得矩阵 $X=\sum_{k=1}^ng_kA_k$ 除对称性约束外都具有独立元素。对这类矩阵，可以借助 $\sigma_\ast$ 写出更强的不等式 [@Bandeira_NARandomMatrixBound]：[^3]
+
+::: theorem
+[]{#thm:4:matrixconcentrationindependententries label="thm:4:matrixconcentrationindependententries"} 设 $X$ 是 $d\times d$ 随机对称矩阵；除对称性约束外，各元素为独立高斯变量，且 $(i,j)$ 元的方差为 $b_{ij}^2$。则
+$$\EE \| X\| \lesssim \sqrt{ \max_{1\leq i\leq d} \sum_{j=1}^d b_{ij}^2 } + \max_{ij}\left| b_{ij} \right| \sqrt{\log d}.$$
+:::
+
+::: remark
+上述 $X$ 可写成高斯级数：对 $i<j$ 取
+$$A_{ij}=b_{ij}(e_ie_j^T+e_je_i^T),$$
+并取 $A_{ii}=b_{ii}e_ie_i^T$。由此可算得
+$$\sigma^2=\max_{1\leq i\leq d}\sum_{j=1}^db_{ij}^2,qquad
+\sigma_\ast^2\asymp\max_{i,j}b_{ij}^2.$$
+因此，当非交换 Khintchine 定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 中的随机矩阵除对称性外具有独立元素时，
+$$\begin{equation}
+\label{eq:4:sigmasigmastar}
+ \EE\|X\| \lesssim \sigma + \sqrt{\log d}\,\sigma_\ast.
+\end{equation}$$
+:::
+
+近期，[@Bandeiraetal_FreeProbability] 利用自由概率的思想，在某些情形下去除了维数因子；非高斯推广见 [@Tatianaetal_Universality]。有趣的是，同一工作还证明式 [\[eq:4:sigmasigmastar\]](#eq:4:sigmasigmastar){reference-type="eqref" reference="eq:4:sigmasigmastar"} 一般并不成立，从而否定了本书早期版本中的一个猜想。第 [1.3](#subsec:freeprobimprovement){reference-type="ref" reference="subsec:freeprobimprovement"} 节将更深入地讨论这些改进。
+
+### 非交换 Khintchine 不等式的证明 {#subsec:proofNCK}
+
+现在证明非交换 Khintchine 不等式，即定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"}。同一论证的其他讲法可见 [@Tropp:TailBoundsSecondOrder] 第 7.2 节与 [@Ramon-StFlour-2022]。
+
+::: proof
+*定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 的证明.* 设 $p$ 为正整数，令 $X=\sum_{k=1}^ng_kA_k$。则
+$$\left(\EE\|X\|\right)^{2p}\leq\EE\|X\|^{2p}
+=\EE\|X^{2p}\|\leq\EE\tr X^{2p}.$$
+第一个不等式来自 Jensen 不等式，第二个则因为半正定矩阵的迹不小于其谱范数。
+
+使用高斯分部积分（引理 [\[lemma:GIbP\]](#lemma:GIbP){reference-type="ref" reference="lemma:GIbP"}），得到
+$$\begin{eqnarray*}
+\EE \tr X^{2p} &=& \EE \tr\sum_{k=1}^ng_kA_k X^{2p-1} =  \EE \tr\sum_{k=1}^n\sum_{q=0}^{2p-2}A_kX^qA_kX^{2p-2-q} \\ 
+&=&  \EE\sum_{k=1}^n\sum_{q=0}^{2p-2} \tr\left(A_kX^qA_kX^{2p-2-q}\right).
+\end{eqnarray*}$$
+
+若 $A_1,\dots,A_n$ 两两可交换，则对每个 $q$ 都有
+$\tr(A_kX^qA_kX^{2p-2-q})=\tr(A_k^2X^{2p-2})$。事实证明，可交换情形恰是最坏情形：其上界总能支配非交换情形。下面的引理 [\[lemma:commutativeisworstGIbP\]](#lemma:commutativeisworstGIbP){reference-type="ref" reference="lemma:commutativeisworstGIbP"} 将证明，对所有 $0\leq q\leq2p-2$，
+$\tr(A_kX^qA_kX^{2p-2-q})\leq\tr(A_k^2X^{2p-2})$。因此
+$$\begin{eqnarray*}
+\EE \tr X^{2p} &\leq & \EE\sum_{k=1}^n(2p-1) \tr\left(A_k^2X^{2p-2}\right) = (2p-1) \EE\tr\left(\left(\sum_{k=1}^nA_k^2\right)X^{2p-2}\right).
+\end{eqnarray*}$$
+再对 Schatten 范数应用 Hölder 不等式，得到
+$$\begin{eqnarray*}
+\EE \tr X^{2p} &\leq & (2p-1) \left\| \sum_{k=1}^nA_k^2 \right\| \EE\sum_{k=1}^n \tr\left(X^{2p-2}\right) = (2p-1)\sigma^2 \EE\sum_{k=1}^n \tr\left(X^{2p-2}\right).
+\end{eqnarray*}$$
+迭代这一过程可得
+$$\begin{equation*}
+\EE \tr X^{2p} \leq (2p-1)!! \sigma^{2p} d,
+\end{equation*}$$
+从而
+$$\begin{equation}
+\EE\|X\| \leq \left( \tr X^{2p} \right)^{\frac1{2p}} \leq  \left( (2p-1)!!\, \sigma^{2p} d \right)^{\frac1{2p}} \leq [(2p-1)!!]^{\frac1{2p}} \sigma d^{\frac1{2p}}.
+\end{equation}$$
+取 $p=\lceil\log d\rceil$，并使用
+$(2p-1)!!\leq((2p+1)/e)^p$。这个界的初等证明可见 [@Tropp_MatrixConcentrationElementary]，本质上是取对数后用积分比较求和；引理 [\[lemma:gaussianmoments\]](#lemma:gaussianmoments){reference-type="ref" reference="lemma:gaussianmoments"} 也能给出只差一个 $e$ 因子的结果。于是
+$$\EE \|X\| \leq \left( \frac{2\lceil \log d \rceil+1}{e} \right)^{\frac12} \sigma d^{\frac1{2 \lceil \log d \rceil }} \leq \left( 2\lceil \log d \rceil+1 \right)^{\frac12} \sigma.$$
+证明完成。 ◻
+:::
+
+::: lemma
+[]{#lemma:commutativeisworstGIbP label="lemma:commutativeisworstGIbP"} 设 $A,X$ 为对称矩阵。对任意满足 $0\leq q\leq2p-2$ 的非负整数 $p,q$，都有
+$$\tr\left(AX^qAX^{2p-2-q}\right) \leq \tr\left(A^2X^{2p-2}\right).$$
+:::
+
+::: proof
+*证明.* 考虑谱分解 $X=\sum_{i=1}^d\lambda_iv_iv_i^T$。于是
+$$\begin{eqnarray*}
+\tr\left(AX^qAX^{2p-2-q}\right) & = & \sum_{i,j=1}^d\lambda_i^q\lambda_j^{2p-2-q}\tr\left(Av_iv_i^TAv_jv_j^T\right) \\
+& = & \sum_{i,j=1}^d\lambda_i^q\lambda_j^{2p-2-q}\left(v_i^TAv_j\right)^2 \\
+& \leq & \left( \sum_{i,j=1}^d|\lambda_i|^{2p-2}\left(v_i^TAv_j\right)^2 \right)^{\frac{q}{2p-2}} \left( \sum_{i,j=1}^d|\lambda_j|^{2p-2}\left(v_i^TAv_j\right)^2 \right)^{\frac{2p-2-q}{2p-2}}\\
+& = & \sum_{i,j=1}^d|\lambda_i|^{2p-2}\left(v_i^TAv_j\right)^2 =  \sum_{i,j=1}^d\lambda_i^{2p-2}\left(v_j^TAv_i\right)\left(v_i^TAv_j\right) \\
+& = & \sum_{i,j=1}^d\tr\left(\lambda_i^{2p-2}v_j^TAv_iv_i^TAv_j\right) = \tr\left(A^2X^{2p-2}\right),
+\end{eqnarray*}$$
+其中不等式来自 Hölder 不等式，参见命题 [\[prop:holderineq\]](#prop:holderineq){reference-type="ref" reference="prop:holderineq"}，特别是式 [\[eq:HolderRS\]](#eq:HolderRS){reference-type="eqref" reference="eq:HolderRS"}。 ◻
+:::
+
+::: remark
+定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 控制的是一个高斯过程。因此原则上，Talagrand 的通用链方法可以给出量级最优的界，而基于 Dudley 不等式的覆盖数论证则能给出相差对数因子的界，参见 [@Talagrand14]。但有趣的是，目前尚无仅依靠这些概率过程技术、而不使用算子理论，就能证明对数因子内最优界的方法。若能找到这样的论证，它很可能远远超出矩阵谱范数的范围；相关讨论见 [@Lucca-et-al-TensorNCK]。
+:::
+
+## 矩阵集中不等式 {#matrix-concentration-inequalities}
+
+下面紧随 [@Tropp_MatrixConcentrationElementary]，利用定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 对几个实用的矩阵集中不等式给出初等证明。先从该定理的 Rademacher 版本开始。
+
+::: theorem
+[]{#thm:4:RademacherSeries label="thm:4:RademacherSeries"} 设 $H_1,\dots,H_n\in\RR^{d\times d}$ 为对称矩阵，$\eps_1,\dots,\eps_n$ 是独立同分布的 Rademacher 随机变量，即各以 $1/2$ 的概率取 $+1$ 或 $-1$。则
+$$\EE \left\| \sum_{k=1}^{n} \eps_k H_k \right\| \leq \Big(  \frac\pi2 + \pi\lceil\log(d)\rceil \Big)^{\frac12} \sigma,$$
+其中
+$$\begin{equation}
+\label{eq:4:sigma:forrademacherseries}
+\sigma^2 = \left\| \sum_{k=1}^n H_k^2  \right\|.
+\end{equation}$$
+:::
+
+::: proof
+*证明.* 令 $g_1,\dots,g_n$ 为与这些 Rademacher 变量独立的标准高斯变量。由于 $g_k$ 的符号与绝对值相互独立，且 $\EE|g_k|=\sqrt{2/\pi}$，Jensen 不等式给出
+$$\begin{eqnarray*}
+\EE \left\| \sum_{k=1}^{n} \eps_k H_k \right\| & = &\frac{1}{\EE|g_1|} \EE \left\| \sum_{k=1}^{n} \left(\EE|g_k|\right)\eps_k H_k \right\| \\ & \leq & \sqrt{\frac{\pi}2} \EE \left\| \sum_{k=1}^{n} |g_k|\eps_k H_k \right\| = \sqrt{\frac{\pi}2} \EE \left\| \sum_{k=1}^{n} g_k H_k \right\|.
+\end{eqnarray*}$$
+再应用定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 即得结论。 ◻
+:::
+
+实际上，定理 [\[thm:4:RademacherSeries\]](#thm:4:RademacherSeries){reference-type="ref" reference="thm:4:RademacherSeries"} 中额外的 $\pi/2$ 因子可以去掉。证明见 [@Tropp_MatrixConcentrationElementary]，其思路与高斯版本定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 的证明本质相同。
+
+利用 Rademacher 级数定理，可以证明下面的半正定矩阵集中界。
+
+::: theorem
+[]{#thm:4:matrixconcentration:PSDcase label="thm:4:matrixconcentration:PSDcase"} 设 $T_1,\dots,T_n\in\RR^{d\times d}$ 是相互独立的随机对称半正定矩阵。则
+$$\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left[  \left\| \sum_{i=1}^n \EE T_i \right\|^{\frac12}  + \sqrt{C(d)} \left(   \EE \max_i \| T_i\|   \right)^{\frac12}    \right]^2,$$
+其中
+$$\begin{equation}
+\label{eq:4:Cd_constant}
+C(d) \defeq 2\pi + 4\pi\lceil \log d \rceil.
+\end{equation}$$
+:::
+
+证明定理 [\[thm:4:matrixconcentration:PSDcase\]](#thm:4:matrixconcentration:PSDcase){reference-type="ref" reference="thm:4:matrixconcentration:PSDcase"} 的关键，是概率论中极其常用的对称化技巧。我们将它单独写成引理。
+
+::: lemma
+[]{#lemma:4:symmetrization label="lemma:4:symmetrization"} 设 $T_1,\dots,T_n$ 是相互独立的随机矩阵；本引理不要求它们半正定。再设 $\eps_1,\dots,\eps_n$ 是彼此独立、且与这些矩阵独立的 Rademacher 随机变量。则
+$$\EE \Big\| \sum_{i=1}^n T_i  \Big\| \leq \Big\| \sum_{i=1}^n \EE T_i \Big\| + 2 \EE  \Big\| \sum_{i=1}^n \eps_i T_i  \Big\|.$$
+:::
+
+::: proof
+*证明.* 三角不等式给出
+$$\EE \Big\| \sum_{i=1}^n T_i  \Big\| \leq \Big\| \sum_{i=1}^n \EE T_i \Big\| + \EE  \Big\| \sum_{i=1}^n  \Big(T_i - \EE T_i\Big)  \Big\|.$$
+对每个 $i$，引入与 $T_i$ 同分布的独立副本 $T_i'$，并令全部 $2n$ 个矩阵相互独立。于是
+$$\begin{eqnarray*}
+\EE  \Big\| \sum_{i=1}^n  \Big(T_i - \EE T_i\Big)  \Big\| & = & \EE_T  \Big\| \sum_{i=1}^n  \Big(T_i -  \EE T_i - \EE_{T_i'}\Big[ T_i' - \EE_{T_i'}T_i' \Big]\Big)  \Big\|  \\ & = & \EE_T  \Big\| \EE_{T'} \sum_{i=1}^n  \Big(T_i -  T_i' \Big)  \Big\| \leq \EE  \Big\| \sum_{i=1}^n  \Big(T_i -  T_i' \Big)  \Big\|,
+\end{eqnarray*}$$
+这里 $\EE_a$ 表示仅对变量 $a$ 取期望；最后一步对 $\EE_{T'}$ 使用了 Jensen 不等式。
+
+由于 $T_i-T_i'$ 是对称随机变量，[^4] 它与 $\eps_i(T_i-T_i')$ 同分布。因此
+$$\begin{align*}
+&\EE  \left\| \sum_{i=1}^n  \left(T_i -  T_i' \right)  \right\|  = \EE  \left\| \sum_{i=1}^n  \eps_i\left(T_i -  T_i' \right)  \right\|  \\
+ \leq \,\, & \EE  \left\| \sum_{i=1}^n  \eps_i T_i  \right\| + \EE  \left\| \sum_{i=1}^n  \eps_i T_i'  \right\| = 2 \EE  \left\| \sum_{i=1}^n  \eps_i T_i  \right\|,
+\end{align*}$$
+引理得证。 ◻
+:::
+
+::: proof
+*定理 [\[thm:4:matrixconcentration:PSDcase\]](#thm:4:matrixconcentration:PSDcase){reference-type="ref" reference="thm:4:matrixconcentration:PSDcase"} 的证明.* 由对称化引理 [\[lemma:4:symmetrization\]](#lemma:4:symmetrization){reference-type="ref" reference="lemma:4:symmetrization"} 与 Rademacher 级数定理 [\[thm:4:RademacherSeries\]](#thm:4:RademacherSeries){reference-type="ref" reference="thm:4:RademacherSeries"}，
+$$\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)} \EE \left\| \sum_{i=1}^n T_i^2  \right\|^{\frac12}.$$
+
+接下来的技巧，是让左侧同类项出现在右侧。由于 $T_i\succeq0$，有
+$$\left\| \sum_{i=1}^n T_i^2  \right\| \leq \max_i \| T_i\|   \left\| \sum_{i=1}^n T_i  \right\|;$$
+初等证明见 [@Tropp_MatrixConcentrationElementary] 的事实 2.3。因此
+$$\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)} \EE \left[ \left(  \max_i \| T_i\| \right)^{\frac12} \left\| \sum_{i=1}^n T_i  \right\|^{\frac12} \right].$$
+再对期望应用 Cauchy--Schwarz 不等式，
+$$\EE \left\| \sum_{i=1}^n T_i  \right\| \leq \left\| \sum_{i=1}^n \EE T_i \right\| + \sqrt{C(d)}  \left( \EE \max_i \| T_i\| \right)^{\frac12} \left( \EE \left\| \sum_{i=1}^n T_i  \right\|\right)^{\frac12}.$$
+右侧现在出现了待求量的平方根。把它视作一元二次不等式并使用求根公式，即得到定理结论；细节见 [@Tropp_MatrixConcentrationElementary] 第 6.1 节。 ◻
+:::
+
+下面转向一般对称矩阵。
+
+::: theorem
+[]{#thm:4:matrixconsymmetric label="thm:4:matrixconsymmetric"} 设 $Y_1,\dots,Y_n\in\RR^{d\times d}$ 是相互独立的随机对称矩阵，且 $\EE Y_i=0$。则
+$$\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq \sqrt{C(d)}\sigma  + C(d) L,$$
+其中
+$$\begin{equation}
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{ and } L^2 = \EE \max_i \| Y_i\|^2
+\end{equation}$$
+并且与式 [\[eq:4:Cd_constant\]](#eq:4:Cd_constant){reference-type="eqref" reference="eq:4:Cd_constant"} 相同，
+$$\begin{equation*}
+C(d) \defeq 2\pi + 4\pi\lceil \log d \rceil.
+\end{equation*}$$
+:::
+
+::: proof
+*证明.* 使用对称化引理 [\[lemma:4:symmetrization\]](#lemma:4:symmetrization){reference-type="ref" reference="lemma:4:symmetrization"} 与定理 [\[thm:4:RademacherSeries\]](#thm:4:RademacherSeries){reference-type="ref" reference="thm:4:RademacherSeries"}，得到
+$$\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq 2 \EE_Y \left[  \EE_\eps \left\|   \sum_{i=1}^n \eps_i Y_i \right\| \right] \leq \sqrt{C(d)} \EE \left\| \sum_{i=1}^n Y_i^2  \right\|^{\frac12}.$$
+Jensen 不等式进一步给出
+$$\EE \left\| \sum_{i=1}^n Y_i^2  \right\|^{\frac12} \leq \left( \EE \left\| \sum_{i=1}^n Y_i^2  \right\| \right)^{\frac12}.$$
+最后注意 $Y_i^2\succeq0$，对这些半正定矩阵应用定理 [\[thm:4:matrixconcentration:PSDcase\]](#thm:4:matrixconcentration:PSDcase){reference-type="ref" reference="thm:4:matrixconcentration:PSDcase"} 即得结论。 ◻
+:::
+
+::: remark
+定理 [\[thm:4:matrixconsymmetric\]](#thm:4:matrixconsymmetric){reference-type="ref" reference="thm:4:matrixconsymmetric"} 可推广到一般矩形矩阵 $S_1,\dots,S_n\in\RR^{d_1\times d_2}$。只需定义所谓的 Hermitian 膨胀
+$$Y_i = \left[ \begin{array}{cc}  0 & S_i \\ S_i^T & 0   \end{array} \right],$$
+并注意
+$$\left\| Y_i^2 \right\| = \left\| \left[ \begin{array}{cc}  0 & S_i \\ S_i^T & 0   \end{array} \right]^2   \right\| 
+= \left\| \left[ \begin{array}{cc}  S_iS_i^T & 0 \\ 0 & S_i^TS_i    \end{array} \right]   \right\| = \max\left\{ \left\| S_i^TS_i \right\|, \left\| S_iS_i^T \right\|  \right\}.$$
+细节参见 [@Tropp_MatrixConcentrationElementary]。
+:::
+
+## 利用内禀自由性的改进 {#subsec:freeprobimprovement}
+
+第 [1.1.1](#sec:tightnessNCK){reference-type="ref" reference="sec:tightnessNCK"} 节已经看到，非交换 Khintchine 不等式中最坏情形确实需要对数因子，但在一些重要例子里它又是多余的。细看定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 的证明会发现：当 $A_1,\dots,A_n$ 不可交换时，使用引理 [\[lemma:commutativeisworstGIbP\]](#lemma:commutativeisworstGIbP){reference-type="ref" reference="lemma:commutativeisworstGIbP"} 可能造成损失。把每个求和项都用 $q=0$ 项控制会产生 $(2p-1)$ 因子；若在某些情况下能把它换成常数，最终的对数因子便会消失。[^5] Tropp [@Tropp:TailBoundsSecondOrder] 较早揭示了改进非交换 Khintchine 不等式与自由概率 [@NicaSpeicher-FreeProbability] 之间的重要联系。他两次使用高斯分部积分，并以可能更小的“矩阵对齐参数” $\omega$ 控制两次分部积分所产生因子发生交叉的项。这样可进行更高效的迭代，把乘在 $\sigma$ 前的 $\theta((\log n)^{1/2})$ 改进为 $\theta((\log n)^{1/4})$。
+
+下面简述 [@Bandeiraetal_FreeProbability] 对定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 的改进；它常能给出锐界。为说明其思想，先换一种方式证明原定理。仍令 $X=\sum_{k=1}^ng_kA_k$ 且 $p\geq1$。由 Wick 公式（引理 [\[lemma:Wicksformula\]](#lemma:Wicksformula){reference-type="ref" reference="lemma:Wicksformula"}），
+$$\begin{eqnarray*}
+\EE X^{2p} &=& \sum_{u:[2p]\to[n]} \EE[g_{u(1)}\cdots g_{u(2p)}] \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \\
+&=& \sum_{u:[2p]\to[n]} \sum_{\nu\in \PP_2[2p]} 1_{u \sim \nu}\tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \\
+&=& \sum_{\nu\in \PP_2[2p]}\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right).
+\end{eqnarray*}$$
+若矩阵 $A_k$ 两两可交换，则对所有配对划分 $\nu$，内层求和都相同；特别地，它们等于配对
+$\nu_0:=\{(1,2),(3,4),\dots,(2p-1,2p)\}$ 对应的项：
+$$\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu_0} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) = \sum_{\substack{u:[p]\to[n] } } \tr\left(A_{u(1)}^2\cdots A_{u(p)}^2\right)=\tr\left( \sum_{k=1}^n A_k^2\right)^p.$$
+下面由 Buchholz [@Buchholz01] 给出的引理，与引理 [\[lemma:commutativeisworstGIbP\]](#lemma:commutativeisworstGIbP){reference-type="ref" reference="lemma:commutativeisworstGIbP"} 对应。
+
+::: lemma
+[]{#lemma:commutativeisworstWicks label="lemma:commutativeisworstWicks"} 对任意 $\nu\in\PP[2p]$ 及对称矩阵 $A_1,\dots,A_n$，
+$$\sum_{\substack{u:[2p]\to[n] \\ u\sim\nu} } \tr\left(A_{u(1)}\cdots A_{u(2p)}\right) \leq \tr\left( \sum_{k=1}^n A_k^2\right)^p.$$
+:::
+
+若 $\sum_{k=1}^nA_k^2$ 是单位矩阵的倍数，会有许多配对划分达到上述上界。只要划分中存在相邻配对，就可在求和中将它“剥离”；剥离后又可能产生新的相邻配对。能够以这种方式被完全剥离的，恰好是所谓的*非交叉划分*，而它们确实达到上界，见命题 [\[prop:GUENONcrossingpairings\]](#prop:GUENONcrossingpairings){reference-type="ref" reference="prop:GUENONcrossingpairings"}。
+
+::: definition
+[]{#partitions:crossing label="partitions:crossing"} 若 $\nu\in\PP[2p]$ 含有两对 $(i_1,i_2),(j_1,j_2)\in\nu$，满足 $i_1<j_1<i_2<j_2$，则称 $\nu$ 为交叉划分；否则称为*非交叉划分*。所有非交叉配对划分组成的集合记为 $\NC[2p]\subset\PP[2p]$。
+:::
+
+Bandeira、Boedihardjo 与 van Handel [@Bandeiraetal_FreeProbability] 证明，在许多情形下，随机矩阵 $X$ 具有内禀自由性：只有非交叉划分对应的求和项不可忽略。
+
+证明方法是用高斯插值（引理 [\[lemma:gaussianinterpolation\]](#lemma:gaussianinterpolation){reference-type="ref" reference="lemma:gaussianinterpolation"}）连接高斯模型 $X$ 与自由概率模型 $X_{\mathrm{free}}$。后者把高斯变量替换成*半圆族*；可把它们理解为一种“非交换随机变量”，其 Wick 公式只对 $\NC[2p]$ 求和。这也是下文引理 [\[lemma:WicksformulaGUE\]](#lemma:WicksformulaGUE){reference-type="ref" reference="lemma:WicksformulaGUE"} 的极限行为；等价地，可把论证理解为用规模不断增大的 Wigner 矩阵替换高斯变量。Tropp 的矩阵对齐参数仍是论证的重要成分，但内禀自由性由
+$v^2=\|\Cov X\|$ 控制，即 $X$ 的元素协方差矩阵的谱范数；该协方差矩阵大小为 $d^2\times d^2$。当 $\sigma/v\gg\polylog(d)$ 时，改进界给出
+$\EE\|X\|\leq(2+o(1))\sigma$。
+
+此外，Brailovskaya 与 van Handel [@Tatianaetal_Universality] 建立了一个普适性原理。粗略地说，对任意独立随机矩阵之和 $Y=\sum_{i=1}^nY_i$，例如定理 [\[thm:4:matrixconsymmetric\]](#thm:4:matrixconsymmetric){reference-type="ref" reference="thm:4:matrixconsymmetric"} 的模型，只要各求和项足够小，$Y$ 的行为就接近其高斯对应物 $Y_G$；后者以具有相同均值和协方差的高斯变量替换 $Y$ 的元素，因此可应用 [@Bandeiraetal_FreeProbability] 的结果。注意，这不同于此前从定理 [\[thm:4:Gaussianseries\]](#thm:4:Gaussianseries){reference-type="ref" reference="thm:4:Gaussianseries"} 通过对称化证明定理 [\[thm:4:matrixconsymmetric\]](#thm:4:matrixconsymmetric){reference-type="ref" reference="thm:4:matrixconsymmetric"} 的方法。结合内禀自由性与普适性，可以改进矩阵 Bernstein 不等式。
+
+::: theorem
+[]{#thm:improvedBernstein label="thm:improvedBernstein"} 设 $Y_1,\dots,Y_n\in\RR^{d\times d}$ 是相互独立的随机对称矩阵，满足 $\EE Y_i=0$，且对所有 $i\in[n]$ 几乎处处有 $\|Y_i\|\leq R$。则
+$$\EE \left\| \sum_{i=1}^n Y_i  \right\| \leq 2\sigma + C \Big( v^{\frac12}\sigma^{\frac12}(\log d)^\frac34 + R^{\frac13}\sigma^{\frac23}(\log d)^\frac23 + R \log d \Big),$$
+并且
+$$\PP\Big[  \left\| \sum_{i=1}^n Y_i  \right\| \geq 2\sigma + C \Big( v^{\frac12}\sigma^{\frac12}(\log d)^\frac34 + \sigma_\ast t^{\frac12}+ R^{\frac13}\sigma^{\frac23}t^\frac23 + R t \Big)    \Big] \leq de^{-t}.$$
+其中 $C$ 是普适常数，且
+$$\begin{equation}
+\sigma^2 = \left\|  \sum_{i=1}^n \EE Y_i^2   \right\| \text{, } v^2 = \left\| \mathrm{Cov}(Y) \right\| \text{ and } \sigma_\ast^2 = \sup_{\|u\|=\|w\|=1}\EE \left| u^TYw \right|^2.
+\end{equation}$$
+:::
+
+若 $v,\sigma_\ast,R\ll\sigma/\polylog(d)$，这在应用中经常出现，参见 [@Bandeiraetal_FreeProbability; @Tatianaetal_Universality]，则所有乘以普适常数 $C$ 的项都可忽略；在尾界中，尾参数 $t$ 也只出现在低阶项里。
+
+### 交叉配对与 GUE 的 Wick 公式
+
+一个很有启发性的练习，是为 Wigner 矩阵的复数版本推导 Wick 公式；Wigner 矩阵曾出现在第 [\[subsection:WignerMatrices\]](#subsection:WignerMatrices){reference-type="ref" reference="subsection:WignerMatrices"} 节及例 [\[subsection:WignerMatrices\]](#subsection:WignerMatrices){reference-type="ref" reference="subsection:WignerMatrices"}。在这个模型中，交叉划分导致的抵消尤为清楚。它与 Voiculescu [@Voiculescu1991]、Haagerup--Thorbjørnsen [@HaagerupThorbjornsen2005] 的奠基工作紧密相关，也与 [@Bandeiraetal_FreeProbability] 中导出定理 [\[thm:improvedBernstein\]](#thm:improvedBernstein){reference-type="ref" reference="thm:improvedBernstein"} 的方法相连。
+
+::: definition
+随机 $D\times D$ GUE 矩阵 $W$ 是 Hermitian（自伴）随机矩阵：上三角非对角元独立同分布且服从 $\CNNN(0,1/D)$，对角元独立同分布且服从 $\NNN(0,1/D)$，并与非对角元独立。$W_{ij}\sim\CNNN(0,1/D)$ 表示 $\Repart(W_{ij})$ 与 $\Impart(W_{ij})$ 相互独立，且都服从 $\NNN(0,1/D)$。
+:::
+
+本小节将证明：对高维 GUE，Wick 公式中只有非交叉划分对应的项不可忽略。
+
+::: lemma
+[]{#lemma:WicksformulaGUE label="lemma:WicksformulaGUE"} 设 $W_1,\dots,W_n$ 是独立同分布的 $D\times D$ GUE 矩阵，$u:[2p]\to[n]$。则
+$$\frac1D\EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] = \sum_{\nu\in \NC_2[2p]} 1_{u \sim \nu} + \mathcal{O}\left(\frac1{D^2}\right).$$
+其中 $\NC_2[2p]$ 表示所有非交叉配对划分，$u\sim\nu$ 表示 $u$ 与 $\nu$ 相容；$\mathcal O$ 中的常数可以依赖 $n,p,u$。参见定义 [\[def:pairpartition\]](#def:pairpartition){reference-type="ref" reference="def:pairpartition"} 与 [\[partitions:crossing\]](#partitions:crossing){reference-type="ref" reference="partitions:crossing"}。
+:::
+
+先证明非交叉项不会发生抵消。
+
+::: definition
+设 $\nu\in\PP[2p]$，参见定义 [\[def:pairpartition\]](#def:pairpartition){reference-type="ref" reference="def:pairpartition"}。把 $u_\nu:[2p]\to[p]$ 定义为按字典序第一个满足 $u\sim\nu$ 的满射。[^6]
+:::
+
+::: proposition
+[]{#prop:GUENONcrossingpairings label="prop:GUENONcrossingpairings"} 设 $\nu\in\NC[2p]$，$W_1,\dots,W_p$ 是独立同分布的 $D\times D$ GUE 矩阵。则
+$$\begin{equation}
+\label{eq:GUENONcrossingpairings}
+    \EE\left[\tr W_{u_\nu(1)}\cdots W_{u_\nu(2p)}\right] = \tr(I)
+\end{equation}$$
+:::
+
+::: proof
+*证明.* 因为 $\nu$ 非交叉，必存在 $i\in[2p-1]$ 使 $u_\nu(i)=u_\nu(i+1)$。对这样的 $i$，式 [\[eq:GUENONcrossingpairings\]](#eq:GUENONcrossingpairings){reference-type="eqref" reference="eq:GUENONcrossingpairings"} 左侧等于
+$$%
+\EE\left[\tr W_{u_\nu(1)}\cdots W_{u_{\nu(i-1)}} \left(\EE_{W_{u_\nu(i)}}  W_{u_\nu(i)}^2 \right) W_{u_\nu(i+2)}\cdots W_{u_\nu(2p)}\right],$$
+其中外层期望对其余随机矩阵求取。又因为 $\EE_{W_{u_\nu(i)}}W_{u_\nu(i)}^2=I$，可逐对“剥离”这些相邻配对。形式上，对 $p$ 归纳即可，因为删去 $\{i,i+1\}$ 后仍是非交叉划分。 ◻
+:::
+
+下面考察交叉划分。
+
+::: proposition
+[]{#prop:GUEcrossingFormula label="prop:GUEcrossingFormula"} 设 $B_1,B_2,B_3,B_4$ 为 $D\times D$ 复矩阵，$W,V$ 为两个相互独立的 $D\times D$ GUE 矩阵。则
+$$\begin{equation}
+\label{eq:crossingformula}
+\EE\left[ \tr W B_1 V B_2 W B_3 V B_4 \right] = \frac{1}{D^2} \tr\left( B_3B_2B_1B_4 \right).
+\end{equation}$$
+:::
+
+::: proof
+*证明.* 对 $W\sim\mathrm{GUE}$，有
+$\EE W_{i_1j_1}W_{i_2j_2}=D^{-1}\delta_{i_1j_2}\delta_{i_2j_1}$，其中 $\delta_{ij}$ 是 $i=j$ 的指示量。[^7] 展开式 [\[eq:crossingformula\]](#eq:crossingformula){reference-type="eqref" reference="eq:crossingformula"} 左侧，得到
+$$\begin{eqnarray*}
+\mathrm{LHS}\text{ of }\eqref{eq:crossingformula} & = & \sum_{i_1,\dots,i_8=1}^D \EE\left[W_{i_1i_2} (B_1)_{i_2i_3} V_{i_3i_4} (B_2)_{i_4i_5} W_{i_5i_6} (B_3)_{i_6i_7} V_{i_7i_8} (B_4)_{i_8i_1} \right] \\ 
+& = & \sum_{i_1,\dots,i_8=1}^D \frac1{D^2}\delta_{i_1i_6}\delta_{i_2i_5}\delta_{i_3i_8}\delta_{i_4i_7}  (B_1)_{i_2i_3}  (B_2)_{i_4i_5}  (B_3)_{i_6i_7}  (B_4)_{i_8i_1} \\
+& = & \frac1{D^2}\sum_{i_1,\dots,i_4=1}^D  (B_1)_{i_2i_3}  (B_2)_{i_4i_2}  (B_3)_{i_1i_4}  (B_4)_{i_3i_1} \\
+& = & \frac1{D^2}\tr\left[ B_3 B_2 B_1 B_4\right].
+\end{eqnarray*}$$ ◻
+:::
+
+::: proposition
+[]{#prop:GUEcrossingpairings label="prop:GUEcrossingpairings"} 设 $\nu\in\PP[2p]\setminus\NC[2p]$ 为交叉划分，$W_1,\dots,W_p$ 是独立同分布的 $D\times D$ GUE 矩阵。则
+$$\begin{equation}
+    0\leq \EE\left[\tr W_{u_\nu(1)}\cdots W_{u_\nu(2p)}\right] \leq \frac1{D^2}\tr(I)
+\end{equation}$$
+:::
+
+::: proof
+*证明.* 取一个交叉四元组 $\{i,j,i',j'\}$，满足 $i<j<i'<j'$、$u_\nu(i)=u_\nu(i')$ 以及 $u_\nu(j)=u_\nu(j')$。对 $W_{u_\nu(i)}$ 与 $W_{u_\nu(j)}$ 应用命题 [\[prop:GUEcrossingFormula\]](#prop:GUEcrossingFormula){reference-type="ref" reference="prop:GUEcrossingFormula"}，再对 $p$ 归纳即得。 ◻
+:::
+
+::: proof
+*引理 [\[lemma:WicksformulaGUE\]](#lemma:WicksformulaGUE){reference-type="ref" reference="lemma:WicksformulaGUE"} 的证明.* 前面的结果已经备齐。由恒等式
+$$\begin{equation}
+\label{eq:WicksMixedFormula?}
+    \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] = \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} \EE\left[\tr W_{u_{\nu}(1)}\cdots W_{u_{\nu}(2p)}\right],
+\end{equation}$$
+以及命题 [\[prop:GUEcrossingpairings\]](#prop:GUEcrossingpairings){reference-type="ref" reference="prop:GUEcrossingpairings"}、[\[prop:GUENONcrossingpairings\]](#prop:GUENONcrossingpairings){reference-type="ref" reference="prop:GUENONcrossingpairings"}，结论立即得到。
+
+式 [\[eq:WicksMixedFormula?\]](#eq:WicksMixedFormula?){reference-type="eqref" reference="eq:WicksMixedFormula?"} 是引理 [\[lemma:Wicksformula\]](#lemma:Wicksformula){reference-type="ref" reference="lemma:Wicksformula"} 的推论。严格地说，由于 $W_\ell$ 是高斯矩阵，可对某些复矩阵 $A_j$ 写成
+$W_\ell=\sum_{j=1}^mg_{\ell;j}A_j$。于是
+$$\begin{eqnarray*}
+    \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right] 
+    %= \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right]
+    &=& \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \EE\left[ g_{u(1);j_1}%g_{u(2);j_2}
+    \cdots g_{u(2p);j_{2p}} \right]\\
+    &=&  \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} 1_{j \sim \nu} \\
+    &=& \sum_{\nu\in\PP[2p]} 1_{u \sim \nu} \left( \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right)   1_{j \sim \nu} \right),
+\end{eqnarray*}$$
+另一方面，
+$$\begin{eqnarray*}
+    \EE\left[\tr W_{u_{\nu}(1)}\cdots W_{u_{\nu}(2p)}\right] 
+    %= \EE\left[\tr W_{u(1)}\cdots W_{u(2p)}\right]
+    &=& \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) \EE\left[ g_{u_{\nu}(1);j_1}%g_{u(2);j_2}
+    \cdots g_{u_{\nu}(2p);j_{2p}} \right]\\
+    &=&  \sum_{j_1,\dots,j_{2p}=1}^{m} \tr\left(A_{j_1}%A_{j_2}
+    \cdots A_{j_{2p}}\right) 1_{j \sim \nu},
+\end{eqnarray*}$$
+第二个等号使用了如下事实：$\nu$ 是唯一与 $u_\nu$ 相容的配对。 ◻
+:::
+
+## 习题 {#exercises .unnumbered}
+
+::: definition
+设 $W$ 是如下高斯级数表示的 $d\times d$ 矩阵：$W=\sum_{1\leq k\leq l\leq d}g_{kl}A_{kl}$，其中
+$$\begin{equation*}
+        A_{kl} = \begin{cases}
+            e_ke_l^\top + e_le_k^\top &\text{for }k<l,\\
+            \sqrt{2} e_ke_k^\top &\text{for }k=l.
+        \end{cases}
+\end{equation*}$$
+:::
+
+::: myexercise
+[]{#prob:constructing_wigner label="prob:constructing_wigner"} 设 $Z$ 是 $d\times d$ 随机矩阵，其 $d^2$ 个元素均为独立标准高斯变量。证明 $2^{-1/2}(Z+Z^\top)$ 是高斯 Wigner 矩阵。
+:::
+
+::: definition
+设 $D$ 是如下高斯级数表示的 $d\times d$ 对角矩阵：$D=\sum_{1\leq k\leq d}g_kA_k$，其中
+$$\begin{equation*}
+        A_{k} = e_ke_k^\top.
+\end{equation*}$$
+:::
+
+::: myexercise
+[]{#prob:computing_sigma label="prob:computing_sigma"} 设 $W$ 为 $d\times d$ 高斯 Wigner 矩阵，$D$ 为对角元独立且服从标准高斯分布的 $d\times d$ 对角矩阵。证明
+$\norm{\mathbb EW^2}^{1/2}=\sigma(W)=\sqrt{d+1}$、$\norm{\mathbb ED^2}^{1/2}=\sigma(D)=1$，并用非交换 Khintchine 不等式分别上界 $\E\norm W$ 与 $\E\norm D$。
+:::
+
+::: myexercise
+[]{#prob:strong_NCK label="prob:strong_NCK"} 实际上，非交换 Khintchine 不等式还有更强的版本。设 $A_1,\ldots,A_n\in\R^{d\times d}$ 为对称矩阵，$g_1,\ldots,g_n$ 独立同分布且服从 $\NN(0,1)$。高斯级数 $X=\sum_{t=1}^ng_tA_t$ 满足
+$$\begin{equation*}
+        \E\norm{X} \leq 2 \sigma + C\,v\,(\log d)^{\frac{3}{2}},
+\end{equation*}$$
+其中 $C>0$ 为绝对常数，$\sigma^2=\norm{\sum_{i=1}^nA_i^2}$，且
+$$\begin{equation*}
+        v^2 = \norm{\Cov(X)}.
+\end{equation*}$$
+这里矩阵协方差 $\Cov(X)$ 是 $d^2\times d^2$ 矩阵，行列坐标均由指标对索引，其元素为
+$$\begin{equation*}
+        \Cov(X)_{ij,kl} = \E\bras{X_{ij}X_{kl}} \quad\text{for }i,j,k,l\in[d].
+\end{equation*}$$
+计算习题 [\[prob:computing_sigma\]](#prob:computing_sigma){reference-type="ref" reference="prob:computing_sigma"} 中 $W,D$ 的 $\Cov(W),\Cov(D)$，并利用内禀自由的非交换 Khintchine 不等式推出：存在绝对常数 $C'>0$ 使
+$$\begin{equation*}
+        \E\norm{W} \leq C'\,\sqrt{d}.
+\end{equation*}$$
+:::
+
+::: hint
+首先证明 $\Cov(X)_{ij,kl}=\sum_{t=1}^n\bras{A_t}_{ij}\bras{A_t}_{kl}$。
+:::
+
+::: myexercise
+[]{#prob:hermitian_dilation label="prob:hermitian_dilation"} 为把矩阵 Bernstein 不等式从对称矩阵推广到一般矩形矩阵，使用 Hermitian 膨胀。对 $S\in\R^{d_1\times d_2}$，定义
+$$\begin{equation*}
+        \mathcal{H}(S) \coloneqq \begin{pmatrix}
+            0_{d_1 \times d_1} & S \\
+            S^\top & 0_{d_2 \times d_2}
+        \end{pmatrix}\in\R^{(d_1 + d_2)\times (d_1 + d_2)}.
+\end{equation*}$$
+习题 [\[prob:symmetrization\]](#prob:symmetrization){reference-type="ref" reference="prob:symmetrization"}(c) 已证明 $\mathcal H(S)$ 对称且 $\norm{\mathcal H(S)}=\norm S$。
+
+设 $S_1,\dots,S_n\in\R^{d_1\times d_2}$ 为随机矩形矩阵，且对每个 $i\in[n]$ 都有 $\E\bras{S_i}=0$。证明
+$$\begin{equation*}
+        \E \norm{ \sum_{i=1}^n S_i } \le \sqrt{C(d)}\, \sigma + C(d)\, L,
+\end{equation*}$$
+其中 $d=d_1+d_2$、$C(d)=4+8\ceil{\log d}$，且
+$$\begin{equation*}
+        \sigma^2 = \max \brac{\norm{ \sum_{i=1}^n \E\bras{S_i S_i^\top}},  \norm{ \sum_{i=1}^n \E\bras{S_i^\top S_i}}},\qquad L^2 = \E \max_i \norm{S_i}^2.
+\end{equation*}$$
+:::
+
+::: myexercise
+[]{#prob:bernstein_expectation_bound label="prob:bernstein_expectation_bound"} 设 $\brac{X_k}_{k=1}^n$ 是相互独立的随机对称 $d\times d$ 矩阵，并假设每个 $X_k$ 满足
+$$\begin{equation*}
+        \E X_k=0 \text { and } \|X_k\|\leq R \text { almost surely. }
+\end{equation*}$$
+本题目标是证明
+$$\begin{equation}
+\label{eq:bernstein_expectation}
+        \E \norm{\sum_{k=1}^n X_k} \le C \brap{ \sigma \sqrt{\log{(d+1)}} + R\log(d+1)}.
+\end{equation}$$
+为从定理 [\[thm:4:MatrixBernstein\]](#thm:4:MatrixBernstein){reference-type="ref" reference="thm:4:MatrixBernstein"} 的尾界得到期望界，将使用期望的积分恒等式，参见习题 [\[prob:integral_identity\]](#prob:integral_identity){reference-type="ref" reference="prob:integral_identity"}(a)。
+
+(a) 证明对任意 $a,b>0$，
+$$\begin{equation*}
+                \exp\brap{-\frac{2}{a+b}} \le \max\brac{\exp\brap{-\frac{1}{a}}, \exp\brap{-\frac{1}{b}}} \le \exp\brap{-\frac{1}{a}} + \exp\brap{-\frac{1}{b}}.
+    \end{equation*}$$
+把它应用到矩阵 Bernstein 不等式右侧的指数上，以得到更容易计算的积分。
+
+(b) 当 $t$ 很小时，指数接近 $1$，尾界较松。思考如何单独处理 $t$ 接近 $0$ 的区间。
+
+(c) 拆分积分后，分别计算各部分并选择合适常数。可从目标界 [\[eq:bernstein_expectation\]](#eq:bernstein_expectation){reference-type="eqref" reference="eq:bernstein_expectation"} 反推常数的选择。
+:::
+
+::: myexercise
+[]{#prob:randomized_matrix_mult label="prob:randomized_matrix_mult"} 设 $A\in\R^{n\times m}$ 为实矩阵且 $\norm A=1$。用标准矩阵乘法计算 $AA^\top$ 的代价为 $n^2m$ 量级，当 $n,m$ 很大时可能难以承受。若只需近似结果，随机化可显著降低成本。本题将证明这一点。
+
+记 $a_1,\dots,a_m\in\R^n$ 为 $A$ 的列向量。定义随机矩阵 $X$，使
+$\P\brap{X=ma_ka_k^\top}=1/m$。
+
+(a) 独立抽取 $X$ 的 $s$ 个副本 $X_1,\dots,X_s$，并取平均 $\hat X_s=s^{-1}\sum_{k=1}^sX_k$。证明 $\hat X_s$ 是 $AA^\top$ 的无偏估计，即 $\E\hat X_s=AA^\top$。
+
+(b) 定义相干性统计量 $\mu(A)=m\max_{1\leq k\leq m}\|a_k\|^2$。证明
+$$\begin{equation*}
+                \max_{k = 1, \dots, s} \norm{\E \bras{(X_k - \E X_k)^2}}  \le 2 \mu(A)
+    \end{equation*}$$ and $$\begin{equation*}
+                \max_{k = 1, \dots, s} \|X_k - \E X_k \| \le 2\mu(A), \text{ almost surely}.
+    \end{equation*}$$
+
+(c) 使用习题 [\[prob:bernstein_expectation_bound\]](#prob:bernstein_expectation_bound){reference-type="ref" reference="prob:bernstein_expectation_bound"} 的结论，无需重证。证明存在绝对常数 $C$，使得若样本数满足
+$$\begin{equation*}
+                s \ge C \max \brac{\frac{1}{\eps}, \frac{1}{\eps^2} } \mu \log n
+\end{equation*}$$
+则该方法达到 $\eps$ 精度，即 $\E\norm{\hat X_s-AA^\top}\leq\eps$。
+:::
+
+::: myexercise
+[]{#prob:commuting_vs_sim_diag label="prob:commuting_vs_sim_diag"} 设 $A,B\in\R^{d\times d}$ 为对称矩阵。
+
+(a) 若 $A,B$ 可同时对角化，证明它们可交换。
+
+(b) 若 $A,B$ 可交换，且 $B$ 的特征值两两不同，证明它们可同时对角化。
+
+(c) 将 (a)、(b) 推广到 $n$ 个对称矩阵 $A_1,\ldots,A_n\in\R^{d\times d}$。
+:::
+
+::: hint
+对 (b)，证明若 $Bv=\lambda v$，则 $B(Av)=\lambda(Av)$。
+:::
+
+::: myexercise
+[]{#prob:NCK_commuting label="prob:NCK_commuting"} 本章讨论了矩阵可交换性对随机矩阵谱范数期望上界的影响。回顾：若 $X:=\sum_{i=1}^ng_iA_i$，其中 $A_1,\dots,A_n\in\R^{d\times d}$ 对称，且 $g_1,\dots,g_n\overset{\mathrm{iid}}\sim\NN(0,1)$，则
+$$\begin{equation*}
+        \sigma \lesssim \E \norm{X} \lesssim  \sigma \sqrt{\log d},
+\end{equation*}$$
+其中 $\sigma^2:=\norm{\sum_{i=1}^nA_i^2}$。
+
+(a) 假设 $A_1,\dots,A_n$ 是两两可交换的对称矩阵。它们可同时对角化，此事实无需证明；故存在正交矩阵 $Q$，使每个 $D_i:=QA_iQ^{-1}$ 都是对角矩阵。记 $D_i$ 的对角元依次为 $\lambda_1^{(i)},\dots,\lambda_d^{(i)}$。证明
+$$\begin{equation*}
+                \E\norm{ X } = \E \max_{k = 1, \ldots, d} \abs{\sum_{i=1}^n g_i \lambda^{(i)}_{k}}.
+    \end{equation*}$$
+
+(b) 利用习题 [\[prob:maximum_gaussians\]](#prob:maximum_gaussians){reference-type="ref" reference="prob:maximum_gaussians"}(a) 推出
+$$\begin{equation*}
+                \E \norm{X} \lesssim \sigma \sqrt{\log d}.
+    \end{equation*}$$
+
+(c) 构造一组可交换矩阵 $A_1,\dots,A_n$，使习题 [\[prob:maximum_gaussians\]](#prob:maximum_gaussians){reference-type="ref" reference="prob:maximum_gaussians"}(b) 蕴含
+$$\begin{equation*}
+                \E \norm{X} \gtrsim \sigma \sqrt{\log d}.
+    \end{equation*}$$
+:::
+
+::: myexercise
+[]{#prob:trace_commutativity_ineq label="prob:trace_commutativity_ineq"} 本题证明一个关键不等式，解释为什么在迹矩估计中，可交换矩阵会给出比不可交换矩阵更坏的上界。按照 (b) 的提示，也可采用与正文略有不同的方法。\
+设 $X,A\in\R^{d\times d}$ 为对称矩阵，$k,l$ 为非负整数且 $k+l$ 为偶数。证明
+$$\tr(AX^kAX^l)\leq\tr(A^2X^{k+l}).$$
+
+(a) 设 $X=\sum_{i=1}^d\lambda_iu_iu_i^\top$ 为 $X$ 的特征分解。证明
+$$\tr(AX^kAX^l)\leq\sum_{i,j=1}^d\abs{\lambda_i}^k\abs{\lambda_j}^l(u_i^\top Au_j)^2.$$
+
+(b) 证明
+$$\sum_{i,j=1}^d\abs{\lambda_i}^k\abs{\lambda_j}^l(u_i^\top Au_j)^2\leq\tr(A^2X^{k+l}),$$
+从而完成证明。
+
+    ::: hint
+    对特征值的乘积使用 Young 不等式。
+    :::
+:::
+
+[^1]: 若希望系统学习矩阵集中，并查看定理 [\[thm:4:MatrixBernstein\]](#thm:4:MatrixBernstein){reference-type="ref" reference="thm:4:MatrixBernstein"} 的直接证明，推荐 Tropp 的优秀专著 [@Tropp:TailBoundsRM_Monograph]。
+
+[^2]: $a\asymp b$ 表示 $a\lesssim b$ 且 $a\gtrsim b$。
+
+[^3]: 定理 [\[thm:4:matrixconcentrationindependententries\]](#thm:4:matrixconcentrationindependententries){reference-type="ref" reference="thm:4:matrixconcentrationindependententries"} 还有多项重要改进，包括无维数界 [@latala2018dimension]、往往能捕捉首项正确常数的界 [@Bandeiraetal_FreeProbability]，以及达到 Tracy--Widom 尾部尺度的界 [@vanHandel-Brailovskaya-indentries2024]。
+
+[^4]: 注意，“对称随机变量”指 $X\sim-X$，而“对称矩阵”指 $X^T=X$；两者含义不同。
+
+[^5]: 值得注意的是，$q=0$ 与 $q=2p-2$ 两项都等于引理 [\[lemma:commutativeisworstGIbP\]](#lemma:commutativeisworstGIbP){reference-type="ref" reference="lemma:commutativeisworstGIbP"} 的上界。人们或许希望用更小量级的参数控制其余所有项，但这会导出 $\sqrt2\sigma$ 的最终界；它对 Wigner 矩阵不成立，后者需要 $2\sigma$。交叉与非交叉划分的概念（定义 [\[partitions:crossing\]](#partitions:crossing){reference-type="ref" reference="partitions:crossing"}）恰好优雅地区分了哪些项具有实质贡献。
+
+[^6]: 对这里的所有用途，任取满足相容条件的满射 $u:[2p]\to[p]$ 都可以；选择字典序第一个只是人为约定。
+
+[^7]: 对实值 Wigner 矩阵，即例 [\[example:WignerMatrix\]](#example:WignerMatrix){reference-type="ref" reference="example:WignerMatrix"} 的 GOE，也可作类似计算；但能产生非零矩的 $i_1,j_1,i_2,j_2$ 组合更多，因而计算不如 GUE 清晰。
